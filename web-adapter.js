@@ -100,7 +100,32 @@
         'APROBADO_POR', 'CARGO_APROBADO', 'META_FORMACION_PORCENTAJE'
       ]];
 
-      const teacherHeaders = [[
+      const careerRows = [
+      ['CARRERA','PROGRAMA'],
+      ['Enfermería','Técnico Superior'],
+      ['Mecánica Automotriz','Tecnología Superior'],
+      ['Diseño Multimedia','Tecnología Superior'],
+      ['Marketing Digital y Comercio Electrónico','Tecnología Superior'],
+      ['Ventas','Tecnología Superior'],
+      ['Desarrollo de Software','Tecnología Superior'],
+      ['Desarrollo de Software y Ciberseguridad','Tecnología Universitaria'],
+      ['Redes y Telecomunicaciones','Tecnología Superior'],
+      ['Estética Integral','Tecnología Superior'],
+      ['Educación Básica','Tecnología Superior'],
+      ['Educación Inicial','Tecnología Superior'],
+      ['Pedagogía','Tecnología Universitaria'],
+      ['Procesamiento de Alimentos','Tecnología Superior'],
+      ['Administración','Tecnología Superior'],
+      ['Administración de Empresas e inteligencia de negocios','Tecnología Universitaria'],
+      ['Administración del Talento Humano','Tecnología Universitaria'],
+      ['Contabilidad','Tecnología Superior'],
+      ['Contabilidad y Tributación','Tecnología Universitaria'],
+      ['Gestión del Talento Humano','Tecnología Superior'],
+      ['Seguridad y Prevención de Riesgos Laborales','Tecnología Superior'],
+      ['Seguridad Ciudadana y Orden Publico','Tecnología Superior']
+    ];
+
+    const teacherHeaders = [[
         'CEDULA', 'NOMBRE_COMPLETO', 'CARRERA_PRINCIPAL', 'DEDICACION',
         'NIVEL_ACADEMICO_ACTUAL', 'TITULO_ACADEMICO_ACTUAL', 'AFIN_TITULO_CARRERA',
         'ESTUDIA_ACTUALMENTE', 'NIVEL_FORMACION_EN_CURSO', 'PROGRAMA_EN_CURSO',
@@ -125,7 +150,8 @@
         'PORCENTAJE_AVANCE', 'TITULO_EVIDENCIA', 'RUTA_EVIDENCIA', 'ABANDONO'
       ]];
 
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(periodHeaders), 'PERIODO');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(careerRows), 'CARRERAS');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(periodHeaders), 'PERIODO');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(teacherHeaders), 'DOCENTES');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(coordHeaders), 'COORDINACIONES');
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(planHeaders), 'PLAN');
