@@ -68,7 +68,8 @@ function defaultState() {
       carrera: name,
       coordinador: '',
       priorityOverride: '',
-      needsOverride: ''
+      needsOverride: '',
+      needItems: []
     })),
     settings: {
       genericLines: [...GENERIC_LINES],
@@ -123,12 +124,91 @@ function planByTeacher(teacherId){ return state.plan.find(p=>p.teacherId===teach
 function followByTeacher(teacherId){ return state.followup.find(f=>f.teacherId===teacherId); }
 function careerNames(){ return (state.careers||[]).map(c=>c.name).filter(Boolean); }
 function programForCareer(name){ return (state.careers||[]).find(c=>c.name===name)?.program || ''; }
-function ensureCoordination(name){
-  if(!name) return;
-  if(!state.coordinations.some(c=>c.carrera===name)){
-    state.coordinations.push({carrera:name,coordinador:'',priorityOverride:'',needsOverride:''});
-  }
+function careerKey(name){
+  return norm(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
 }
+function coordinationFor(name){
+  const key=careerKey(name);
+  return state.coordinations.find(c=>careerKey(c.carrera)===key);
+}
+function ensureCoordination(name){
+  if(!name) return null;
+  let coord=coordinationFor(name);
+  if(!coord){
+    coord={carrera:name,coordinador:'',priorityOverride:'',needsOverride:'',needItems:[]};
+    state.coordinations.push(coord);
+  }
+  if(!Array.isArray(coord.needItems)) coord.needItems=[];
+  return coord;
+}
+function dedupeCareerState(){
+  let changed=false;
+  const canonical=new Map();
+  const uniqueCareers=[];
+  (state.careers||[]).forEach(cr=>{
+    const name=norm(cr.name);
+    if(!name) return;
+    const key=careerKey(name);
+    if(!canonical.has(key)){
+      const item={...cr,name};
+      canonical.set(key,item);
+      uniqueCareers.push(item);
+    }else{
+      const kept=canonical.get(key);
+      if((!kept.program||kept.program==='Por definir') && cr.program && cr.program!=='Por definir') kept.program=cr.program;
+      changed=true;
+    }
+  });
+  state.careers=uniqueCareers;
+
+  const coordMap=new Map();
+  const uniqueCoords=[];
+  (state.coordinations||[]).forEach(raw=>{
+    const name=norm(raw.carrera);
+    if(!name) return;
+    const key=careerKey(name);
+    if(!coordMap.has(key)){
+      const item={carrera:canonical.get(key)?.name||name,coordinador:'',priorityOverride:'',needsOverride:'',needItems:[],...raw};
+      if(!Array.isArray(item.needItems)) item.needItems=[];
+      coordMap.set(key,item);
+      uniqueCoords.push(item);
+    }else{
+      const kept=coordMap.get(key);
+      if(!norm(kept.coordinador)&&norm(raw.coordinador)) kept.coordinador=raw.coordinador;
+      if(!norm(kept.needsOverride)&&norm(raw.needsOverride)) kept.needsOverride=raw.needsOverride;
+      if(!norm(kept.priorityOverride)&&norm(raw.priorityOverride)) kept.priorityOverride=raw.priorityOverride;
+      if((!kept.needItems||!kept.needItems.length)&&Array.isArray(raw.needItems)&&raw.needItems.length) kept.needItems=raw.needItems;
+      changed=true;
+    }
+  });
+  state.coordinations=uniqueCoords;
+
+  (state.teachers||[]).forEach(t=>{
+    const key=careerKey(t.carrera);
+    const canonicalCareer=canonical.get(key);
+    if(canonicalCareer && t.carrera!==canonicalCareer.name){
+      t.carrera=canonicalCareer.name;
+      changed=true;
+    }
+  });
+
+  (state.careers||[]).forEach(cr=>ensureCoordination(cr.name));
+  return changed;
+}
+function specificCareerNames(){
+  const seen=new Set();
+  const out=[];
+  (state.teachers||[]).forEach(t=>{
+    if(!validCareerName(t.carrera)) return;
+    const key=careerKey(t.carrera);
+    if(seen.has(key)) return;
+    seen.add(key);
+    const canonical=(state.careers||[]).find(cr=>careerKey(cr.name)===key)?.name||t.carrera;
+    out.push(canonical);
+  });
+  return out;
+}
+
 function ensureCareer(name, program=''){
   const clean=norm(name);
   if(!clean || !validCareerName(clean)) return;
@@ -721,7 +801,7 @@ $('#teacherForm').addEventListener('submit',handleTeacherSubmit);
 $('#closeTeacher').onclick=$('#cancelTeacher').onclick=closeTeacherDialog;
 
 function needSummary(career) {
-  const list=state.teachers.filter(t=>t.carrera===career);
+  const list=state.teachers.filter(t=>careerKey(t.carrera)===careerKey(career));
   if(!list.length) return [];
   const counts={};
   list.forEach(t=>{
@@ -735,27 +815,65 @@ function needSummary(career) {
   if(doctoral && needs.length<3) needs.push('Formación doctoral');
   return [...new Set(needs)].slice(0,3);
 }
-function autoPriority(career) {
-  const list=state.teachers.filter(t=>t.carrera===career);
+function needId(career,index){
+  return 'need_'+careerKey(career).replace(/[^a-z0-9]+/g,'_')+'_'+index;
+}
+function ensureNeedItems(career){
+  const coord=ensureCoordination(career);
+  if(!coord) return [];
+  if(Array.isArray(coord.needItems)&&coord.needItems.length){
+    coord.needItems=coord.needItems.map((item,i)=>({
+      id:item.id||needId(career,i),
+      text:norm(item.text),
+      priorityOverride:norm(item.priorityOverride)
+    })).filter(item=>item.text);
+    return coord.needItems;
+  }
+  const legacy=norm(coord.needsOverride)
+    ? coord.needsOverride.split('|').map(x=>norm(x)).filter(Boolean).slice(0,3)
+    : needSummary(career);
+  coord.needItems=legacy.map((text,i)=>({
+    id:needId(career,i),
+    text,
+    priorityOverride:norm(coord.priorityOverride)
+  }));
+  return coord.needItems;
+}
+function autoPriorityForNeed(career,need){
+  const list=state.teachers.filter(t=>careerKey(t.carrera)===careerKey(career));
   if(!list.length) return 'Baja';
-  const below=list.filter(t=>!String(t.nivelActual).includes('Maestr') && t.nivelActual!=='Doctorado').length;
-  const noAffinity=list.filter(t=>t.afinidad==='No').length;
-  const score=(below*2+noAffinity)/list.length;
-  return score>=1?'Alta':score>=0.45?'Media':'Baja';
+  const target=norm(need).toLowerCase();
+  let matches=0;
+  if(target==='fortalecimiento de formación de cuarto nivel'){
+    matches=list.filter(t=>!String(t.nivelActual).includes('Maestr') && t.nivelActual!=='Doctorado').length;
+  }else if(target==='formación doctoral'){
+    matches=list.filter(t=>t.nivelDeseado==='Doctorado').length;
+  }else{
+    matches=list.filter(t=>{
+      const candidates=[t.areaInteres,t.programaCurso,t.nivelDeseado].map(x=>norm(x).toLowerCase()).filter(Boolean);
+      return candidates.includes(target);
+    }).length;
+  }
+  const ratio=matches/list.length;
+  if(ratio>=0.5) return 'Alta';
+  if(ratio>=0.25) return 'Media';
+  return 'Baja';
 }
 function needsFor(career){
-  const c=state.coordinations.find(x=>x.carrera===career);
-  if(c?.needsOverride) return c.needsOverride.split('|').map(x=>x.trim()).filter(Boolean).slice(0,3);
-  return needSummary(career);
+  return ensureNeedItems(career).map(x=>x.text);
 }
 function priorityFor(career){
-  const c=state.coordinations.find(x=>x.carrera===career);
-  return c?.priorityOverride || autoPriority(career);
+  const rank={Alta:3,Media:2,Baja:1};
+  const items=ensureNeedItems(career);
+  if(!items.length) return 'Baja';
+  return items.map(item=>item.priorityOverride||autoPriorityForNeed(career,item.text))
+    .sort((a,b)=>rank[b]-rank[a])[0]||'Baja';
 }
 
 function renderDNF() {
   const s=stats();
-  const specific=state.coordinations.filter(c=>state.teachers.some(t=>t.carrera===c.carrera));
+  const careers=specificCareerNames();
+  careers.forEach(name=>ensureNeedItems(name));
   $('#content').innerHTML = `
     ${completionAlert('dnf')}
     <div class="grid cards">
@@ -764,27 +882,91 @@ function renderDNF() {
       ${metric('Con doctorado',s.doctors)}
       ${metric('Dispuestos',s.willing)}
     </div>
-    <div class="section-title"><div><h2>Líneas genéricas por defecto</h2><p>La app las propone; puedes editarlas, eliminarlas o agregar nuevas.</p></div><button class="secondary" id="addGeneric">+ Línea</button></div>
+
+    <div class="section-title"><div><h2>Coordinadores por carrera</h2><p>Este dato identifica al responsable de cada carrera. No define la necesidad de formación.</p></div></div>
+    <div class="table-wrap">
+      ${careers.length?`<table class="table needs-table"><thead><tr><th>Carrera</th><th>Coordinador</th></tr></thead><tbody>
+      ${careers.map(name=>{const coord=ensureCoordination(name);return `<tr>
+        <td><strong>${esc(name)}</strong></td>
+        <td><input class="coord-input" data-career="${esc(name)}" value="${esc(coord?.coordinador||'')}" placeholder="Nombre del coordinador"></td>
+      </tr>`}).join('')}</tbody></table>`:'<div class="empty">Carga docentes para identificar las carreras utilizadas.</div>'}
+    </div>
+
+    <div class="section-title"><div><h2>Necesidades específicas por carrera</h2><p>Las necesidades se obtienen de la información de los docentes. Cada necesidad tiene su propia prioridad.</p></div></div>
+    <div class="table-wrap">
+      ${careers.length?`<table class="table needs-table"><thead><tr><th>Carrera</th><th>Necesidad de formación</th><th>Prioridad sugerida</th><th>Prioridad final</th><th></th></tr></thead><tbody>
+      ${careers.map(name=>{
+        const items=ensureNeedItems(name);
+        const rows=(items.length?items:[{id:needId(name,0),text:'',priorityOverride:''}]).map((item,i)=>{
+          const suggested=item.text?autoPriorityForNeed(name,item.text):'Baja';
+          return `<tr>
+            <td><strong>${esc(name)}</strong>${i===items.length-1&&items.length<3?`<div class="inline-note"><button class="ghost add-need" data-career="${esc(name)}">+ Agregar necesidad</button></div>`:''}</td>
+            <td><input class="need-item-input" data-career="${esc(name)}" data-need-id="${esc(item.id)}" value="${esc(item.text)}" placeholder="Necesidad requerida por la carrera"></td>
+            <td><span class="pill ${suggested.toLowerCase()}">${suggested}</span></td>
+            <td><select class="need-priority-input" data-career="${esc(name)}" data-need-id="${esc(item.id)}"><option value="">Automática</option>${['Alta','Media','Baja'].map(x=>'<option '+(item.priorityOverride===x?'selected':'')+'>'+x+'</option>').join('')}</select></td>
+            <td>${items.length>1?`<button class="danger remove-need" data-career="${esc(name)}" data-need-id="${esc(item.id)}">Eliminar</button>`:''}</td>
+          </tr>`;
+        }).join('');
+        return rows;
+      }).join('')}</tbody></table>`:'<div class="empty">Carga docentes para generar las necesidades por carrera.</div>'}
+    </div>
+
+    <div class="section-title"><div><h2>Líneas genéricas institucionales</h2><p>Son líneas transversales y se gestionan de forma independiente a las necesidades específicas.</p></div><button class="secondary" id="addGeneric">+ Línea</button></div>
     <div class="card" id="genericList">
       ${state.settings.genericLines.map((g,i)=>`<div class="generic-line"><input data-generic="${i}" value="${esc(g)}"><button class="danger delete-generic" data-i="${i}">Eliminar</button></div>`).join('')}
-    </div>
-    <div class="section-title"><div><h2>Necesidades específicas por carrera</h2><p>Se generan automáticamente a partir de la base docente.</p></div></div>
-    <div class="table-wrap">
-      ${specific.length?`<table class="table"><thead><tr><th>Carrera</th><th>Coordinador</th><th>Necesidades propuestas / editables</th><th>Prioridad sugerida</th><th>Prioridad final</th></tr></thead><tbody>
-      ${specific.map(c=>`<tr>
-        <td><strong>${esc(c.carrera)}</strong></td>
-        <td><input class="coord-input" data-career="${esc(c.carrera)}" value="${esc(c.coordinador)}" placeholder="Coordinador por defecto"></td>
-        <td><input class="needs-input" data-career="${esc(c.carrera)}" value="${esc(c.needsOverride || needSummary(c.carrera).join(' | '))}" placeholder="Hasta 3 necesidades separadas por |"><div class="small muted">Se generan automáticamente; puedes cambiarlas.</div></td>
-        <td><span class="pill ${autoPriority(c.carrera).toLowerCase()}">${autoPriority(c.carrera)}</span></td>
-        <td><select class="priority-input" data-career="${esc(c.carrera)}"><option value="">Automática</option>${['Alta','Media','Baja'].map(x=>'<option '+(c.priorityOverride===x?'selected':'')+'>'+x+'</option>').join('')}</select></td>
-      </tr>`).join('')}</tbody></table>`:'<div class="empty">Carga docentes para generar las necesidades por carrera.</div>'}
     </div>`;
+
   $('#addGeneric').onclick=()=>{state.settings.genericLines.push('Nueva línea genérica');save();renderDNF();};
   $$('.delete-generic').forEach(b=>b.onclick=()=>{state.settings.genericLines.splice(Number(b.dataset.i),1);save();renderDNF();});
   $$('[data-generic]').forEach(inp=>inp.onchange=()=>{state.settings.genericLines[Number(inp.dataset.generic)]=inp.value;save();});
-  $$('.coord-input').forEach(inp=>inp.onchange=()=>{state.coordinations.find(c=>c.carrera===inp.dataset.career).coordinador=inp.value;save();});
-  $$('.needs-input').forEach(inp=>inp.onchange=()=>{state.coordinations.find(c=>c.carrera===inp.dataset.career).needsOverride=inp.value;save();});
-  $$('.priority-input').forEach(sel=>sel.onchange=()=>{state.coordinations.find(c=>c.carrera===sel.dataset.career).priorityOverride=sel.value;save();});
+
+  $$('.coord-input').forEach(inp=>inp.onchange=async()=>{
+    const coord=ensureCoordination(inp.dataset.career);
+    coord.coordinador=inp.value;
+    await save();
+  });
+
+  $$('.need-item-input').forEach(inp=>inp.onchange=async()=>{
+    const items=ensureNeedItems(inp.dataset.career);
+    let item=items.find(x=>x.id===inp.dataset.needId);
+    if(!item){
+      item={id:inp.dataset.needId,text:'',priorityOverride:''};
+      items.push(item);
+    }
+    item.text=norm(inp.value);
+    const coord=ensureCoordination(inp.dataset.career);
+    coord.needItems=items.filter(x=>x.text);
+    coord.needsOverride='';
+    coord.priorityOverride='';
+    await save();
+    renderDNF();
+  });
+
+  $$('.need-priority-input').forEach(sel=>sel.onchange=async()=>{
+    const items=ensureNeedItems(sel.dataset.career);
+    const item=items.find(x=>x.id===sel.dataset.needId);
+    if(item) item.priorityOverride=sel.value;
+    const coord=ensureCoordination(sel.dataset.career);
+    coord.needItems=items;
+    coord.priorityOverride='';
+    await save();
+  });
+
+  $$('.add-need').forEach(btn=>btn.onclick=async()=>{
+    const items=ensureNeedItems(btn.dataset.career);
+    if(items.length>=3){toast('Máximo 3 necesidades por carrera');return;}
+    items.push({id:needId(btn.dataset.career,Date.now()),text:'Nueva necesidad',priorityOverride:''});
+    ensureCoordination(btn.dataset.career).needItems=items;
+    await save();
+    renderDNF();
+  });
+
+  $$('.remove-need').forEach(btn=>btn.onclick=async()=>{
+    const coord=ensureCoordination(btn.dataset.career);
+    coord.needItems=ensureNeedItems(btn.dataset.career).filter(x=>x.id!==btn.dataset.needId);
+    await save();
+    renderDNF();
+  });
 }
 
 function ensurePlanRows(){
@@ -966,12 +1148,45 @@ function applyExcel(sheets){
 
   if(sheets.COORDINACIONES?.length){
     sheets.COORDINACIONES.forEach(r=>{
-      const carrera=norm(r.CARRERA); if(!carrera)return;
+      const carrera=norm(r.CARRERA); if(!carrera||!validCareerName(carrera))return;
       ensureCareer(carrera);
-      const coord=state.coordinations.find(x=>x.carrera===carrera);
+      const coord=ensureCoordination(carrera);
       coord.coordinador=norm(r.COORDINADOR)||coord.coordinador;
-      coord.priorityOverride=norm(r.PRIORIDAD_MANUAL)||coord.priorityOverride;
-      coord.needsOverride=norm(r.NECESIDADES)||coord.needsOverride;
+
+      // Compatibilidad con plantillas anteriores donde necesidades y coordinador estaban en la misma hoja.
+      const legacyNeeds=norm(r.NECESIDADES);
+      if(legacyNeeds){
+        coord.needItems=legacyNeeds.split('|').map(x=>norm(x)).filter(Boolean).slice(0,3).map((text,i)=>({
+          id:needId(carrera,i),
+          text,
+          priorityOverride:norm(r.PRIORIDAD_MANUAL)
+        }));
+        coord.needsOverride='';
+        coord.priorityOverride='';
+      }
+    });
+  }
+
+  if(sheets.NECESIDADES?.length){
+    const grouped=new Map();
+    sheets.NECESIDADES.forEach(r=>{
+      const carrera=norm(r.CARRERA);
+      const necesidad=norm(r.NECESIDAD);
+      if(!carrera||!necesidad||!validCareerName(carrera)) return;
+      ensureCareer(carrera);
+      const key=careerKey(carrera);
+      if(!grouped.has(key)) grouped.set(key,{carrera,items:[]});
+      grouped.get(key).items.push({
+        id:needId(carrera,grouped.get(key).items.length),
+        text:necesidad,
+        priorityOverride:norm(r.PRIORIDAD_MANUAL)
+      });
+    });
+    grouped.forEach(({carrera,items})=>{
+      const coord=ensureCoordination(carrera);
+      coord.needItems=items.slice(0,3);
+      coord.needsOverride='';
+      coord.priorityOverride='';
     });
   }
 
@@ -1057,6 +1272,7 @@ function applyExcel(sheets){
     });
   }
   cleanupInvalidCareers();
+  dedupeCareerState();
 }
 
 function basePdfCss(){
@@ -1110,11 +1326,15 @@ function dnfHtml(){
     <div class="h2">3.6 Modalidad preferida</div><table class="data"><tr><th>Modalidad</th><th>Docentes</th><th>Porcentaje</th></tr>${distRows(mod,total)}</table>
     <div class="h2">3.7 Barreras principales</div><table class="data"><tr><th>Barrera</th><th>Docentes</th><th>Porcentaje</th></tr>${distRows(barrier,total)}</table>
     <div class="page-break"></div>${pdfHeader('Detección de Necesidades de Formación',state.period.dnfCode)}
-    <div class="h1">4. Líneas de formación por carrera</div><p>Las necesidades específicas se generan automáticamente a partir de la información de cada carrera y pueden ser priorizadas institucionalmente.</p>
-    <table class="data"><tr><th>Carrera</th><th>Coordinador</th><th>Necesidades específicas</th><th>Prioridad</th></tr>${
-      state.coordinations.filter(c=>state.teachers.some(t=>t.carrera===c.carrera)).map(c=>`<tr><td>${esc(c.carrera)}</td><td>${esc(c.coordinador||'Por definir')}</td><td>${esc(needsFor(c.carrera).join(' · ')||'Sin información suficiente')}</td><td>${esc(priorityFor(c.carrera))}</td></tr>`).join('')
+    <div class="h1">4. Necesidades específicas por carrera</div><p>Las necesidades específicas se obtienen de la información registrada por los docentes. La prioridad se determina para cada necesidad de manera independiente.</p>
+    <table class="data"><tr><th>Carrera</th><th>Necesidad específica</th><th>Prioridad sugerida</th><th>Prioridad final</th></tr>${
+      specificCareerNames().flatMap(career=>ensureNeedItems(career).map(item=>`<tr><td>${esc(career)}</td><td>${esc(item.text)}</td><td>${esc(autoPriorityForNeed(career,item.text))}</td><td>${esc(item.priorityOverride||autoPriorityForNeed(career,item.text))}</td></tr>`)).join('')
     }</table>
-    <div class="h2">4.1 Formación genérica institucional</div><p>Las siguientes líneas transversales se mantienen como catálogo editable para el período:</p><ul>${state.settings.genericLines.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul>
+    <div class="h2">4.1 Coordinadores por carrera</div><p>Los coordinadores se registran como responsables administrativos de cada carrera y se mantienen separados de las necesidades de formación.</p>
+    <table class="data"><tr><th>Carrera</th><th>Coordinador</th></tr>${
+      specificCareerNames().map(career=>`<tr><td>${esc(career)}</td><td>${esc(ensureCoordination(career)?.coordinador||'Por definir')}</td></tr>`).join('')
+    }</table>
+    <div class="h2">4.2 Formación genérica institucional</div><p>Las siguientes líneas transversales se mantienen como catálogo editable para el período:</p><ul>${state.settings.genericLines.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul>
     <div class="h1">5. Conclusiones</div>
     <p>El diagnóstico evidencia una base de ${total} docentes y permite diferenciar brechas por nivel académico, carrera, disposición y tipo de formación. Las prioridades generadas deben utilizarse como insumo directo para la selección y planificación del Plan de Formación Docente.</p>
     <div class="h1">6. Recomendaciones</div><p>Priorizar las carreras con brecha Alta, aprovechar la disposición declarada de los docentes y mantener rutas diferenciadas para formación específica y genérica, evitando duplicar información entre el diagnóstico y el Plan.</p>
@@ -1201,13 +1421,16 @@ $('#btnImport').onclick=importExcel;
     state.period={...defaultState().period,...(loaded.period||{})};
     state.settings={...defaultState().settings,...(loaded.settings||{})};
     state.careers=(loaded.careers?.length?loaded.careers:defaultState().careers).map(x=>({...x}));
-    const previousCoords=loaded.coordinations||[];
+    state.coordinations=(loaded.coordinations||[]).map(x=>({...x,needItems:Array.isArray(x.needItems)?x.needItems:[]}));
+    dedupeCareerState();
+    const previousCoords=[...state.coordinations];
     state.coordinations=state.careers.map(cr=>({
       carrera:cr.name,
       coordinador:'',
       priorityOverride:'',
       needsOverride:'',
-      ...(previousCoords.find(x=>x.carrera===cr.name)||{})
+      needItems:[],
+      ...(previousCoords.find(x=>careerKey(x.carrera)===careerKey(cr.name))||{})
     }));
     previousCoords.filter(x=>
       !state.coordinations.some(c=>c.carrera===x.carrera) &&
@@ -1221,6 +1444,7 @@ $('#btnImport').onclick=importExcel;
     state.followup=loaded.followup||[];
   }
   const cleanedInvalidCareers=cleanupInvalidCareers();
-  if(cleanedInvalidCareers) await save();
+  const dedupedCareers=dedupeCareerState();
+  if(cleanedInvalidCareers||dedupedCareers) await save();
   render();
 })();
