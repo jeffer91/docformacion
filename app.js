@@ -472,9 +472,10 @@ function focusCorrectionTarget(view,teacherId='',careerName=''){
   });
 }
 
-function bindCorrectionActions(type){
+function bindCorrectionActions(type,root=document){
   const back=docViewForType(type);
-  $$('[data-correct-view]').forEach(btn=>btn.onclick=()=>{
+  const buttons=root.querySelectorAll ? [...root.querySelectorAll('[data-correct-view]')] : [];
+  buttons.forEach(btn=>btn.onclick=()=>{
     const view=btn.dataset.correctView;
     const teacherId=btn.dataset.teacherId||'';
     const careerName=btn.dataset.careerName||'';
@@ -491,7 +492,7 @@ function bindCorrectionActions(type){
 
 function statusCard(type,title){
   const s=documentStatus(type);
-  return `<div class="status-card simple-doc-card">
+  return `<div class="status-card simple-doc-card" data-status-type="${type}">`
     <div class="status-head">
       <h3>${esc(title)}</h3>
       <span class="status-badge ${s.ready?'ready':'blocked'}">${s.ready?'Listo':'Pendiente'}</span>
@@ -520,9 +521,9 @@ function renderHome(){
       ${statusCard('plan','Plan de Formación Docente')}
       ${statusCard('informe','Informe de Cumplimiento del Plan de Formación')}
     </div>`;
-  bindCorrectionActions('dnf');
-  bindCorrectionActions('plan');
-  bindCorrectionActions('informe');
+  bindCorrectionActions('dnf',$('[data-status-type="dnf"]'));
+  bindCorrectionActions('plan',$('[data-status-type="plan"]'));
+  bindCorrectionActions('informe',$('[data-status-type="informe"]'));
   $$('[data-generate]').forEach(b=>b.onclick=()=>generateDocument(b.dataset.generate));
 }
 
