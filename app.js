@@ -82,6 +82,7 @@ function defaultState() {
 let state = defaultState();
 let currentView = 'inicio';
 let editingTeacherId = null;
+let teacherReturnView = null;
 
 function id() {
   return 't_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -130,7 +131,7 @@ function ensureCoordination(name){
 }
 function ensureCareer(name, program=''){
   const clean=norm(name);
-  if(!clean) return;
+  if(!clean || !validCareerName(clean)) return;
   if(!state.careers.some(c=>c.name===clean)){
     state.careers.push({name:clean,program:norm(program)||'Por definir'});
   }
@@ -141,16 +142,16 @@ function setView(view) {
   currentView = view;
   $$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
   const meta = {
-    inicio:['Inicio','Completa primero los datos y luego genera los tres documentos.'],
-    periodo:['Datos generales','Información institucional y del período.'],
-    carreras:['Carreras','Catálogo inicial de carreras y tipo de programa; puedes agregar más.'],
-    docentes:['Docentes','Base única de información para los tres documentos.'],
-    necesidades:['Necesidades y líneas','Datos derivados para completar la Detección de Necesidades.'],
-    planificacion:['Planificación','Selecciona docentes y completa los datos que requiere el Plan.'],
-    seguimiento:['Seguimiento','Registra ejecución, avance y evidencias para el Informe.'],
-    'doc-dnf':['Detección de Necesidades','Estado y generación del primer documento.'],
-    'doc-plan':['Plan de Formación Docente','Estado y generación del segundo documento.'],
-    'doc-informe':['Informe de Cumplimiento','Estado y generación del tercer documento.']
+    inicio:['Inicio','Documentos de Formación Docente.'],
+    periodo:['Datos generales','Corrige la información institucional requerida.'],
+    carreras:['Carreras','Corrige el catálogo de carreras y programas.'],
+    docentes:['Docentes','Corrige la información del docente seleccionado.'],
+    necesidades:['Necesidades y líneas','Corrige coordinadores y líneas de formación.'],
+    planificacion:['Planificación','Corrige los datos necesarios para el Plan.'],
+    seguimiento:['Seguimiento','Corrige los datos necesarios para el Informe.'],
+    'doc-dnf':['Detección de Necesidades de Formación','Revisa lo pendiente y genera el documento cuando esté listo.'],
+    'doc-plan':['Plan de Formación Docente','Revisa lo pendiente y genera el documento cuando esté listo.'],
+    'doc-informe':['Informe de Cumplimiento del Plan de Formación','Revisa lo pendiente y genera el documento cuando esté listo.']
   }[view] || ['DocFormación',''];
   $('#viewTitle').textContent = meta[0];
   $('#viewSubtitle').textContent = meta[1];
@@ -187,24 +188,51 @@ function stats() {
 function isPlaceholderCode(v){
   return !v || /0X|AÑO|MES/i.test(String(v));
 }
-function teacherMissing(t){
+function looksLikeStudyProgram(name){
+  const value=norm(name).toLowerCase();
+  if(!value) return false;
+  return /\b(master|máster|maestria|maestría|doctorado|phd|especializacion|especialización|diplomado)\b/i.test(value);
+}
+
+function validCareerName(name){
+  return !!norm(name) && !looksLikeStudyProgram(name);
+}
+
+function cleanupInvalidCareers(){
+  const invalid=new Set((state.careers||[])
+    .filter(cr=>looksLikeStudyProgram(cr.name) && (!norm(cr.program) || cr.program==='Por definir'))
+    .map(cr=>cr.name));
+  if(!invalid.size) return false;
+  state.careers=(state.careers||[]).filter(cr=>!invalid.has(cr.name));
+  state.coordinations=(state.coordinations||[]).filter(co=>!invalid.has(co.carrera));
+  return true;
+}
+
+function teacherMissingEntries(t){
   const missing=[];
   const required=[
-    ['cedula','Cédula'],['nombre','Nombre'],['carrera','Carrera principal'],['dedicacion','Dedicación'],
+    ['cedula','Cédula'],['nombre','Nombre'],['dedicacion','Dedicación'],
     ['nivelActual','Nivel académico actual'],['tituloActual','Título académico actual'],['afinidad','Afinidad del título'],
     ['estudiaActualmente','¿Estudia actualmente?'],['nivelDeseado','Nivel que desea alcanzar'],
     ['areaInteres','Área o programa de interés'],['dispuesto','Disposición para estudiar'],
     ['tipoFormacion','Tipo de formación'],['modalidadPreferida','Modalidad preferida'],
-    ['inicioTentativo','Inicio tentativo'],['barrera','Barrera principal'],['actualizacionReciente','Actualización reciente']
+    ['barrera','Barrera principal'],['actualizacionReciente','Actualización reciente']
   ];
-  required.forEach(([k,label])=>{if(!norm(t[k])) missing.push(label);});
+  required.forEach(([key,label])=>{if(!norm(t[key])) missing.push({key,label});});
+  if(!norm(t.carrera)) missing.push({key:'carrera',label:'Carrera principal'});
+  else if(!validCareerName(t.carrera)) missing.push({key:'carrera',label:'Carrera principal válida'});
   if(t.estudiaActualmente==='Sí'){
-    if(!norm(t.nivelCurso)) missing.push('Nivel de formación en curso');
-    if(!norm(t.programaCurso)) missing.push('Programa en curso');
-    if(!norm(t.institucionCurso)) missing.push('Institución de estudio');
+    if(!norm(t.nivelCurso)) missing.push({key:'nivelCurso',label:'Nivel de formación en curso'});
+    if(!norm(t.programaCurso)) missing.push({key:'programaCurso',label:'Programa en curso'});
+    if(!norm(t.institucionCurso)) missing.push({key:'institucionCurso',label:'Institución de estudio'});
   }
   return missing;
 }
+
+function teacherMissing(t){
+  return teacherMissingEntries(t).map(x=>x.label);
+}
+
 function periodMissing(type){
   const p=state.period, miss=[];
   if(!p.start) miss.push('Fecha de inicio del período');
@@ -217,33 +245,62 @@ function periodMissing(type){
   if(isPlaceholderCode(code)) miss.push('Código documental definitivo');
   return miss;
 }
+
 function documentStatus(type){
-  const missing=[...periodMissing(type)];
-  const careersInUse=[...new Set(state.teachers.map(t=>t.carrera).filter(Boolean))];
+  const issues=periodMissing(type).map(text=>({kind:'period',text,view:'periodo'}));
+  const careersInUse=[...new Set(state.teachers.map(t=>t.carrera).filter(validCareerName))];
 
-  if(!state.teachers.length) missing.push('Cargar al menos un docente');
+  if(!state.teachers.length){
+    issues.push({kind:'teachers-empty',text:'Cargar al menos un docente',view:'docentes'});
+  }
 
-  const incompleteTeachers=state.teachers.filter(t=>teacherMissing(t).length);
-  incompleteTeachers.slice(0,3).forEach(t=>{
-    const fields=teacherMissing(t);
-    missing.push((t.nombre||t.cedula||'Docente')+': falta '+fields.slice(0,3).join(', ')+(fields.length>3?' y '+(fields.length-3)+' campo(s) más':''));
+  state.teachers.forEach(t=>{
+    const entries=teacherMissingEntries(t);
+    if(entries.length){
+      issues.push({
+        kind:'teacher',
+        teacherId:t.id,
+        name:t.nombre||t.cedula||'Docente',
+        fields:entries,
+        text:(t.nombre||t.cedula||'Docente')+': falta '+entries.map(x=>x.label).join(', '),
+        view:'docentes'
+      });
+    }
   });
-  if(incompleteTeachers.length>3) missing.push('Hay '+(incompleteTeachers.length-3)+' docente(s) adicional(es) con datos pendientes');
 
   const withoutProgram=careersInUse.filter(name=>{
     const p=programForCareer(name);
     return !p || p==='Por definir';
   });
-  if(withoutProgram.length) missing.push('Programa pendiente para: '+withoutProgram.slice(0,3).join(', ')+(withoutProgram.length>3?'...':''));
+  if(withoutProgram.length){
+    issues.push({
+      kind:'career-program',
+      names:withoutProgram,
+      text:withoutProgram.length+' carrera(s) sin programa definido',
+      view:'carreras'
+    });
+  }
 
   const noCoordinator=careersInUse.filter(name=>!norm(state.coordinations.find(c=>c.carrera===name)?.coordinador));
-  if(type==='dnf' && noCoordinator.length) missing.push('Coordinador pendiente para: '+noCoordinator.slice(0,3).join(', ')+(noCoordinator.length>3?'...':''));
-  if(type==='dnf' && !(state.settings.genericLines||[]).filter(norm).length) missing.push('Definir al menos una línea genérica');
+  if(type==='dnf' && noCoordinator.length){
+    issues.push({
+      kind:'coordinator',
+      names:noCoordinator,
+      text:noCoordinator.length+' carrera(s) sin coordinador definido',
+      view:'necesidades'
+    });
+  }
+
+  if(type==='dnf' && !(state.settings.genericLines||[]).filter(norm).length){
+    issues.push({kind:'generic',text:'Definir al menos una línea genérica',view:'necesidades'});
+  }
 
   if(type==='plan' || type==='informe'){
     ensurePlanRows();
     const selected=state.plan.filter(p=>p.selected);
-    if(!selected.length) missing.push('Seleccionar al menos un docente en Planificación');
+    if(!selected.length){
+      issues.push({kind:'plan-empty',text:'Seleccionar al menos un docente en Planificación',view:'planificacion'});
+    }
 
     selected.forEach(p=>{
       const fields=[];
@@ -256,7 +313,14 @@ function documentStatus(type){
       if(p.supportType==='Económico'&&!n(p.supportAmount)) fields.push('monto');
       if(fields.length){
         const t=teacherById(p.teacherId);
-        missing.push((t?.nombre||'Docente')+': planificación sin '+fields.join(', '));
+        issues.push({
+          kind:'plan-teacher',
+          teacherId:p.teacherId,
+          name:t?.nombre||'Docente',
+          fields,
+          text:(t?.nombre||'Docente')+': planificación sin '+fields.join(', '),
+          view:'planificacion'
+        });
       }
     });
   }
@@ -276,30 +340,19 @@ function documentStatus(type){
       }
       if(fields.length){
         const t=teacherById(p.teacherId);
-        missing.push((t?.nombre||'Docente')+': seguimiento sin '+fields.join(', '));
+        issues.push({
+          kind:'follow-teacher',
+          teacherId:p.teacherId,
+          name:t?.nombre||'Docente',
+          fields,
+          text:(t?.nombre||'Docente')+': seguimiento sin '+fields.join(', '),
+          view:'seguimiento'
+        });
       }
     });
   }
 
-  return { ready: missing.length===0, missing };
-}
-function correctionViewForMissing(item,type){
-  const text=String(item||'').toLowerCase();
-  if(
-    text.includes('código documental') ||
-    text.includes('fecha de inicio del período') ||
-    text.includes('fecha de fin del período') ||
-    text.includes('fecha de elaboración') ||
-    text.includes('elaborado por') ||
-    text.includes('revisado por') ||
-    text.includes('aprobado por')
-  ) return 'periodo';
-  if(text.includes('programa pendiente para')) return 'carreras';
-  if(text.includes('coordinador pendiente') || text.includes('línea genérica')) return 'necesidades';
-  if(text.includes('seleccionar al menos un docente') || text.includes('planificación sin')) return 'planificacion';
-  if(text.includes('seguimiento sin')) return 'seguimiento';
-  if(text.includes('cargar al menos un docente') || text.includes(': falta ') || text.includes('docente(s) adicional(es)')) return 'docentes';
-  return type==='dnf'?'necesidades':type==='plan'?'planificacion':'seguimiento';
+  return {ready:issues.length===0,missing:issues.map(x=>x.text),issues};
 }
 
 function correctionLabel(view){
@@ -313,14 +366,127 @@ function correctionLabel(view){
   })[view] || 'Corregir';
 }
 
-function missingRows(type,missing){
-  return missing.map((item)=>{
-    const view=correctionViewForMissing(item,type);
-    return `<div class="missing-row">
-      <div class="missing-text">${esc(item)}</div>
-      <button class="secondary compact" data-go="${view}">Corregir en ${esc(correctionLabel(view))}</button>
-    </div>`;
-  }).join('');
+function issueButton(issue,label='Corregir'){
+  const teacher=issue.teacherId?` data-teacher-id="${esc(issue.teacherId)}"`:'';
+  const focus=issue.fields?.[0]?.key?` data-focus-field="${esc(issue.fields[0].key)}"`:'';
+  const career=issue.careerName?` data-career-name="${esc(issue.careerName)}"`:'';
+  return `<button class="secondary compact" data-correct-view="${esc(issue.view)}"${teacher}${focus}${career}>${esc(label)}</button>`;
+}
+
+function issueGroup(title,items){
+  return `<details class="issue-group">
+    <summary><span>${esc(title)}</span><span class="issue-group-hint">Ver y corregir</span></summary>
+    <div class="issue-group-body">${items.join('')}</div>
+  </details>`;
+}
+
+function issueLine(issue,description,buttonLabel='Corregir'){
+  return `<div class="issue-line">
+    <div class="issue-line-text">${description}</div>
+    ${issueButton(issue,buttonLabel)}
+  </div>`;
+}
+
+function renderIssues(type,issues){
+  const out=[];
+  const teachers=issues.filter(x=>x.kind==='teacher');
+  const planTeachers=issues.filter(x=>x.kind==='plan-teacher');
+  const followTeachers=issues.filter(x=>x.kind==='follow-teacher');
+  const groupedKinds=new Set(['teacher','plan-teacher','follow-teacher','career-program','coordinator']);
+
+  issues.filter(x=>!groupedKinds.has(x.kind)).forEach(issue=>{
+    out.push(issueLine(issue,esc(issue.text),`Corregir en ${correctionLabel(issue.view)}`));
+  });
+
+  if(teachers.length){
+    out.push(issueGroup(
+      teachers.length+' docente(s) con información incompleta',
+      teachers.map(issue=>issueLine(
+        issue,
+        `<strong>${esc(issue.name)}</strong><span>${esc(issue.fields.map(x=>x.label).join(' · '))}</span>`
+      ))
+    ));
+  }
+
+  const careerProgram=issues.find(x=>x.kind==='career-program');
+  if(careerProgram){
+    out.push(issueGroup(
+      careerProgram.names.length+' carrera(s) sin programa',
+      careerProgram.names.map(name=>issueLine(
+        {view:'carreras',careerName:name},
+        `<strong>${esc(name)}</strong><span>Programa sin definir</span>`
+      ))
+    ));
+  }
+
+  const coordinators=issues.find(x=>x.kind==='coordinator');
+  if(coordinators){
+    out.push(issueGroup(
+      coordinators.names.length+' carrera(s) sin coordinador',
+      coordinators.names.map(name=>issueLine(
+        {view:'necesidades',careerName:name},
+        `<strong>${esc(name)}</strong><span>Coordinador sin definir</span>`
+      ))
+    ));
+  }
+
+  if(planTeachers.length){
+    out.push(issueGroup(
+      planTeachers.length+' docente(s) con planificación incompleta',
+      planTeachers.map(issue=>issueLine(
+        issue,
+        `<strong>${esc(issue.name)}</strong><span>${esc(issue.fields.join(' · '))}</span>`
+      ))
+    ));
+  }
+
+  if(followTeachers.length){
+    out.push(issueGroup(
+      followTeachers.length+' docente(s) con seguimiento incompleto',
+      followTeachers.map(issue=>issueLine(
+        issue,
+        `<strong>${esc(issue.name)}</strong><span>${esc(issue.fields.join(' · '))}</span>`
+      ))
+    ));
+  }
+
+  return `<div class="issue-list">${out.join('')}</div>`;
+}
+
+function docViewForType(type){
+  return type==='dnf'?'doc-dnf':type==='plan'?'doc-plan':'doc-informe';
+}
+
+function focusCorrectionTarget(view,teacherId='',careerName=''){
+  requestAnimationFrame(()=>{
+    let target=null;
+    if(view==='planificacion'&&teacherId) target=$(`[data-plan-row="${teacherId}"]`);
+    if(view==='seguimiento'&&teacherId) target=$(`[data-follow-row="${teacherId}"]`);
+    if(view==='carreras'&&careerName) target=$$('[data-career-name]').find(el=>el.value===careerName)?.closest('.catalog-row');
+    if(view==='necesidades'&&careerName) target=$$('.coord-input').find(el=>el.dataset.career===careerName)?.closest('tr');
+    if(target){
+      target.classList.add('attention-target');
+      target.scrollIntoView({behavior:'smooth',block:'center'});
+      setTimeout(()=>target.classList.remove('attention-target'),2200);
+    }
+  });
+}
+
+function bindCorrectionActions(type){
+  const back=docViewForType(type);
+  $$('[data-correct-view]').forEach(btn=>btn.onclick=()=>{
+    const view=btn.dataset.correctView;
+    const teacherId=btn.dataset.teacherId||'';
+    const careerName=btn.dataset.careerName||'';
+    const focusField=btn.dataset.focusField||'';
+    if(view==='docentes'&&teacherId){
+      setView('docentes');
+      openTeacher(teacherId,back,focusField);
+      return;
+    }
+    setView(view);
+    focusCorrectionTarget(view,teacherId,careerName);
+  });
 }
 
 function statusCard(type,title){
@@ -333,31 +499,30 @@ function statusCard(type,title){
     ${s.ready
       ? `<div class="ready-message">Toda la información necesaria está completa.</div>
          <div class="doc-actions"><button class="primary" data-generate="${type}">Generar PDF</button></div>`
-      : `<div class="missing-heading">Falta completar:</div>
-         <div class="missing-rows">${missingRows(type,s.missing)}</div>`}
+      : `<div class="missing-heading">${s.issues.length} pendiente(s) por completar</div>${renderIssues(type,s.issues)}`}
   </div>`;
 }
 
 function completionAlert(type){
   const s=documentStatus(type);
-  if(s.ready) return '<div class="alert-strip success"><div><strong>Documento listo</strong>Ya puedes generar el PDF desde Inicio o desde Documentos.</div></div>';
-  return `<div class="alert-strip warning"><div><strong>${s.missing.length} pendiente(s)</strong>Corrige los datos indicados y la app marcará el documento como listo automáticamente.</div></div>`;
+  if(s.ready) return '<div class="alert-strip success"><div><strong>Documento listo</strong>La información mínima está completa.</div></div>';
+  return `<div class="alert-strip warning"><div><strong>${s.issues.length} pendiente(s)</strong>Guarda la corrección y vuelve al documento para verificar el estado.</div></div>`;
 }
 
-function renderHome() {
+function renderHome(){
   $('#content').innerHTML = `
     <div class="simple-home-head">
       <h2>Documentos de Formación Docente</h2>
-      <p>Revisa únicamente qué falta. Entra a corregir cada dato y, cuando todo esté completo, genera el PDF.</p>
+      <p>Selecciona un documento, corrige únicamente lo pendiente y genera el PDF cuando quede listo.</p>
     </div>
-
     <div class="status-grid simple-status-grid">
-      ${statusCard('dnf','1. Detección de Necesidades de Formación')}
-      ${statusCard('plan','2. Plan de Formación Docente')}
-      ${statusCard('informe','3. Informe de Cumplimiento del Plan de Formación')}
+      ${statusCard('dnf','Detección de Necesidades de Formación')}
+      ${statusCard('plan','Plan de Formación Docente')}
+      ${statusCard('informe','Informe de Cumplimiento del Plan de Formación')}
     </div>`;
-
-  $$('[data-go]').forEach(b=>b.onclick=()=>setView(b.dataset.go));
+  bindCorrectionActions('dnf');
+  bindCorrectionActions('plan');
+  bindCorrectionActions('informe');
   $$('[data-generate]').forEach(b=>b.onclick=()=>generateDocument(b.dataset.generate));
 }
 
@@ -472,8 +637,9 @@ function teacherTable(){
   }</tbody></table>`;
 }
 
-function openTeacher(teacherId=null) {
+function openTeacher(teacherId=null,returnView=null,focusField=''){
   editingTeacherId=teacherId;
+  teacherReturnView=returnView||null;
   const t=teacherId?teacherById(teacherId):{
     cedula:'',nombre:'',carrera:'',dedicacion:'Tiempo Completo',
     nivelActual:'',tituloActual:'',afinidad:'Sí',estudiaActualmente:'No',
@@ -486,7 +652,7 @@ function openTeacher(teacherId=null) {
   $('#teacherFields').innerHTML = [
     field('Cédula','cedula',t.cedula),
     field('Nombre completo','nombre',t.nombre),
-    field('Carrera principal','carrera',t.carrera,'select',careerNames(),false,'El tipo de programa se toma automáticamente del catálogo de Carreras.'),
+    field('Carrera principal','carrera',validCareerName(t.carrera)?t.carrera:'','select',careerNames(),false,'Selecciona únicamente la carrera principal donde labora.'),
     field('Dedicación','dedicacion',t.dedicacion,'select',['Tiempo Completo','Medio Tiempo','Tiempo Parcial']),
     field('Nivel académico actual','nivelActual',t.nivelActual,'select',LEVELS),
     field('Título académico actual','tituloActual',t.tituloActual),
@@ -505,21 +671,46 @@ function openTeacher(teacherId=null) {
     field('Actualización reciente','actualizacionReciente',t.actualizacionReciente,'select',['Sí','No'])
   ].join('');
   $('#teacherDialog').showModal();
+  if(focusField){
+    requestAnimationFrame(()=>{
+      const el=$(`#teacherForm [name="${focusField}"]`);
+      if(el){
+        el.closest('.field')?.classList.add('needs-attention');
+        el.focus();
+      }
+    });
+  }
 }
 
-$('#teacherForm').addEventListener('submit',async(e)=>{
+async function handleTeacherSubmit(e){
   e.preventDefault();
   const fd=new FormData(e.target);
   const obj=Object.fromEntries(fd.entries());
   if(!obj.cedula || !obj.nombre || !obj.carrera){toast('Completa cédula, nombre y carrera');return;}
+  if(!validCareerName(obj.carrera)){toast('Selecciona una carrera principal válida');return;}
   const duplicate=state.teachers.find(t=>t.cedula===obj.cedula && t.id!==editingTeacherId);
   if(duplicate){toast('Ya existe un docente con esa cédula');return;}
   if(editingTeacherId) Object.assign(teacherById(editingTeacherId),obj);
   else state.teachers.push({id:id(),...obj});
   $('#teacherDialog').close();
-  await save(); renderTeachers(); toast('Docente guardado');
-});
-$('#closeTeacher').onclick=$('#cancelTeacher').onclick=()=>$('#teacherDialog').close();
+  const back=teacherReturnView;
+  teacherReturnView=null;
+  await save();
+  if(back) setView(back);
+  else renderTeachers();
+  toast('Docente guardado');
+}
+
+function closeTeacherDialog(){
+  $('#teacherDialog').close();
+  const back=teacherReturnView;
+  teacherReturnView=null;
+  if(back) setView(back);
+}
+
+$('#teacherForm').addEventListener('submit',handleTeacherSubmit);
+
+$('#closeTeacher').onclick=$('#cancelTeacher').onclick=closeTeacherDialog;
 
 function needSummary(career) {
   const list=state.teachers.filter(t=>t.carrera===career);
@@ -687,38 +878,20 @@ function renderFollowup() {
   };
 }
 
-function renderDocumentView(type) {
-  const cfg={
-    dnf:{title:'Detección de Necesidades de Formación'},
-    plan:{title:'Plan de Formación Docente'},
-    informe:{title:'Informe de Cumplimiento del Plan de Formación'}
-  }[type];
+function renderDocumentView(type){
   const s=documentStatus(type);
-
   $('#content').innerHTML = `
-    <div class="simple-home-head">
-      <h2>${esc(cfg.title)}</h2>
-      <p>${s.ready?'El documento está listo para generar.':'Completa los siguientes datos para habilitar el PDF.'}</p>
-    </div>
-
     <div class="status-card simple-doc-card single-document">
       <div class="status-head">
-        <h3>${esc(cfg.title)}</h3>
+        <div class="missing-heading">${s.ready?'Documento completo':'Falta completar'}</div>
         <span class="status-badge ${s.ready?'ready':'blocked'}">${s.ready?'Listo':'Pendiente'}</span>
       </div>
-
       ${s.ready
-        ? `<div class="ready-message">Toda la información necesaria está completa.</div>
-           <div class="doc-actions">
-             <button class="secondary" data-go="inicio">Volver al inicio</button>
-             <button class="primary" id="generateCurrent">Generar PDF</button>
-           </div>`
-        : `<div class="missing-heading">Falta completar:</div>
-           <div class="missing-rows">${missingRows(type,s.missing)}</div>
-           <div class="doc-actions"><button class="secondary" data-go="inicio">Volver al inicio</button></div>`}
+        ? `<div class="ready-message">Toda la información requerida está completa.</div>
+           <div class="doc-actions"><button class="primary" id="generateCurrent">Generar PDF</button></div>`
+        : `<div class="issue-count">${s.issues.length} pendiente(s) detectado(s)</div>${renderIssues(type,s.issues)}`}
     </div>`;
-
-  $$('[data-go]').forEach(b=>b.onclick=()=>setView(b.dataset.go));
+  bindCorrectionActions(type);
   if($('#generateCurrent')) $('#generateCurrent').onclick=()=>generateDocument(type);
 }
 
@@ -764,7 +937,7 @@ function applyExcel(sheets){
     sheets.DOCENTES.forEach(r=>{
       const cedula=norm(r.CEDULA); if(!cedula)return;
       const carrera=norm(r.CARRERA_PRINCIPAL);
-      if(carrera) ensureCareer(carrera, r.PROGRAMA_CARRERA||'');
+      if(carrera && validCareerName(carrera)) ensureCareer(carrera, r.PROGRAMA_CARRERA||'');
       const obj={
         cedula,nombre:norm(r.NOMBRE_COMPLETO),carrera,
         dedicacion:norm(r.DEDICACION)||'Tiempo Completo',
@@ -836,7 +1009,7 @@ function applyExcel(sheets){
       const cedula=norm(r['Cédula']??r.CEDULA); if(!cedula)return;
       const nombre=norm(r.Docente??r.DOCENTE);
       const carrera=norm(r['Unidad / carrera donde labora']??r.CARRERA_PRINCIPAL);
-      if(carrera) ensureCareer(carrera);
+      if(carrera && validCareerName(carrera)) ensureCareer(carrera);
 
       let t=existing.get(cedula);
       if(!t){
@@ -875,6 +1048,7 @@ function applyExcel(sheets){
       fol.evidenceTitle=norm(r['Evidencia presentada'])||fol.evidenceTitle;
     });
   }
+  cleanupInvalidCareers();
 }
 
 function basePdfCss(){
@@ -1038,5 +1212,7 @@ $('#btnImport').onclick=importExcel;
     state.plan=loaded.plan||[];
     state.followup=loaded.followup||[];
   }
+  const cleanedInvalidCareers=cleanupInvalidCareers();
+  if(cleanedInvalidCareers) await save();
   render();
 })();
