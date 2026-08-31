@@ -492,7 +492,7 @@ function bindCorrectionActions(type,root=document){
 
 function statusCard(type,title){
   const s=documentStatus(type);
-  return `<div class="status-card simple-doc-card" data-status-type="${type}">`
+  return `<div class="status-card simple-doc-card" data-status-type="${type}">
     <div class="status-head">
       <h3>${esc(title)}</h3>
       <span class="status-badge ${s.ready?'ready':'blocked'}">${s.ready?'Listo':'Pendiente'}</span>
