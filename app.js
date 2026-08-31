@@ -678,6 +678,12 @@ async function importExcel(){
   await save(); render(); toast('Excel global importado');
 }
 function applyExcel(sheets){
+  if(sheets.CARRERAS?.length){
+    sheets.CARRERAS.forEach(r=>{
+      ensureCareer(r.CARRERA||r.Carrera||r.carrera, r.PROGRAMA||r.Programa||r.programa);
+    });
+  }
+
   const p=(sheets.PERIODO||[])[0];
   if(p){
     state.period.start=p.PERIODO_INICIO||state.period.start;
@@ -691,13 +697,19 @@ function applyExcel(sheets){
     state.period.approvedBy=p.APROBADO_POR||state.period.approvedBy;
     state.period.approvedRole=p.CARGO_APROBADO||state.period.approvedRole;
     state.period.targetPercent=n(p.META_FORMACION_PORCENTAJE)||state.period.targetPercent;
+    state.period.dnfCode=p.CODIGO_DNF||state.period.dnfCode;
+    state.period.planCode=p.CODIGO_PLAN||state.period.planCode;
+    state.period.reportCode=p.CODIGO_INFORME||state.period.reportCode;
   }
+
   if(sheets.DOCENTES?.length){
-    const existing=new Map(state.teachers.map(t=>[t.cedula,t]));
+    const existing=new Map(state.teachers.map(t=>[String(t.cedula),t]));
     sheets.DOCENTES.forEach(r=>{
       const cedula=norm(r.CEDULA); if(!cedula)return;
+      const carrera=norm(r.CARRERA_PRINCIPAL);
+      if(carrera) ensureCareer(carrera, r.PROGRAMA_CARRERA||'');
       const obj={
-        cedula,nombre:norm(r.NOMBRE_COMPLETO),carrera:norm(r.CARRERA_PRINCIPAL),
+        cedula,nombre:norm(r.NOMBRE_COMPLETO),carrera,
         dedicacion:norm(r.DEDICACION)||'Tiempo Completo',
         nivelActual:norm(r.NIVEL_ACADEMICO_ACTUAL),tituloActual:norm(r.TITULO_ACADEMICO_ACTUAL),
         afinidad:yes(r.AFIN_TITULO_CARRERA)?'Sí':'No',
@@ -713,16 +725,22 @@ function applyExcel(sheets){
       else {const t={id:id(),...obj}; state.teachers.push(t);existing.set(cedula,t);}
     });
   }
+
   if(sheets.COORDINACIONES?.length){
     sheets.COORDINACIONES.forEach(r=>{
-      const c=state.coordinations.find(x=>x.carrera===norm(r.CARRERA)); if(!c)return;
-      c.coordinador=norm(r.COORDINADOR)||c.coordinador;c.priorityOverride=norm(r.PRIORIDAD_MANUAL)||c.priorityOverride;
+      const carrera=norm(r.CARRERA); if(!carrera)return;
+      ensureCareer(carrera);
+      const coord=state.coordinations.find(x=>x.carrera===carrera);
+      coord.coordinador=norm(r.COORDINADOR)||coord.coordinador;
+      coord.priorityOverride=norm(r.PRIORIDAD_MANUAL)||coord.priorityOverride;
+      coord.needsOverride=norm(r.NECESIDADES)||coord.needsOverride;
     });
   }
+
   ensurePlanRows();
   if(sheets.PLAN?.length){
     sheets.PLAN.forEach(r=>{
-      const t=state.teachers.find(x=>x.cedula===norm(r.CEDULA)); if(!t)return;
+      const t=state.teachers.find(x=>String(x.cedula)===norm(r.CEDULA)); if(!t)return;
       const p=planByTeacher(t.id);
       Object.assign(p,{
         selected:yes(r.INCLUIR_EN_PLAN),level:norm(r.NIVEL_PLANIFICADO)||p.level,
@@ -734,18 +752,70 @@ function applyExcel(sheets){
       });
     });
   }
+
   ensureFollowRows();
   if(sheets.SEGUIMIENTO?.length){
     sheets.SEGUIMIENTO.forEach(r=>{
-      const t=state.teachers.find(x=>x.cedula===norm(r.CEDULA)); if(!t)return;
-      let f=followByTeacher(t.id);
-      if(!f){f={teacherId:t.id,status:'No iniciado',realStart:'',plannedEnd:'',progress:0,evidenceTitle:'',evidencePath:'',abandoned:false};state.followup.push(f);}
-      Object.assign(f,{
-        status:norm(r.ESTADO)||f.status,realStart:norm(r.FECHA_REAL_INICIO)||f.realStart,
-        plannedEnd:norm(r.FECHA_PREVISTA_FINALIZACION)||f.plannedEnd,progress:n(r.PORCENTAJE_AVANCE),
-        evidenceTitle:norm(r.TITULO_EVIDENCIA)||f.evidenceTitle,evidencePath:norm(r.RUTA_EVIDENCIA)||f.evidencePath,
+      const t=state.teachers.find(x=>String(x.cedula)===norm(r.CEDULA)); if(!t)return;
+      let fol=followByTeacher(t.id);
+      if(!fol){fol={teacherId:t.id,status:'No iniciado',realStart:'',plannedEnd:'',progress:0,evidenceTitle:'',evidencePath:'',abandoned:false};state.followup.push(fol);}
+      Object.assign(fol,{
+        status:norm(r.ESTADO)||fol.status,realStart:norm(r.FECHA_REAL_INICIO)||fol.realStart,
+        plannedEnd:norm(r.FECHA_PREVISTA_FINALIZACION)||fol.plannedEnd,progress:n(r.PORCENTAJE_AVANCE),
+        evidenceTitle:norm(r.TITULO_EVIDENCIA)||fol.evidenceTitle,evidencePath:norm(r.RUTA_EVIDENCIA)||fol.evidencePath,
         abandoned:yes(r.ABANDONO)
       });
+    });
+  }
+
+  // También acepta hojas de seguimiento existentes como "forma.xlsx".
+  const legacyRows=Object.values(sheets).find(rows=>Array.isArray(rows)&&rows.length&&(
+    Object.prototype.hasOwnProperty.call(rows[0],'Docente') ||
+    Object.prototype.hasOwnProperty.call(rows[0],'DOCENTE')
+  ));
+  if(legacyRows && !sheets.DOCENTES){
+    const existing=new Map(state.teachers.map(t=>[String(t.cedula),t]));
+    legacyRows.forEach(r=>{
+      const cedula=norm(r['Cédula']??r.CEDULA); if(!cedula)return;
+      const nombre=norm(r.Docente??r.DOCENTE);
+      const carrera=norm(r['Unidad / carrera donde labora']??r.CARRERA_PRINCIPAL);
+      if(carrera) ensureCareer(carrera);
+
+      let t=existing.get(cedula);
+      if(!t){
+        t={
+          id:id(),cedula,nombre,carrera,dedicacion:'Tiempo Completo',
+          nivelActual:'',tituloActual:norm(r['Título académico actual']),afinidad:'Sí',
+          estudiaActualmente:norm(r['Formación en curso'])?'Sí':'No',
+          nivelCurso:norm(r['Formación en curso']),programaCurso:norm(r['Carrera / programa que cursa']),
+          institucionCurso:norm(r.Institución),nivelDeseado:norm(r['Formación en curso']),
+          areaInteres:norm(r['Carrera / programa que cursa']),dispuesto:'Sí',tipoFormacion:'Específica',
+          modalidadPreferida:norm(r.Modalidad)||'Virtual',inicioTentativo:'',barrera:'Ninguna',
+          actualizacionReciente:'Sí'
+        };
+        state.teachers.push(t);existing.set(cedula,t);
+      }
+
+      ensurePlanRows();
+      const pr=planByTeacher(t.id);
+      if(pr){
+        pr.selected=true;
+        pr.level=norm(r['Formación en curso'])||pr.level;
+        pr.program=norm(r['Carrera / programa que cursa'])||pr.program;
+        pr.institution=norm(r.Institución)||pr.institution;
+        pr.modality=norm(r.Modalidad)||pr.modality;
+        pr.supportType=norm(r['Tipo de apoyo'])||pr.supportType;
+        const amount=norm(r['Monto / horas']);
+        if(/^\$?[\d.,]+$/.test(amount)) pr.supportAmount=amount.replace('$','');
+      }
+
+      ensureFollowRows();
+      let fol=followByTeacher(t.id);
+      if(!fol){fol={teacherId:t.id,status:'No iniciado',realStart:'',plannedEnd:'',progress:0,evidenceTitle:'',evidencePath:'',abandoned:false};state.followup.push(fol);}
+      const rawProgress=n(r.Avance);
+      fol.status=norm(r.Estado)||fol.status;
+      fol.progress=rawProgress<=1?rawProgress*100:rawProgress;
+      fol.evidenceTitle=norm(r['Evidencia presentada'])||fol.evidenceTitle;
     });
   }
 }
