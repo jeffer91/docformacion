@@ -75,6 +75,16 @@ function defaultState() {
       genericLines: [...GENERIC_LINES],
       planActions: [...DEFAULT_ACTIONS]
     },
+    integrations: {
+      firebase: {
+        source: 'Repaso-Fire',
+        url: 'https://repaso-fire-d8ceb-default-rtdb.firebaseio.com/',
+        mode: 'read-only',
+        lastReadAt: '',
+        lastAppliedAt: '',
+        lastStats: null
+      }
+    },
     plan: [],
     followup: []
   };
@@ -216,6 +226,337 @@ function ensureCareer(name, program=''){
     state.careers.push({name:clean,program:norm(program)||'Por definir'});
   }
   ensureCoordination(clean);
+}
+
+const FIREBASE_FIELD_ALIASES = {
+  "cedula": [
+    "cedula",
+    "identificacion",
+    "documento",
+    "dni",
+    "iddocente",
+    "documentodocente"
+  ],
+  "nombre": [
+    "nombrecompleto",
+    "nombre",
+    "docente",
+    "nombresapellidos",
+    "nombres"
+  ],
+  "carrera": [
+    "carreraprincipal",
+    "carrera",
+    "unidadcarrera",
+    "unidadcarreradondelabora",
+    "carreradondelabora"
+  ],
+  "dedicacion": [
+    "dedicacion",
+    "tiempodedicacion",
+    "tipodedicacion"
+  ],
+  "nivelActual": [
+    "nivelacademicoactual",
+    "nivelacademico",
+    "nivelactual",
+    "gradoacademico"
+  ],
+  "tituloActual": [
+    "tituloacademicoactual",
+    "tituloacademico",
+    "tituloactual"
+  ],
+  "afinidad": [
+    "afintitulocarrera",
+    "afinidad",
+    "tituloafin"
+  ],
+  "estudiaActualmente": [
+    "estudiaactualmente",
+    "enformacion",
+    "estudiando",
+    "formacionactiva"
+  ],
+  "nivelCurso": [
+    "nivelformacionencurso",
+    "nivelcurso",
+    "nivelencurso",
+    "nivelformacionactual"
+  ],
+  "programaCurso": [
+    "programaencurso",
+    "carreraprogramaquecursa",
+    "programaacademico",
+    "programaestudio",
+    "programaformacion"
+  ],
+  "institucionCurso": [
+    "institucionestudio",
+    "institucionacademica",
+    "universidad",
+    "ies",
+    "institucionformacion"
+  ],
+  "nivelDeseado": [
+    "nivelquedeseaalcanzar",
+    "niveldeseado",
+    "formaciondeseada"
+  ],
+  "areaInteres": [
+    "areaoprogramainteres",
+    "areainteres",
+    "programainteres",
+    "interesformacion"
+  ],
+  "dispuesto": [
+    "dispuestoaestudiar",
+    "dispuesto",
+    "continuarestudios"
+  ],
+  "modalidadPreferida": [
+    "modalidadpreferida",
+    "modalidadformacion",
+    "modalidad"
+  ],
+  "tipoFormacion": [
+    "tipoformacion"
+  ],
+  "barrera": [
+    "barreraprincipal",
+    "barrera"
+  ],
+  "inicioTentativo": [
+    "iniciotentativo",
+    "fechainicioformacion",
+    "fechainicioacademica"
+  ]
+};
+
+function firebaseKey(value=''){
+  return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[^a-z0-9]/g,'');
+}
+
+function firebasePrimitiveMap(record){
+  const map={};
+  if(!record||typeof record!=='object'||Array.isArray(record)) return map;
+  Object.entries(record).forEach(([key,value])=>{
+    if(value===null||['string','number','boolean'].includes(typeof value)) map[firebaseKey(key)]=value;
+  });
+  return map;
+}
+
+function firebasePick(map,aliases){
+  for(const alias of aliases||[]){
+    const key=firebaseKey(alias);
+    if(Object.prototype.hasOwnProperty.call(map,key) && norm(map[key])!=='') return map[key];
+  }
+  return '';
+}
+
+function firebaseId(value=''){
+  return String(value).replace(/[^0-9A-Za-z]/g,'').toUpperCase();
+}
+
+function firebaseYesNo(value){
+  if(value===true) return 'Sí';
+  if(value===false) return 'No';
+  const v=norm(value).toLowerCase();
+  if(['si','sí','yes','true','1','activo','activa'].includes(v)) return 'Sí';
+  if(['no','false','0','inactivo','inactiva'].includes(v)) return 'No';
+  return '';
+}
+
+function firebaseLevel(value=''){
+  const v=norm(value), k=firebaseKey(v);
+  if(!v) return '';
+  if(k.includes('doctor')||k==='phd') return 'Doctorado';
+  if(k.includes('maestr')||k.includes('master')) return 'Maestría / Maestría Tecnológica';
+  if(k.includes('licenci')||k.includes('ingenier')) return 'Licenciatura / Ingeniería';
+  if(k.includes('universitari')) return 'Tecnólogo Universitario';
+  if(k.includes('tecnolog')||k.includes('tecnic')) return 'Tecnólogo Superior';
+  return v;
+}
+
+function firebaseMonth(value=''){
+  const v=norm(value), m=v.match(/^(\d{4})-(\d{2})/);
+  return m?m[1]+'-'+m[2]:'';
+}
+
+function firebaseExcluded(path,record){
+  const excluded=new Set(['capacitacion','capacitaciones','capacitacionesgenericas','taller','talleres','seminario','seminarios','webinar','webinars']);
+  if(path.map(firebaseKey).some(x=>excluded.has(x))) return true;
+  const map=firebasePrimitiveMap(record);
+  if(Object.prototype.hasOwnProperty.call(map,'capacitacion')) return true;
+  if(Object.prototype.hasOwnProperty.call(map,'horas') &&
+     (Object.prototype.hasOwnProperty.call(map,'curso')||Object.prototype.hasOwnProperty.call(map,'taller'))) return true;
+  return false;
+}
+
+function firebaseFormalText(value=''){
+  const k=firebaseKey(value);
+  return /(maestr|master|doctor|phd|especializ|licenci|ingenier|tecnolog|universidad|universitari)/.test(k);
+}
+
+function firebaseAcademicSignal(map){
+  const keys=[
+    ...FIREBASE_FIELD_ALIASES.nivelActual,
+    ...FIREBASE_FIELD_ALIASES.tituloActual,
+    ...FIREBASE_FIELD_ALIASES.nivelCurso,
+    ...FIREBASE_FIELD_ALIASES.programaCurso,
+    ...FIREBASE_FIELD_ALIASES.institucionCurso,
+    ...FIREBASE_FIELD_ALIASES.nivelDeseado,
+    ...FIREBASE_FIELD_ALIASES.areaInteres
+  ].map(firebaseKey);
+  if(keys.some(key=>Object.prototype.hasOwnProperty.call(map,key)&&norm(map[key])!=='')) return true;
+  return Object.values(map).some(value=>typeof value==='string'&&firebaseFormalText(value));
+}
+
+function firebaseContext(record,parent={}){
+  const map=firebasePrimitiveMap(record);
+  return {
+    cedula:norm(firebasePick(map,FIREBASE_FIELD_ALIASES.cedula))||parent.cedula||'',
+    nombre:norm(firebasePick(map,FIREBASE_FIELD_ALIASES.nombre))||parent.nombre||'',
+    carrera:norm(firebasePick(map,FIREBASE_FIELD_ALIASES.carrera))||parent.carrera||''
+  };
+}
+
+function firebaseCandidate(record,path,context){
+  const map=firebasePrimitiveMap(record);
+  const candidate={
+    cedula:context.cedula,
+    nombre:context.nombre,
+    carrera:context.carrera,
+    dedicacion:norm(firebasePick(map,FIREBASE_FIELD_ALIASES.dedicacion)),
+    nivelActual:firebaseLevel(firebasePick(map,FIREBASE_FIELD_ALIASES.nivelActual)),
+    tituloActual:norm(firebasePick(map,FIREBASE_FIELD_ALIASES.tituloActual)),
+    afinidad:firebaseYesNo(firebasePick(map,FIREBASE_FIELD_ALIASES.afinidad)),
+    estudiaActualmente:firebaseYesNo(firebasePick(map,FIREBASE_FIELD_ALIASES.estudiaActualmente)),
+    nivelCurso:firebaseLevel(firebasePick(map,FIREBASE_FIELD_ALIASES.nivelCurso)),
+    programaCurso:norm(firebasePick(map,FIREBASE_FIELD_ALIASES.programaCurso)),
+    institucionCurso:norm(firebasePick(map,FIREBASE_FIELD_ALIASES.institucionCurso)),
+    nivelDeseado:firebaseLevel(firebasePick(map,FIREBASE_FIELD_ALIASES.nivelDeseado)),
+    areaInteres:norm(firebasePick(map,FIREBASE_FIELD_ALIASES.areaInteres)),
+    dispuesto:firebaseYesNo(firebasePick(map,FIREBASE_FIELD_ALIASES.dispuesto)),
+    modalidadPreferida:norm(firebasePick(map,FIREBASE_FIELD_ALIASES.modalidadPreferida)),
+    tipoFormacion:norm(firebasePick(map,FIREBASE_FIELD_ALIASES.tipoFormacion)),
+    barrera:norm(firebasePick(map,FIREBASE_FIELD_ALIASES.barrera)),
+    inicioTentativo:firebaseMonth(firebasePick(map,FIREBASE_FIELD_ALIASES.inicioTentativo)),
+    _path:'/'+path.join('/')
+  };
+  if(!candidate.estudiaActualmente && (candidate.nivelCurso||candidate.programaCurso||candidate.institucionCurso)) candidate.estudiaActualmente='Sí';
+  if(!['Específica','Genérica'].includes(candidate.tipoFormacion)) candidate.tipoFormacion='';
+  if(!['Presencial','Virtual','Híbrida'].includes(candidate.modalidadPreferida)) candidate.modalidadPreferida='';
+  return candidate;
+}
+
+function mergeFirebaseCandidateObjects(target,source){
+  const fields=['nombre','carrera','dedicacion','nivelActual','tituloActual','afinidad','estudiaActualmente','nivelCurso','programaCurso','institucionCurso','nivelDeseado','areaInteres','dispuesto','modalidadPreferida','tipoFormacion','barrera','inicioTentativo'];
+  fields.forEach(field=>{if(!norm(target[field])&&norm(source[field])) target[field]=source[field];});
+  target._paths=[...new Set([...(target._paths||[]),source._path].filter(Boolean))];
+}
+
+function analyzeFirebaseFormation(root){
+  const candidates=new Map();
+  const stats={visitedObjects:0,ignoredTrainingBranches:0,candidateRecords:0};
+  function walk(node,path=[],parentContext={}){
+    if(node===null||typeof node!=='object') return;
+    if(Array.isArray(node)){ node.forEach((child,index)=>walk(child,path.concat(String(index)),parentContext)); return; }
+    stats.visitedObjects++;
+    if(firebaseExcluded(path,node)){ stats.ignoredTrainingBranches++; return; }
+    const context=firebaseContext(node,parentContext), map=firebasePrimitiveMap(node);
+    if(context.cedula && firebaseAcademicSignal(map)){
+      const candidate=firebaseCandidate(node,path,context), key=firebaseId(candidate.cedula);
+      if(key){
+        stats.candidateRecords++;
+        if(!candidates.has(key)) candidates.set(key,{...candidate,_paths:[candidate._path]});
+        else mergeFirebaseCandidateObjects(candidates.get(key),candidate);
+      }
+    }
+    Object.entries(node).forEach(([key,value])=>{if(value&&typeof value==='object') walk(value,path.concat(key),context);});
+  }
+  walk(root,[],{});
+  return {candidates:[...candidates.values()],stats};
+}
+
+function firebaseEmpty(value){
+  return value===null||value===undefined||norm(value)==='';
+}
+
+function applyFirebaseFormation(analysis,readAt){
+  const stats={...analysis.stats,teachersFound:analysis.candidates.length,teachersCreated:0,teachersUpdated:0,fieldsFilled:0,conflicts:0,unchanged:0,conflictItems:[]};
+  const fields=['nombre','carrera','dedicacion','nivelActual','tituloActual','afinidad','estudiaActualmente','nivelCurso','programaCurso','institucionCurso','nivelDeseado','areaInteres','dispuesto','modalidadPreferida','tipoFormacion','barrera','inicioTentativo'];
+  analysis.candidates.forEach(candidate=>{
+    const key=firebaseId(candidate.cedula);
+    let teacher=state.teachers.find(t=>firebaseId(t.cedula)===key), created=false, changed=false;
+    if(!teacher){
+      teacher={id:id(),cedula:candidate.cedula,nombre:'',carrera:'',dedicacion:'',nivelActual:'',tituloActual:'',afinidad:'',estudiaActualmente:'',nivelCurso:'',programaCurso:'',institucionCurso:'',nivelDeseado:'',areaInteres:'',dispuesto:'',tipoFormacion:'',modalidadPreferida:'',inicioTentativo:'',barrera:'',actualizacionReciente:'Sí'};
+      state.teachers.push(teacher); stats.teachersCreated++; created=true;
+    }
+    teacher._sourceMeta=teacher._sourceMeta||{};
+    teacher._firebasePaths=[...new Set([...(teacher._firebasePaths||[]),...(candidate._paths||[])])];
+    teacher._firebaseLastSeenAt=readAt;
+    fields.forEach(field=>{
+      const incoming=candidate[field];
+      if(firebaseEmpty(incoming)) return;
+      if(firebaseEmpty(teacher[field])){
+        teacher[field]=incoming;
+        teacher._sourceMeta[field]={source:'firebase',readAt,path:candidate._paths?.[0]||candidate._path||''};
+        stats.fieldsFilled++; changed=true;
+      } else if(norm(teacher[field])===norm(incoming)) {
+        stats.unchanged++;
+      } else {
+        stats.conflicts++;
+        if(stats.conflictItems.length<30) stats.conflictItems.push({docente:teacher.nombre||candidate.nombre||teacher.cedula,field,local:teacher[field],firebase:incoming,path:candidate._paths?.[0]||candidate._path||''});
+      }
+    });
+    if(validCareerName(teacher.carrera)) ensureCareer(teacher.carrera);
+    if(!created&&changed) stats.teachersUpdated++;
+  });
+  dedupeCareerState();
+  return stats;
+}
+
+function firebaseFieldLabel(field){
+  return ({nombre:'Nombre',carrera:'Carrera principal',dedicacion:'Dedicación',nivelActual:'Nivel académico actual',tituloActual:'Título académico actual',afinidad:'Afinidad del título',estudiaActualmente:'Estudia actualmente',nivelCurso:'Nivel en curso',programaCurso:'Programa en curso',institucionCurso:'Institución de estudio',nivelDeseado:'Nivel deseado',areaInteres:'Área/programa de interés',dispuesto:'Disposición para estudiar',modalidadPreferida:'Modalidad',tipoFormacion:'Tipo de formación',barrera:'Barrera',inicioTentativo:'Inicio tentativo'})[field]||field;
+}
+
+function firebaseSummaryHtml(stats,error=''){
+  if(error){
+    return '<div class="alert-strip danger"><div><strong>No se pudo leer Firebase</strong>'+esc(error)+'</div></div><div class="firebase-rule-note">No se realizó ningún cambio en DocFormación ni en Firebase.</div>';
+  }
+  const conflicts=stats.conflictItems||[];
+  return '<div class="alert-strip success"><div><strong>Lectura completada</strong>Firebase se consultó en modo solo lectura. Ningún dato externo fue modificado.</div></div>'+
+    '<div class="firebase-summary-grid">'+
+      '<div><strong>'+(stats.teachersFound||0)+'</strong><span>docentes de formación encontrados</span></div>'+
+      '<div><strong>'+(stats.teachersCreated||0)+'</strong><span>docentes nuevos</span></div>'+
+      '<div><strong>'+(stats.teachersUpdated||0)+'</strong><span>docentes completados</span></div>'+
+      '<div><strong>'+(stats.fieldsFilled||0)+'</strong><span>campos faltantes completados</span></div>'+
+      '<div><strong>'+(stats.conflicts||0)+'</strong><span>conflictos: dato local conservado</span></div>'+
+      '<div><strong>'+(stats.ignoredTrainingBranches||0)+'</strong><span>ramas de capacitación ignoradas</span></div>'+
+    '</div>'+
+    '<div class="firebase-rule-note"><strong>Regla:</strong> Firebase solo completa campos vacíos. No reemplaza datos existentes y no crea necesidades ni prioridades.</div>'+
+    (conflicts.length?'<details class="issue-group" style="margin-top:14px"><summary><span>Revisar '+(stats.conflicts||0)+' conflicto(s)</span><span class="issue-group-hint">Dato local conservado</span></summary><div class="issue-group-body">'+conflicts.map(x=>'<div class="firebase-conflict"><strong>'+esc(x.docente)+'</strong><span>'+esc(firebaseFieldLabel(x.field))+': local “'+esc(x.local)+'” · Firebase “'+esc(x.firebase)+'”</span></div>').join('')+'</div></details>':'');
+}
+
+function showFirebaseSummary(stats,error=''){
+  $('#firebaseSummary').innerHTML=firebaseSummaryHtml(stats,error);
+  $('#firebaseDialog').showModal();
+}
+
+async function updateFromFirebase(){
+  const btn=$('#btnFirebase'), original=btn.textContent;
+  btn.disabled=true; btn.textContent='Leyendo Firebase…';
+  try{
+    const response=await window.docformacion.readFirebase();
+    if(!response?.ok){ showFirebaseSummary({},response?.error||'No fue posible acceder a la base.'); return; }
+    const readAt=new Date().toISOString(), analysis=analyzeFirebaseFormation(response.data), stats=applyFirebaseFormation(analysis,readAt);
+    state.integrations=state.integrations||defaultState().integrations;
+    state.integrations.firebase={...defaultState().integrations.firebase,...(state.integrations.firebase||{}),lastReadAt:readAt,lastAppliedAt:readAt,lastStats:stats};
+    await save(); render(); showFirebaseSummary(stats);
+  }catch(error){ showFirebaseSummary({},error.message); }
+  finally{ btn.disabled=false; btn.textContent=original; }
 }
 
 function setView(view) {
@@ -1413,6 +1754,8 @@ async function generateDocument(type){
 $$('.nav-item').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 $('#btnTemplate').onclick=exportTemplate;
 $('#btnImport').onclick=importExcel;
+$('#btnFirebase').onclick=updateFromFirebase;
+$('#closeFirebase').onclick=$('#closeFirebaseBottom').onclick=()=>$('#firebaseDialog').close();
 
 (async function init(){
   const loaded=await window.docformacion.loadData();
@@ -1420,6 +1763,11 @@ $('#btnImport').onclick=importExcel;
     state={...defaultState(),...loaded};
     state.period={...defaultState().period,...(loaded.period||{})};
     state.settings={...defaultState().settings,...(loaded.settings||{})};
+    state.integrations={
+      ...defaultState().integrations,
+      ...(loaded.integrations||{}),
+      firebase:{...defaultState().integrations.firebase,...(loaded.integrations?.firebase||{})}
+    };
     state.careers=(loaded.careers?.length?loaded.careers:defaultState().careers).map(x=>({...x}));
     state.coordinations=(loaded.coordinations||[]).map(x=>({...x,needItems:Array.isArray(x.needItems)?x.needItems:[]}));
     dedupeCareerState();
