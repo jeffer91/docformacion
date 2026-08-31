@@ -880,8 +880,8 @@ function dnfHtml(){
     <p>El diagnóstico evidencia una base de ${total} docentes y permite diferenciar brechas por nivel académico, carrera, disposición y tipo de formación. Las prioridades generadas deben utilizarse como insumo directo para la selección y planificación del Plan de Formación Docente.</p>
     <div class="h1">6. Recomendaciones</div><p>Priorizar las carreras con brecha Alta, aprovechar la disposición declarada de los docentes y mantener rutas diferenciadas para formación específica y genérica, evitando duplicar información entre el diagnóstico y el Plan.</p>
     <div class="h1">7. Anexo: Base consolidada</div>
-    <table class="data"><tr><th>Docente</th><th>Carrera</th><th>Nivel actual</th><th>Nivel deseado</th><th>Tipo</th><th>Modalidad</th></tr>${
-      state.teachers.map(t=>`<tr><td>${esc(t.nombre)}</td><td>${esc(t.carrera)}</td><td>${esc(t.nivelActual)}</td><td>${esc(t.nivelDeseado)}</td><td>${esc(t.tipoFormacion)}</td><td>${esc(t.modalidadPreferida)}</td></tr>`).join('')
+    <table class="data"><tr><th>Docente</th><th>Carrera</th><th>Programa</th><th>Nivel actual</th><th>Nivel deseado</th><th>Tipo</th><th>Modalidad</th></tr>${
+      state.teachers.map(t=>`<tr><td>${esc(t.nombre)}</td><td>${esc(t.carrera)}</td><td>${esc(programForCareer(t.carrera)||'Por definir')}</td><td>${esc(t.nivelActual)}</td><td>${esc(t.nivelDeseado)}</td><td>${esc(t.tipoFormacion)}</td><td>${esc(t.modalidadPreferida)}</td></tr>`).join('')
     }</table>
   `);
 }
@@ -961,10 +961,19 @@ $('#btnImport').onclick=importExcel;
     state={...defaultState(),...loaded};
     state.period={...defaultState().period,...(loaded.period||{})};
     state.settings={...defaultState().settings,...(loaded.settings||{})};
-    state.coordinations=defaultState().coordinations.map(c=>({
-      ...c,
-      ...(loaded.coordinations||[]).find(x=>x.carrera===c.carrera)
+    state.careers=(loaded.careers?.length?loaded.careers:defaultState().careers).map(x=>({...x}));
+    const previousCoords=loaded.coordinations||[];
+    state.coordinations=state.careers.map(cr=>({
+      carrera:cr.name,
+      coordinador:'',
+      priorityOverride:'',
+      needsOverride:'',
+      ...(previousCoords.find(x=>x.carrera===cr.name)||{})
     }));
+    previousCoords.filter(x=>!state.coordinations.some(c=>c.carrera===x.carrera)).forEach(x=>{
+      if(!state.careers.some(cr=>cr.name===x.carrera)) state.careers.push({name:x.carrera,program:'Por definir'});
+      state.coordinations.push({...x});
+    });
     state.teachers=loaded.teachers||[];
     state.plan=loaded.plan||[];
     state.followup=loaded.followup||[];
