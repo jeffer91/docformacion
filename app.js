@@ -359,7 +359,7 @@ function renderCareers() {
     renderCareers();
   };
 
-  $('.remove-career').forEach(b=>b.onclick=()=>{
+  $$('.remove-career').forEach(b=>b.onclick=()=>{
     const i=Number(b.dataset.i), cr=state.careers[i];
     if(state.teachers.some(t=>t.carrera===cr.name)){ toast('No puedes eliminar una carrera que ya tiene docentes.'); return; }
     if(!confirm('¿Eliminar '+cr.name+'?')) return;
@@ -369,7 +369,7 @@ function renderCareers() {
   });
 
   $('#saveCareers').onclick=async()=>{
-    $('[data-career-row]').forEach(row=>{
+    $$('[data-career-row]').forEach(row=>{
       const i=Number(row.dataset.careerRow);
       const old=state.careers[i].name;
       const name=norm(row.querySelector('[data-career-name]').value) || old;
@@ -526,9 +526,9 @@ function renderDNF() {
   $('#addGeneric').onclick=()=>{state.settings.genericLines.push('Nueva línea genérica');save();renderDNF();};
   $$('.delete-generic').forEach(b=>b.onclick=()=>{state.settings.genericLines.splice(Number(b.dataset.i),1);save();renderDNF();});
   $$('[data-generic]').forEach(inp=>inp.onchange=()=>{state.settings.genericLines[Number(inp.dataset.generic)]=inp.value;save();});
-  $('.coord-input').forEach(inp=>inp.onchange=()=>{state.coordinations.find(c=>c.carrera===inp.dataset.career).coordinador=inp.value;save();});
-  $('.needs-input').forEach(inp=>inp.onchange=()=>{state.coordinations.find(c=>c.carrera===inp.dataset.career).needsOverride=inp.value;save();});
-  $('.priority-input').forEach(sel=>sel.onchange=()=>{state.coordinations.find(c=>c.carrera===sel.dataset.career).priorityOverride=sel.value;save();});
+  $$('.coord-input').forEach(inp=>inp.onchange=()=>{state.coordinations.find(c=>c.carrera===inp.dataset.career).coordinador=inp.value;save();});
+  $$('.needs-input').forEach(inp=>inp.onchange=()=>{state.coordinations.find(c=>c.carrera===inp.dataset.career).needsOverride=inp.value;save();});
+  $$('.priority-input').forEach(sel=>sel.onchange=()=>{state.coordinations.find(c=>c.carrera===sel.dataset.career).priorityOverride=sel.value;save();});
 }
 
 function ensurePlanRows(){
