@@ -274,6 +274,7 @@ function renderHome() {
   const dnf=documentStatus('dnf'), plan=documentStatus('plan'), report=documentStatus('informe');
   const done=[dnf,plan,report].filter(x=>x.ready).length;
   $('#content').innerHTML = `
+    ${completionAlert('dnf')}
     <div class="grid cards">
       ${metric('Docentes',s.total)}
       ${metric('Carreras configuradas',(state.careers||[]).length)}
@@ -335,6 +336,59 @@ function renderPeriod() {
   };
 }
 
+function renderCareers() {
+  $('#content').innerHTML = `
+    <div class="alert-strip success"><div><strong>Catálogo precargado</strong>Estas son las carreras que aparecerán inmediatamente en la app. Puedes editar el tipo de programa o agregar nuevas carreras.</div></div>
+    <div class="section-title">
+      <div><h2>Carreras y programas</h2><p>${(state.careers||[]).length} carreras configuradas.</p></div>
+      <button class="primary" id="addCareer">+ Agregar carrera</button>
+    </div>
+    <div class="card" id="careerCatalog">
+      ${(state.careers||[]).map((cr,i)=>`<div class="catalog-row" data-career-row="${i}">
+        <input data-career-name="${i}" value="${esc(cr.name)}" placeholder="Nombre de la carrera">
+        <select data-career-program="${i}">${optionList(['Técnico Superior','Tecnología Superior','Tecnología Universitaria','Otro'],cr.program)}</select>
+        <button class="danger remove-career" data-i="${i}">Eliminar</button>
+      </div>`).join('')}
+    </div>
+    <div class="dialog-actions"><button class="primary" id="saveCareers">Guardar carreras</button></div>`;
+
+  $('#addCareer').onclick=()=>{
+    let base='Nueva carrera', name=base, i=2;
+    while(state.careers.some(c=>c.name===name)){ name=base+' '+i; i++; }
+    state.careers.push({name,program:'Tecnología Superior'});
+    ensureCoordination(name);
+    renderCareers();
+  };
+
+  $('.remove-career').forEach(b=>b.onclick=()=>{
+    const i=Number(b.dataset.i), cr=state.careers[i];
+    if(state.teachers.some(t=>t.carrera===cr.name)){ toast('No puedes eliminar una carrera que ya tiene docentes.'); return; }
+    if(!confirm('¿Eliminar '+cr.name+'?')) return;
+    state.careers.splice(i,1);
+    state.coordinations=state.coordinations.filter(x=>x.carrera!==cr.name);
+    renderCareers();
+  });
+
+  $('#saveCareers').onclick=async()=>{
+    $('[data-career-row]').forEach(row=>{
+      const i=Number(row.dataset.careerRow);
+      const old=state.careers[i].name;
+      const name=norm(row.querySelector('[data-career-name]').value) || old;
+      const program=row.querySelector('[data-career-program]').value || 'Por definir';
+      if(old!==name){
+        state.teachers.filter(t=>t.carrera===old).forEach(t=>t.carrera=name);
+        const coord=state.coordinations.find(x=>x.carrera===old);
+        if(coord) coord.carrera=name;
+      }
+      state.careers[i]={name,program};
+      ensureCoordination(name);
+    });
+    await save();
+    toast('Carreras actualizadas');
+    renderCareers();
+  };
+}
+
 function renderTeachers() {
   $('#content').innerHTML = `
     <div class="section-title">
@@ -357,8 +411,8 @@ function renderTeachers() {
   });
 }
 function teacherTable(){
-  return `<table class="table"><thead><tr><th>Cédula</th><th>Nombre</th><th>Carrera principal</th><th>Dedicación</th><th>Nivel actual</th><th>Deseado</th><th>Tipo</th><th></th></tr></thead><tbody>${
-    state.teachers.map(t=>`<tr><td>${esc(t.cedula)}</td><td><strong>${esc(t.nombre)}</strong></td><td>${esc(t.carrera)}</td><td>${esc(t.dedicacion)}</td><td>${esc(t.nivelActual)}</td><td>${esc(t.nivelDeseado)}</td><td>${esc(t.tipoFormacion)}</td><td class="right"><button class="ghost edit-teacher" data-id="${t.id}">Editar</button><button class="danger delete-teacher" data-id="${t.id}">Eliminar</button></td></tr>`).join('')
+  return `<table class="table"><thead><tr><th>Cédula</th><th>Nombre</th><th>Carrera principal</th><th>Programa</th><th>Dedicación</th><th>Nivel actual</th><th>Deseado</th><th>Tipo</th><th></th></tr></thead><tbody>${
+    state.teachers.map(t=>`<tr><td>${esc(t.cedula)}</td><td><strong>${esc(t.nombre)}</strong></td><td>${esc(t.carrera)}</td><td>${esc(programForCareer(t.carrera)||'Por definir')}</td><td>${esc(t.dedicacion)}</td><td>${esc(t.nivelActual)}</td><td>${esc(t.nivelDeseado)}</td><td>${esc(t.tipoFormacion)}</td><td class="right"><button class="ghost edit-teacher" data-id="${t.id}">Editar</button><button class="danger delete-teacher" data-id="${t.id}">Eliminar</button></td></tr>`).join('')
   }</tbody></table>`;
 }
 
@@ -376,7 +430,7 @@ function openTeacher(teacherId=null) {
   $('#teacherFields').innerHTML = [
     field('Cédula','cedula',t.cedula),
     field('Nombre completo','nombre',t.nombre),
-    field('Carrera principal','carrera',t.carrera,'select',CAREERS),
+    field('Carrera principal','carrera',t.carrera,'select',careerNames(),false,'El tipo de programa se toma automáticamente del catálogo de Carreras.'),
     field('Dedicación','dedicacion',t.dedicacion,'select',['Tiempo Completo','Medio Tiempo','Tiempo Parcial']),
     field('Nivel académico actual','nivelActual',t.nivelActual,'select',LEVELS),
     field('Título académico actual','tituloActual',t.tituloActual),
@@ -501,6 +555,7 @@ function renderPlan() {
   ensurePlanRows();
   const candidates=state.teachers.filter(t=>t.dispuesto==='Sí' || t.estudiaActualmente==='Sí');
   $('#content').innerHTML = `
+    ${completionAlert('plan')}
     <div class="notice">Los candidatos y datos vienen de la DNF. Selecciona quién entra al Plan y cambia únicamente lo que sea necesario.</div>
     <div class="section-title"><div><h2>Meta institucional</h2><p>Valor precargado y editable desde Período.</p></div><span class="pill">${esc(state.period.targetPercent)}%</span></div>
     <div class="table-wrap">${candidates.length?`<table class="table"><thead><tr><th>Incluir</th><th>Docente</th><th>Nivel</th><th>Programa</th><th>Institución</th><th>Modalidad</th><th>Inicio</th><th>Fin</th><th>Apoyo</th><th>Monto</th></tr></thead><tbody>
@@ -543,6 +598,7 @@ function renderFollowup() {
   ensureFollowRows();
   const rows=state.plan.filter(p=>p.selected);
   $('#content').innerHTML = `
+    ${completionAlert('informe')}
     <div class="notice">Seguimiento mínimo: estado + porcentaje de avance. El porcentaje restante se calcula automáticamente. Solo se registra abandono cuando ocurra.</div>
     <div class="table-wrap" style="margin-top:16px">${rows.length?`<table class="table"><thead><tr><th>Docente</th><th>Estado</th><th>Inicio real</th><th>Fin previsto</th><th>Avance</th><th>Restante</th><th>Título evidencia</th><th>Evidencia</th><th>Abandono</th></tr></thead><tbody>
     ${rows.map(p=>{const t=teacherById(p.teacherId),f=followByTeacher(p.teacherId);return`<tr data-follow-row="${t.id}">
