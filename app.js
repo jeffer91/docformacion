@@ -1,17 +1,28 @@
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
-const CAREERS = [
-  'Enfermería','Mecánica Automotriz','Mecánica de Motos','Diseño Multimedia',
-  'Marketing Digital y Comercio Electrónico','Marketing Digital y Comercio Electrónico TSU',
-  'Ventas','Desarrollo de Software','Desarrollo de Software y Ciberseguridad',
-  'Redes y Telecomunicaciones','Redes y Telecomunicaciones TSU','Estética Integral',
-  'Educación Básica','Educación Inicial','Educación Inicial TSU','Pedagogía',
-  'Procesamiento de Alimentos','Administración',
-  'Administración de Empresas e Inteligencia de Negocios',
-  'Administración del Talento Humano','Contabilidad','Contabilidad y Tributación TSU',
-  'Gestión del Talento Humano','Seguridad y Prevención de Riesgos Laborales',
-  'Rehabilitación Física','Seguridad Ciudadana y Orden Público','Gastronomía'
+const DEFAULT_CAREERS = [
+  { name: 'Enfermería', program: 'Técnico Superior' },
+  { name: 'Mecánica Automotriz', program: 'Tecnología Superior' },
+  { name: 'Diseño Multimedia', program: 'Tecnología Superior' },
+  { name: 'Marketing Digital y Comercio Electrónico', program: 'Tecnología Superior' },
+  { name: 'Ventas', program: 'Tecnología Superior' },
+  { name: 'Desarrollo de Software', program: 'Tecnología Superior' },
+  { name: 'Desarrollo de Software y Ciberseguridad', program: 'Tecnología Universitaria' },
+  { name: 'Redes y Telecomunicaciones', program: 'Tecnología Superior' },
+  { name: 'Estética Integral', program: 'Tecnología Superior' },
+  { name: 'Educación Básica', program: 'Tecnología Superior' },
+  { name: 'Educación Inicial', program: 'Tecnología Superior' },
+  { name: 'Pedagogía', program: 'Tecnología Universitaria' },
+  { name: 'Procesamiento de Alimentos', program: 'Tecnología Superior' },
+  { name: 'Administración', program: 'Tecnología Superior' },
+  { name: 'Administración de Empresas e inteligencia de negocios', program: 'Tecnología Universitaria' },
+  { name: 'Administración del Talento Humano', program: 'Tecnología Universitaria' },
+  { name: 'Contabilidad', program: 'Tecnología Superior' },
+  { name: 'Contabilidad y Tributación', program: 'Tecnología Universitaria' },
+  { name: 'Gestión del Talento Humano', program: 'Tecnología Superior' },
+  { name: 'Seguridad y Prevención de Riesgos Laborales', program: 'Tecnología Superior' },
+  { name: 'Seguridad Ciudadana y Orden Publico', program: 'Tecnología Superior' }
 ];
 
 const GENERIC_LINES = [
@@ -51,9 +62,10 @@ function defaultState() {
       planCode: 'UGPA-RGI2-0X-PRO-31-AÑO-MES',
       reportCode: 'UGPA-RGI3-0X-PRO-31-AÑO-MES'
     },
+    careers: DEFAULT_CAREERS.map(x => ({ ...x })),
     teachers: [],
-    coordinations: CAREERS.map(carrera => ({
-      carrera,
+    coordinations: DEFAULT_CAREERS.map(({name}) => ({
+      carrera: name,
       coordinador: '',
       priorityOverride: '',
       needsOverride: ''
@@ -108,6 +120,22 @@ function field(label, name, value='', type='text', options=[], wide=false, hint=
 function teacherById(teacherId){ return state.teachers.find(t=>t.id===teacherId); }
 function planByTeacher(teacherId){ return state.plan.find(p=>p.teacherId===teacherId); }
 function followByTeacher(teacherId){ return state.followup.find(f=>f.teacherId===teacherId); }
+function careerNames(){ return (state.careers||[]).map(c=>c.name).filter(Boolean); }
+function programForCareer(name){ return (state.careers||[]).find(c=>c.name===name)?.program || ''; }
+function ensureCoordination(name){
+  if(!name) return;
+  if(!state.coordinations.some(c=>c.carrera===name)){
+    state.coordinations.push({carrera:name,coordinador:'',priorityOverride:'',needsOverride:''});
+  }
+}
+function ensureCareer(name, program=''){
+  const clean=norm(name);
+  if(!clean) return;
+  if(!state.careers.some(c=>c.name===clean)){
+    state.careers.push({name:clean,program:norm(program)||'Por definir'});
+  }
+  ensureCoordination(clean);
+}
 
 function setView(view) {
   currentView = view;
