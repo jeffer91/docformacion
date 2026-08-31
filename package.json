@@ -1,0 +1,16 @@
+{
+  "name": "docformacion",
+  "version": "0.1.0",
+  "description": "Gestión y generación PDF del proceso de Formación Docente - ITSQMET",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0"
+  }
+}
