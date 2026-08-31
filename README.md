@@ -53,9 +53,11 @@ La app precarga seis líneas editables:
 
 La app genera una plantilla con las hojas:
 
+- `CARRERAS`
 - `PERIODO`
 - `DOCENTES`
-- `COORDINACIONES`
+- `COORDINACIONES` — únicamente carrera y coordinador.
+- `NECESIDADES` — una fila por necesidad de formación, con prioridad propia.
 - `PLAN`
 - `SEGUIMIENTO`
 
@@ -84,7 +86,8 @@ Versión inicial funcional con:
 - formulario de docentes;
 - importación y plantilla Excel global;
 - diagnóstico automático;
-- prioridades por carrera;
+- necesidades específicas separadas de los coordinadores;
+- prioridad independiente por cada necesidad de formación;
 - líneas genéricas editables;
 - selección de docentes para el Plan;
 - seguimiento con estado, avance y evidencias;
