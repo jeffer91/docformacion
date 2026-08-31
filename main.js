@@ -143,7 +143,11 @@ ipcMain.handle('excel:template', async () => {
     ]];
 
     const coordHeaders = [[
-      'CARRERA', 'COORDINADOR', 'NECESIDADES', 'PRIORIDAD_MANUAL'
+      'CARRERA', 'COORDINADOR'
+    ]];
+
+    const needHeaders = [[
+      'CARRERA', 'NECESIDAD', 'PRIORIDAD_MANUAL'
     ]];
 
     const planHeaders = [[
@@ -162,6 +166,7 @@ ipcMain.handle('excel:template', async () => {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(periodHeaders), 'PERIODO');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(teacherHeaders), 'DOCENTES');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(coordHeaders), 'COORDINACIONES');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(needHeaders), 'NECESIDADES');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(planHeaders), 'PLAN');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(followHeaders), 'SEGUIMIENTO');
 
