@@ -274,7 +274,6 @@ function renderHome() {
   const dnf=documentStatus('dnf'), plan=documentStatus('plan'), report=documentStatus('informe');
   const done=[dnf,plan,report].filter(x=>x.ready).length;
   $('#content').innerHTML = `
-    ${completionAlert('dnf')}
     <div class="grid cards">
       ${metric('Docentes',s.total)}
       ${metric('Carreras configuradas',(state.careers||[]).length)}
@@ -502,6 +501,7 @@ function renderDNF() {
   const s=stats();
   const specific=state.coordinations.filter(c=>state.teachers.some(t=>t.carrera===c.carrera));
   $('#content').innerHTML = `
+    ${completionAlert('dnf')}
     <div class="grid cards">
       ${metric('Total docentes',s.total)}
       ${metric('Con maestría',s.masters)}
@@ -970,7 +970,10 @@ $('#btnImport').onclick=importExcel;
       needsOverride:'',
       ...(previousCoords.find(x=>x.carrera===cr.name)||{})
     }));
-    previousCoords.filter(x=>!state.coordinations.some(c=>c.carrera===x.carrera)).forEach(x=>{
+    previousCoords.filter(x=>
+      !state.coordinations.some(c=>c.carrera===x.carrera) &&
+      (loaded.teachers||[]).some(t=>t.carrera===x.carrera)
+    ).forEach(x=>{
       if(!state.careers.some(cr=>cr.name===x.carrera)) state.careers.push({name:x.carrera,program:'Por definir'});
       state.coordinations.push({...x});
     });
