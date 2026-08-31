@@ -46,13 +46,17 @@ function defaultState() {
       reviewedRole: 'Coordinación General de Carreras',
       approvedBy: 'Dr. Alex León T.',
       approvedRole: 'Vicerrector',
-      targetPercent: 10
+      targetPercent: 10,
+      dnfCode: 'UGPA-RGI1-0X-PRO-31-AÑO-MES',
+      planCode: 'UGPA-RGI2-0X-PRO-31-AÑO-MES',
+      reportCode: 'UGPA-RGI3-0X-PRO-31-AÑO-MES'
     },
     teachers: [],
     coordinations: CAREERS.map(carrera => ({
       carrera,
       coordinador: '',
-      priorityOverride: ''
+      priorityOverride: '',
+      needsOverride: ''
     })),
     settings: {
       genericLines: [...GENERIC_LINES],
@@ -181,6 +185,9 @@ function renderPeriod() {
         ${field('Aprobado por','approvedBy',p.approvedBy)}
         ${field('Cargo','approvedRole',p.approvedRole)}
         ${field('Meta de docentes en formación (%)','targetPercent',p.targetPercent,'number')}
+        ${field('Código DNF','dnfCode',p.dnfCode)}
+        ${field('Código Plan','planCode',p.planCode)}
+        ${field('Código Informe','reportCode',p.reportCode)}
       </div>
       <div class="dialog-actions"><button class="primary" id="savePeriod">Guardar</button></div>
     </div>`;
@@ -289,6 +296,11 @@ function autoPriority(career) {
   const score=(below*2+noAffinity)/list.length;
   return score>=1?'Alta':score>=0.45?'Media':'Baja';
 }
+function needsFor(career){
+  const c=state.coordinations.find(x=>x.carrera===career);
+  if(c?.needsOverride) return c.needsOverride.split('|').map(x=>x.trim()).filter(Boolean).slice(0,3);
+  return needSummary(career);
+}
 function priorityFor(career){
   const c=state.coordinations.find(x=>x.carrera===career);
   return c?.priorityOverride || autoPriority(career);
@@ -310,11 +322,11 @@ function renderDNF() {
     </div>
     <div class="section-title"><div><h2>Necesidades específicas por carrera</h2><p>Se generan automáticamente a partir de la base docente.</p></div></div>
     <div class="table-wrap">
-      ${specific.length?`<table class="table"><thead><tr><th>Carrera</th><th>Coordinador</th><th>Necesidades automáticas</th><th>Prioridad sugerida</th><th>Prioridad final</th></tr></thead><tbody>
+      ${specific.length?`<table class="table"><thead><tr><th>Carrera</th><th>Coordinador</th><th>Necesidades propuestas / editables</th><th>Prioridad sugerida</th><th>Prioridad final</th></tr></thead><tbody>
       ${specific.map(c=>`<tr>
         <td><strong>${esc(c.carrera)}</strong></td>
         <td><input class="coord-input" data-career="${esc(c.carrera)}" value="${esc(c.coordinador)}" placeholder="Coordinador por defecto"></td>
-        <td>${needSummary(c.carrera).map(n=>'<span class="pill">'+esc(n)+'</span>').join(' ')||'<span class="muted">Sin datos suficientes</span>'}</td>
+        <td><input class="needs-input" data-career="${esc(c.carrera)}" value="${esc(c.needsOverride || needSummary(c.carrera).join(' | '))}" placeholder="Hasta 3 necesidades separadas por |"><div class="small muted">Se generan automáticamente; puedes cambiarlas.</div></td>
         <td><span class="pill ${autoPriority(c.carrera).toLowerCase()}">${autoPriority(c.carrera)}</span></td>
         <td><select class="priority-input" data-career="${esc(c.carrera)}"><option value="">Automática</option>${['Alta','Media','Baja'].map(x=>'<option '+(c.priorityOverride===x?'selected':'')+'>'+x+'</option>').join('')}</select></td>
       </tr>`).join('')}</tbody></table>`:'<div class="empty">Carga docentes para generar las necesidades por carrera.</div>'}
@@ -322,8 +334,9 @@ function renderDNF() {
   $('#addGeneric').onclick=()=>{state.settings.genericLines.push('Nueva línea genérica');save();renderDNF();};
   $$('.delete-generic').forEach(b=>b.onclick=()=>{state.settings.genericLines.splice(Number(b.dataset.i),1);save();renderDNF();});
   $$('[data-generic]').forEach(inp=>inp.onchange=()=>{state.settings.genericLines[Number(inp.dataset.generic)]=inp.value;save();});
-  $$('.coord-input').forEach(inp=>inp.onchange=()=>{state.coordinations.find(c=>c.carrera===inp.dataset.career).coordinador=inp.value;save();});
-  $$('.priority-input').forEach(sel=>sel.onchange=()=>{state.coordinations.find(c=>c.carrera===sel.dataset.career).priorityOverride=sel.value;save();});
+  $('.coord-input').forEach(inp=>inp.onchange=()=>{state.coordinations.find(c=>c.carrera===inp.dataset.career).coordinador=inp.value;save();});
+  $('.needs-input').forEach(inp=>inp.onchange=()=>{state.coordinations.find(c=>c.carrera===inp.dataset.career).needsOverride=inp.value;save();});
+  $('.priority-input').forEach(sel=>sel.onchange=()=>{state.coordinations.find(c=>c.carrera===sel.dataset.career).priorityOverride=sel.value;save();});
 }
 
 function ensurePlanRows(){
@@ -554,8 +567,8 @@ function dnfHtml(){
   const level=dist('nivelActual'),ded=dist('dedicacion'),wish=dist('nivelDeseado'),type=dist('tipoFormacion'),mod=dist('modalidadPreferida'),barrier=dist('barrera');
   const intro=`La Detección de Necesidades de Formación consolida la situación académica del claustro docente, sus aspiraciones de desarrollo y las brechas que deben orientar la planificación institucional. Para el período analizado se consideran ${total} docentes, todos asociados a su carrera principal y a la función de docencia.`;
   return htmlDoc('Detección de Necesidades de Formación',`
-    ${cover('Detección de Necesidades de Formación','UGPA-RGI1-02-PRO-31')}
-    <div class="page-break"></div>${pdfHeader('Detección de Necesidades de Formación','UGPA-RGI1-02-PRO-31')}
+    ${cover('Detección de Necesidades de Formación',state.period.dnfCode)}
+    <div class="page-break"></div>${pdfHeader('Detección de Necesidades de Formación',state.period.dnfCode)}
     <div class="h1">1. Introducción</div><p>${intro}</p>
     <div class="h1">2. Metodología y enfoque</div><p>La información procede de la base institucional cargada mediante formulario o Excel global. La aplicación utiliza únicamente datos registrados y cálculos derivados; no modifica las cifras de origen.</p>
     <div class="h1">3. Caracterización del claustro docente</div>
@@ -571,10 +584,10 @@ function dnfHtml(){
     <div class="h2">3.5 Formación específica y genérica</div><table class="data"><tr><th>Tipo</th><th>Docentes</th><th>Porcentaje</th></tr>${distRows(type,total)}</table>
     <div class="h2">3.6 Modalidad preferida</div><table class="data"><tr><th>Modalidad</th><th>Docentes</th><th>Porcentaje</th></tr>${distRows(mod,total)}</table>
     <div class="h2">3.7 Barreras principales</div><table class="data"><tr><th>Barrera</th><th>Docentes</th><th>Porcentaje</th></tr>${distRows(barrier,total)}</table>
-    <div class="page-break"></div>${pdfHeader('Detección de Necesidades de Formación','UGPA-RGI1-02-PRO-31')}
+    <div class="page-break"></div>${pdfHeader('Detección de Necesidades de Formación',state.period.dnfCode)}
     <div class="h1">4. Líneas de formación por carrera</div><p>Las necesidades específicas se generan automáticamente a partir de la información de cada carrera y pueden ser priorizadas institucionalmente.</p>
     <table class="data"><tr><th>Carrera</th><th>Coordinador</th><th>Necesidades específicas</th><th>Prioridad</th></tr>${
-      state.coordinations.filter(c=>state.teachers.some(t=>t.carrera===c.carrera)).map(c=>`<tr><td>${esc(c.carrera)}</td><td>${esc(c.coordinador||'Por definir')}</td><td>${esc(needSummary(c.carrera).join(' · ')||'Sin información suficiente')}</td><td>${esc(priorityFor(c.carrera))}</td></tr>`).join('')
+      state.coordinations.filter(c=>state.teachers.some(t=>t.carrera===c.carrera)).map(c=>`<tr><td>${esc(c.carrera)}</td><td>${esc(c.coordinador||'Por definir')}</td><td>${esc(needsFor(c.carrera).join(' · ')||'Sin información suficiente')}</td><td>${esc(priorityFor(c.carrera))}</td></tr>`).join('')
     }</table>
     <div class="h2">4.1 Formación genérica institucional</div><p>Las siguientes líneas transversales se mantienen como catálogo editable para el período:</p><ul>${state.settings.genericLines.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul>
     <div class="h1">5. Conclusiones</div>
@@ -592,8 +605,8 @@ function planHtml(){
   const total=state.teachers.length;
   const coverage=pct(rows.length,total);
   return htmlDoc('Plan de Formación Docente',`
-    ${cover('Plan de Formación Docente','UGPA-RGI1-01-PRO-31')}
-    <div class="page-break"></div>${pdfHeader('Plan de Formación Docente','UGPA-RGI1-01-PRO-31')}
+    ${cover('Plan de Formación Docente',state.period.planCode)}
+    <div class="page-break"></div>${pdfHeader('Plan de Formación Docente',state.period.planCode)}
     <div class="h1">1. Introducción</div><p>El presente Plan se construye a partir de la Detección de Necesidades de Formación del mismo período. La información de los docentes no se vuelve a ingresar: se hereda de la base institucional y se complementa únicamente con decisiones de planificación.</p>
     <div class="h1">2. Objetivo</div><p>Orientar la formación académica del personal docente mediante rutas pertinentes y verificables, alineadas con las brechas identificadas y las prioridades institucionales.</p>
     <div class="h1">3. Diagnóstico resumido</div><p>La base institucional contiene ${total} docentes. El Plan incluye ${rows.length}, equivalente al ${fmtPct(coverage)}. La meta configurada para el período es ${fmtPct(state.period.targetPercent)}.</p>
@@ -617,8 +630,8 @@ function informeHtml(){
   const abandoned=fs.filter(x=>x.f?.abandoned).length;
   const avg=fs.length?fs.reduce((a,x)=>a+n(x.f?.progress),0)/fs.length:0;
   return htmlDoc('Informe de Cumplimiento del Plan de Formación Docente',`
-    ${cover('Informe de Cumplimiento del Plan de Formación Docente','UGPA-RGI3-0X-PRO-31')}
-    <div class="page-break"></div>${pdfHeader('Informe de Cumplimiento del Plan de Formación Docente','UGPA-RGI3-0X-PRO-31')}
+    ${cover('Informe de Cumplimiento del Plan de Formación Docente',state.period.reportCode)}
+    <div class="page-break"></div>${pdfHeader('Informe de Cumplimiento del Plan de Formación Docente',state.period.reportCode)}
     <div class="h1">1. Objeto del informe</div><p>Presentar el resultado del seguimiento de los docentes incluidos en el Plan de Formación Docente del período, contrastando la planificación con la ejecución registrada.</p>
     <div class="h1">2. Resumen de cumplimiento</div>
     <table class="data"><tr><th>Indicador</th><th>Resultado</th></tr><tr><td>Docentes planificados</td><td>${planned.length}</td></tr><tr><td>Docentes que iniciaron o continúan</td><td>${started}</td></tr><tr><td>Docentes finalizados</td><td>${finished}</td></tr><tr><td>Abandonos registrados</td><td>${abandoned}</td></tr><tr><td>Avance promedio</td><td>${fmtPct(avg)}</td></tr><tr><td>Cumplimiento de inicio</td><td>${fmtPct(pct(started,planned.length))}</td></tr></table>
