@@ -219,36 +219,66 @@ function periodMissing(type){
 }
 function documentStatus(type){
   const missing=[...periodMissing(type)];
-  const incompleteTeachers=state.teachers.filter(t=>teacherMissing(t).length);
   const careersInUse=[...new Set(state.teachers.map(t=>t.carrera).filter(Boolean))];
 
   if(!state.teachers.length) missing.push('Cargar al menos un docente');
-  if(incompleteTeachers.length) missing.push(`${incompleteTeachers.length} docente(s) con campos obligatorios pendientes`);
+
+  const incompleteTeachers=state.teachers.filter(t=>teacherMissing(t).length);
+  incompleteTeachers.slice(0,3).forEach(t=>{
+    const fields=teacherMissing(t);
+    missing.push((t.nombre||t.cedula||'Docente')+': falta '+fields.slice(0,3).join(', ')+(fields.length>3?' y '+(fields.length-3)+' campo(s) más':''));
+  });
+  if(incompleteTeachers.length>3) missing.push('Hay '+(incompleteTeachers.length-3)+' docente(s) adicional(es) con datos pendientes');
+
+  const withoutProgram=careersInUse.filter(name=>{
+    const p=programForCareer(name);
+    return !p || p==='Por definir';
+  });
+  if(withoutProgram.length) missing.push('Programa pendiente para: '+withoutProgram.slice(0,3).join(', ')+(withoutProgram.length>3?'...':''));
 
   const noCoordinator=careersInUse.filter(name=>!norm(state.coordinations.find(c=>c.carrera===name)?.coordinador));
-  if(type==='dnf' && noCoordinator.length) missing.push(`${noCoordinator.length} carrera(s) sin coordinador`);
+  if(type==='dnf' && noCoordinator.length) missing.push('Coordinador pendiente para: '+noCoordinator.slice(0,3).join(', ')+(noCoordinator.length>3?'...':''));
   if(type==='dnf' && !(state.settings.genericLines||[]).filter(norm).length) missing.push('Definir al menos una línea genérica');
 
   if(type==='plan' || type==='informe'){
     ensurePlanRows();
     const selected=state.plan.filter(p=>p.selected);
     if(!selected.length) missing.push('Seleccionar al menos un docente en Planificación');
-    const incomplete=selected.filter(p=>!p.level||!p.program||!p.modality||!p.plannedStart||!p.plannedEnd||!p.supportType||(p.supportType==='Económico'&&!n(p.supportAmount)));
-    if(incomplete.length) missing.push(`${incomplete.length} docente(s) del Plan con planificación incompleta`);
+
+    selected.forEach(p=>{
+      const fields=[];
+      if(!p.level) fields.push('nivel');
+      if(!p.program) fields.push('programa');
+      if(!p.modality) fields.push('modalidad');
+      if(!p.plannedStart) fields.push('inicio');
+      if(!p.plannedEnd) fields.push('fin');
+      if(!p.supportType) fields.push('tipo de apoyo');
+      if(p.supportType==='Económico'&&!n(p.supportAmount)) fields.push('monto');
+      if(fields.length){
+        const t=teacherById(p.teacherId);
+        missing.push((t?.nombre||'Docente')+': planificación sin '+fields.join(', '));
+      }
+    });
   }
 
   if(type==='informe'){
     ensureFollowRows();
     const selected=state.plan.filter(p=>p.selected);
-    const bad=selected.filter(p=>{
-      const f=followByTeacher(p.teacherId);
-      if(!f||!f.status||!f.plannedEnd) return true;
-      if(['En proceso','Finalizado'].includes(f.status)){
-        return !f.realStart || n(f.progress)<=0 || !norm(f.evidenceTitle) || !norm(f.evidencePath);
+    selected.forEach(p=>{
+      const f=followByTeacher(p.teacherId), fields=[];
+      if(!f||!f.status) fields.push('estado');
+      if(!f||!f.plannedEnd) fields.push('fecha prevista de finalización');
+      if(f&&['En proceso','Finalizado'].includes(f.status)){
+        if(!f.realStart) fields.push('fecha real de inicio');
+        if(n(f.progress)<=0) fields.push('avance');
+        if(!norm(f.evidenceTitle)) fields.push('título de evidencia');
+        if(!norm(f.evidencePath)) fields.push('evidencia');
       }
-      return false;
+      if(fields.length){
+        const t=teacherById(p.teacherId);
+        missing.push((t?.nombre||'Docente')+': seguimiento sin '+fields.join(', '));
+      }
     });
-    if(bad.length) missing.push(`${bad.length} seguimiento(s) incompleto(s) o sin evidencia`);
   }
 
   return { ready: missing.length===0, missing };
