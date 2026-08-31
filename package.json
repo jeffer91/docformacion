@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron ."
+    "dev": "electron .",
+    "check": "node --check main.js && node --check preload.js && node --check app.js"
   },
   "dependencies": {
     "xlsx": "^0.18.5"
