@@ -151,7 +151,9 @@ function refreshTeacherMissingStyles(){
   const form=$('#teacherForm');
   if(!form) return;
   const draft=Object.fromEntries(new FormData(form).entries());
-  const missing=new Set(teacherMissingEntries(draft).map(x=>x.key));
+  const type=teacherReturnView==='doc-dnf'?'dnf':teacherReturnView==='doc-plan'?'plan':teacherReturnView==='doc-informe'?'informe':'full';
+  const entries=type==='full'?teacherMissingEntries(draft):teacherMissingEntriesForDocument(type,draft);
+  const missing=new Set(entries.map(x=>x.key));
   form.querySelectorAll('[name]').forEach(el=>setMissingControl(el,missing.has(el.name)));
 }
 
@@ -745,6 +747,26 @@ function teacherMissingEntries(t){
   return missing;
 }
 
+function teacherMissingEntriesForDNF(t){
+  const missing=[];
+  const required=[
+    ['nivelActual','Nivel académico actual'],
+    ['nivelDeseado','Nivel que desea alcanzar'],
+    ['areaInteres','Área o programa de interés'],
+    ['tipoFormacion','Tipo de formación']
+  ];
+  required.forEach(([key,label])=>{if(!norm(t[key])) missing.push({key,label});});
+  if(!norm(t.carrera)) missing.push({key:'carrera',label:'Carrera principal'});
+  else if(!validCareerName(t.carrera)) missing.push({key:'carrera',label:'Carrera principal válida'});
+  return missing;
+}
+
+function teacherMissingEntriesForDocument(type,t){
+  if(type==='dnf') return teacherMissingEntriesForDNF(t);
+  return teacherMissingEntries(t);
+}
+
+
 function teacherMissing(t){
   return teacherMissingEntries(t).map(x=>x.label);
 }
@@ -771,7 +793,7 @@ function documentStatus(type){
   }
 
   state.teachers.forEach(t=>{
-    const entries=teacherMissingEntries(t);
+    const entries=teacherMissingEntriesForDocument(type,t);
     if(entries.length){
       issues.push({
         kind:'teacher',
@@ -1184,6 +1206,12 @@ function openTeacher(teacherId=null,returnView=null,focusField=''){
     actualizacionReciente:'Sí'
   };
   $('#teacherDialogTitle').textContent=teacherId?'Editar docente':'Nuevo docente';
+  const dialogHint=$('#teacherDialog .dialog-header p');
+  if(dialogHint){
+    dialogHint.textContent=teacherReturnView==='doc-dnf'
+      ? 'Para la DNF solo se marcan en rojo los datos necesarios para detectar la necesidad de formación.'
+      : 'Solo campos necesarios para los documentos.';
+  }
   $('#teacherFields').innerHTML = [
     field('Cédula','cedula',t.cedula),
     field('Nombre completo','nombre',t.nombre),
