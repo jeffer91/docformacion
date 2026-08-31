@@ -129,6 +129,101 @@ function field(label, name, value='', type='text', options=[], wide=false, hint=
   }
   return '<div class="field '+(wide?'wide':'')+'"><label>'+esc(label)+'</label>'+control+(hint?'<span class="hint">'+esc(hint)+'</span>':'')+'</div>';
 }
+
+function setMissingControl(el,missing,message='Campo obligatorio pendiente'){
+  if(!el) return;
+  el.classList.toggle('is-missing-control',!!missing);
+  const wrapper=el.closest('.field');
+  if(!wrapper) return;
+  wrapper.classList.toggle('is-missing',!!missing);
+  let note=wrapper.querySelector('.missing-note');
+  if(missing && !note){
+    note=document.createElement('span');
+    note.className='missing-note';
+    note.textContent=message;
+    wrapper.appendChild(note);
+  }else if(!missing && note){
+    note.remove();
+  }
+}
+
+function refreshTeacherMissingStyles(){
+  const form=$('#teacherForm');
+  if(!form) return;
+  const draft=Object.fromEntries(new FormData(form).entries());
+  const missing=new Set(teacherMissingEntries(draft).map(x=>x.key));
+  form.querySelectorAll('[name]').forEach(el=>setMissingControl(el,missing.has(el.name)));
+}
+
+function refreshPeriodMissingStyles(){
+  const root=$('#content');
+  if(!root) return;
+  const required={
+    start:!norm(root.querySelector('[name="start"]')?.value),
+    end:!norm(root.querySelector('[name="end"]')?.value),
+    elaborationDate:!norm(root.querySelector('[name="elaborationDate"]')?.value),
+    preparedBy:!norm(root.querySelector('[name="preparedBy"]')?.value),
+    reviewedBy:!norm(root.querySelector('[name="reviewedBy"]')?.value),
+    approvedBy:!norm(root.querySelector('[name="approvedBy"]')?.value),
+    dnfCode:isPlaceholderCode(root.querySelector('[name="dnfCode"]')?.value),
+    planCode:isPlaceholderCode(root.querySelector('[name="planCode"]')?.value),
+    reportCode:isPlaceholderCode(root.querySelector('[name="reportCode"]')?.value)
+  };
+  Object.entries(required).forEach(([name,missing])=>setMissingControl(root.querySelector('[name="'+name+'"]'),missing));
+}
+
+function refreshCareerMissingStyles(){
+  $$('[data-career-row]').forEach(row=>{
+    const name=row.querySelector('[data-career-name]');
+    const program=row.querySelector('[data-career-program]');
+    setMissingControl(name,!norm(name?.value));
+    setMissingControl(program,!norm(program?.value)||program?.value==='Por definir');
+  });
+}
+
+function refreshDNFMissingStyles(){
+  $$('.coord-input').forEach(inp=>setMissingControl(inp,!norm(inp.value)));
+  $$('.need-item-input').forEach(inp=>setMissingControl(inp,!norm(inp.value)));
+}
+
+function refreshPlanMissingStyles(){
+  $$('[data-plan-row]').forEach(row=>{
+    const selected=row.querySelector('[data-p="selected"]')?.checked;
+    const supportType=row.querySelector('[data-p="supportType"]')?.value;
+    row.querySelectorAll('[data-p]').forEach(el=>{
+      if(el.dataset.p==='selected'){ setMissingControl(el,false); return; }
+      let missing=false;
+      if(selected && ['level','program','modality','plannedStart','plannedEnd','supportType'].includes(el.dataset.p)){
+        missing=!norm(el.value);
+      }
+      if(selected && el.dataset.p==='supportAmount' && supportType==='Económico'){
+        missing=n(el.value)<=0;
+      }
+      setMissingControl(el,missing);
+    });
+  });
+}
+
+function refreshFollowupMissingStyles(){
+  $$('[data-follow-row]').forEach(row=>{
+    const teacherId=row.dataset.followRow;
+    const status=row.querySelector('[data-f="status"]')?.value||'';
+    const active=['En proceso','Finalizado'].includes(status);
+    row.querySelectorAll('[data-f]').forEach(el=>{
+      let missing=false;
+      if(el.dataset.f==='status') missing=!norm(el.value);
+      if(el.dataset.f==='plannedEnd') missing=!norm(el.value);
+      if(active && el.dataset.f==='realStart') missing=!norm(el.value);
+      if(active && el.dataset.f==='progress') missing=n(el.value)<=0;
+      if(active && el.dataset.f==='evidenceTitle') missing=!norm(el.value);
+      setMissingControl(el,missing);
+    });
+    const evidenceButton=row.querySelector('.evidence-btn');
+    const follow=followByTeacher(teacherId);
+    setMissingControl(evidenceButton,active&&!norm(follow?.evidencePath));
+  });
+}
+
 function teacherById(teacherId){ return state.teachers.find(t=>t.id===teacherId); }
 function planByTeacher(teacherId){ return state.plan.find(p=>p.teacherId===teacherId); }
 function followByTeacher(teacherId){ return state.followup.find(f=>f.teacherId===teacherId); }
@@ -980,6 +1075,11 @@ function renderPeriod() {
       </div>
       <div class="dialog-actions"><button class="primary" id="savePeriod">Guardar</button></div>
     </div>`;
+  refreshPeriodMissingStyles();
+  $('#content').querySelectorAll('[name]').forEach(el=>{
+    el.addEventListener('input',refreshPeriodMissingStyles);
+    el.addEventListener('change',refreshPeriodMissingStyles);
+  });
   $('#savePeriod').onclick=async()=>{
     $('#content').querySelectorAll('[name]').forEach(el=>state.period[el.name]=el.name==='targetPercent'?n(el.value):el.value);
     await save(); toast('Período actualizado');
@@ -1001,6 +1101,12 @@ function renderCareers() {
       </div>`).join('')}
     </div>
     <div class="dialog-actions"><button class="primary" id="saveCareers">Guardar carreras</button></div>`;
+
+  refreshCareerMissingStyles();
+  $('[data-career-name],[data-career-program]').forEach(el=>{
+    el.addEventListener('input',refreshCareerMissingStyles);
+    el.addEventListener('change',refreshCareerMissingStyles);
+  });
 
   $('#addCareer').onclick=()=>{
     let base='Nueva carrera', name=base, i=2;
@@ -1100,6 +1206,11 @@ function openTeacher(teacherId=null,returnView=null,focusField=''){
     field('Actualización reciente (opcional)','actualizacionReciente',t.actualizacionReciente,'select',['Sí','No'])
   ].join('');
   $('#teacherDialog').showModal();
+  refreshTeacherMissingStyles();
+  $('#teacherForm').querySelectorAll('[name]').forEach(el=>{
+    el.addEventListener('input',refreshTeacherMissingStyles);
+    el.addEventListener('change',refreshTeacherMissingStyles);
+  });
   if(focusField){
     requestAnimationFrame(()=>{
       const el=$(`#teacherForm [name="${focusField}"]`);
@@ -1257,6 +1368,12 @@ function renderDNF() {
       ${state.settings.genericLines.map((g,i)=>`<div class="generic-line"><input data-generic="${i}" value="${esc(g)}"><button class="danger delete-generic" data-i="${i}">Eliminar</button></div>`).join('')}
     </div>`;
 
+  refreshDNFMissingStyles();
+  $('.coord-input,.need-item-input').forEach(el=>{
+    el.addEventListener('input',refreshDNFMissingStyles);
+    el.addEventListener('change',refreshDNFMissingStyles);
+  });
+
   $('#addGeneric').onclick=()=>{state.settings.genericLines.push('Nueva línea genérica');save();renderDNF();};
   $$('.delete-generic').forEach(b=>b.onclick=()=>{state.settings.genericLines.splice(Number(b.dataset.i),1);save();renderDNF();});
   $$('[data-generic]').forEach(inp=>inp.onchange=()=>{state.settings.genericLines[Number(inp.dataset.generic)]=inp.value;save();});
@@ -1351,6 +1468,11 @@ function renderPlan() {
       <td><input type="number" data-p="supportAmount" value="${esc(p.supportAmount)}" min="0" step="0.01"></td>
     </tr>`}).join('')}</tbody></table>`:'<div class="empty">No hay docentes dispuestos o en formación actualmente.</div>'}</div>
     <div class="dialog-actions"><button class="primary" id="savePlan">Guardar Plan</button></div>`;
+  refreshPlanMissingStyles();
+  $('[data-p]').forEach(el=>{
+    el.addEventListener('input',refreshPlanMissingStyles);
+    el.addEventListener('change',refreshPlanMissingStyles);
+  });
   $('#savePlan').onclick=async()=>{
     $$('[data-plan-row]').forEach(row=>{
       const p=planByTeacher(row.dataset.planRow);
@@ -1392,7 +1514,12 @@ function renderFollowup() {
       <td><input type="checkbox" data-f="abandoned" ${f.abandoned?'checked':''}></td>
     </tr>`}).join('')}</tbody></table>`:'<div class="empty">Selecciona docentes en el Plan para habilitar su seguimiento.</div>'}</div>
     <div class="dialog-actions"><button class="primary" id="saveFollow">Guardar seguimiento</button></div>`;
-  $$('.evidence-btn').forEach(b=>b.onclick=async()=>{
+  refreshFollowupMissingStyles();
+  $('[data-f]').forEach(el=>{
+    el.addEventListener('input',refreshFollowupMissingStyles);
+    el.addEventListener('change',refreshFollowupMissingStyles);
+  });
+  $('.evidence-btn').forEach(b=>b.onclick=async()=>{
     const picked=await window.docformacion.pickEvidence();
     if(!picked)return;
     const f=followByTeacher(b.dataset.id);
