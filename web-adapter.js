@@ -97,7 +97,8 @@
       const periodHeaders = [[
         'PERIODO_INICIO', 'PERIODO_FIN', 'FECHA_ELABORACION', 'VERSION',
         'ELABORADO_POR', 'CARGO_ELABORADO', 'REVISADO_POR', 'CARGO_REVISADO',
-        'APROBADO_POR', 'CARGO_APROBADO', 'META_FORMACION_PORCENTAJE'
+        'APROBADO_POR', 'CARGO_APROBADO', 'META_FORMACION_PORCENTAJE',
+        'CODIGO_DNF', 'CODIGO_PLAN', 'CODIGO_INFORME'
       ]];
 
       const careerRows = [
@@ -135,7 +136,7 @@
       ]];
 
       const coordHeaders = [[
-        'CARRERA', 'COORDINADOR', 'PRIORIDAD_MANUAL'
+        'CARRERA', 'COORDINADOR', 'NECESIDADES', 'PRIORIDAD_MANUAL'
       ]];
 
       const planHeaders = [[
