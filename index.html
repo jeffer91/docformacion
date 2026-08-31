@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: file:; style-src 'self' 'unsafe-inline'; script-src 'self';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocFormación ITSQMET</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">DF</div>
+        <div>
+          <strong>DocFormación</strong>
+          <span>UGPA · Formación Docente</span>
+        </div>
+      </div>
+
+      <nav id="nav">
+        <button class="nav-item active" data-view="inicio">Inicio</button>
+        <button class="nav-item" data-view="periodo">Período</button>
+        <button class="nav-item" data-view="docentes">Docentes</button>
+        <button class="nav-item" data-view="deteccion">Detección</button>
+        <button class="nav-item" data-view="plan">Plan de Formación</button>
+        <button class="nav-item" data-view="seguimiento">Seguimiento</button>
+        <button class="nav-item" data-view="documentos">Documentos PDF</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="btnTemplate" class="secondary full">Plantilla Excel global</button>
+        <button id="btnImport" class="primary full">Importar Excel global</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="viewTitle">Inicio</h1>
+          <p id="viewSubtitle">Gestión integrada de DNF, Plan e Informe.</p>
+        </div>
+        <div class="save-state" id="saveState">Guardado</div>
+      </header>
+
+      <section id="content" class="content"></section>
+    </main>
+  </div>
+
+  <dialog id="teacherDialog">
+    <form method="dialog" id="teacherForm">
+      <div class="dialog-header">
+        <div>
+          <h2 id="teacherDialogTitle">Docente</h2>
+          <p>Solo campos necesarios para los documentos.</p>
+        </div>
+        <button type="button" class="icon-btn" id="closeTeacher">×</button>
+      </div>
+      <div id="teacherFields" class="form-grid"></div>
+      <div class="dialog-actions">
+        <button type="button" class="secondary" id="cancelTeacher">Cancelar</button>
+        <button type="submit" class="primary">Guardar docente</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
