@@ -283,57 +283,84 @@ function documentStatus(type){
 
   return { ready: missing.length===0, missing };
 }
-function statusCard(type,title,go){
+function correctionViewForMissing(item,type){
+  const text=String(item||'').toLowerCase();
+  if(
+    text.includes('código documental') ||
+    text.includes('fecha de inicio del período') ||
+    text.includes('fecha de fin del período') ||
+    text.includes('fecha de elaboración') ||
+    text.includes('elaborado por') ||
+    text.includes('revisado por') ||
+    text.includes('aprobado por')
+  ) return 'periodo';
+  if(text.includes('programa pendiente para')) return 'carreras';
+  if(text.includes('coordinador pendiente') || text.includes('línea genérica')) return 'necesidades';
+  if(text.includes('seleccionar al menos un docente') || text.includes('planificación sin')) return 'planificacion';
+  if(text.includes('seguimiento sin')) return 'seguimiento';
+  if(text.includes('cargar al menos un docente') || text.includes(': falta ') || text.includes('docente(s) adicional(es)')) return 'docentes';
+  return type==='dnf'?'necesidades':type==='plan'?'planificacion':'seguimiento';
+}
+
+function correctionLabel(view){
+  return ({
+    periodo:'Datos generales',
+    carreras:'Carreras',
+    docentes:'Docentes',
+    necesidades:'Necesidades',
+    planificacion:'Planificación',
+    seguimiento:'Seguimiento'
+  })[view] || 'Corregir';
+}
+
+function missingRows(type,missing){
+  return missing.map((item)=>{
+    const view=correctionViewForMissing(item,type);
+    return `<div class="missing-row">
+      <div class="missing-text">${esc(item)}</div>
+      <button class="secondary compact" data-go="${view}">Corregir en ${esc(correctionLabel(view))}</button>
+    </div>`;
+  }).join('');
+}
+
+function statusCard(type,title){
   const s=documentStatus(type);
-  const label=s.ready?'Completo':(s.missing.length<=2?'Casi listo':'Pendiente');
-  const cls=s.ready?'ready':(s.missing.length<=2?'pending':'blocked');
-  return `<div class="status-card">
-    <div class="status-head"><h3>${esc(title)}</h3><span class="status-badge ${cls}">${label}</span></div>
-    ${s.ready?'<div class="small muted">Ya tiene la información mínima necesaria.</div>':`<ul class="missing-list">${s.missing.slice(0,4).map(x=>'<li>'+esc(x)+'</li>').join('')}${s.missing.length>4?'<li>+'+(s.missing.length-4)+' pendiente(s) más</li>':''}</ul>`}
-    <button class="${s.ready?'primary':'secondary'}" data-go="${go}">${s.ready?'Abrir documento':'Corregir pendientes'}</button>
+  return `<div class="status-card simple-doc-card">
+    <div class="status-head">
+      <h3>${esc(title)}</h3>
+      <span class="status-badge ${s.ready?'ready':'blocked'}">${s.ready?'Listo':'Pendiente'}</span>
+    </div>
+    ${s.ready
+      ? `<div class="ready-message">Toda la información necesaria está completa.</div>
+         <div class="doc-actions"><button class="primary" data-generate="${type}">Generar PDF</button></div>`
+      : `<div class="missing-heading">Falta completar:</div>
+         <div class="missing-rows">${missingRows(type,s.missing)}</div>`}
   </div>`;
 }
+
 function completionAlert(type){
   const s=documentStatus(type);
-  if(s.ready) return '<div class="alert-strip success"><div><strong>Documento completo</strong>Ya puedes generar el PDF con la información actual.</div></div>';
-  return `<div class="alert-strip warning"><div><strong>Falta información para completar este documento</strong><ul class="missing-list">${s.missing.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul></div></div>`;
+  if(s.ready) return '<div class="alert-strip success"><div><strong>Documento listo</strong>Ya puedes generar el PDF desde Inicio o desde Documentos.</div></div>';
+  return `<div class="alert-strip warning"><div><strong>${s.missing.length} pendiente(s)</strong>Corrige los datos indicados y la app marcará el documento como listo automáticamente.</div></div>`;
 }
 
 function renderHome() {
-  const s = stats();
-  const dnf=documentStatus('dnf'), plan=documentStatus('plan'), report=documentStatus('informe');
-  const done=[dnf,plan,report].filter(x=>x.ready).length;
   $('#content').innerHTML = `
-    <div class="grid cards">
-      ${metric('Docentes',s.total)}
-      ${metric('Carreras configuradas',(state.careers||[]).length)}
-      ${metric('Incluidos en el Plan',s.selected)}
-      ${metric('Documentos completos',done+' / 3')}
+    <div class="simple-home-head">
+      <h2>Documentos de Formación Docente</h2>
+      <p>Revisa únicamente qué falta. Entra a corregir cada dato y, cuando todo esté completo, genera el PDF.</p>
     </div>
 
-    <div class="section-title"><div><h2>Qué falta para completar los documentos</h2><p>Estas alertas se actualizan automáticamente mientras llenas la información.</p></div></div>
-    <div class="status-grid">
-      ${statusCard('dnf','1. Detección de Necesidades','doc-dnf')}
-      ${statusCard('plan','2. Plan de Formación','doc-plan')}
-      ${statusCard('informe','3. Informe de Cumplimiento','doc-informe')}
-    </div>
-
-    <div class="section-title"><div><h2>Orden recomendado de trabajo</h2><p>Primero completas los datos. Después generas los documentos.</p></div></div>
-    <div class="grid">
-      <div class="card"><strong>1. Datos generales y carreras</strong><p class="muted">Revisa período, autoridades, códigos y catálogo de carreras/programas.</p><div class="toolbar"><button class="secondary" data-go="periodo">Datos generales</button><button class="secondary" data-go="carreras">Carreras</button></div></div>
-      <div class="card"><strong>2. Docentes y necesidades</strong><p class="muted">Carga el Excel global o llena los formularios. La app calcula brechas y necesidades.</p><div class="toolbar"><button class="secondary" data-go="docentes">Docentes</button><button class="secondary" data-go="necesidades">Necesidades</button></div></div>
-      <div class="card"><strong>3. Planificación y seguimiento</strong><p class="muted">Completa solo la información adicional que requiere el Plan y luego el Informe.</p><div class="toolbar"><button class="secondary" data-go="planificacion">Planificación</button><button class="secondary" data-go="seguimiento">Seguimiento</button></div></div>
-    </div>
-
-    <div class="section-title"><div><h2>Carga de información</h2><p>Formulario y Excel global escriben sobre la misma base.</p></div></div>
-    <div class="split">
-      <div class="card"><h3>Formulario</h3><p class="muted">Puedes editar cualquier dato manualmente después de importar.</p><button class="primary" data-go="docentes">Gestionar docentes</button></div>
-      <div class="card"><h3>Excel global</h3><p class="muted">Incluye CARRERAS, PERIODO, DOCENTES, COORDINACIONES, PLAN y SEGUIMIENTO.</p><div class="toolbar"><button class="secondary" id="homeTemplate">Plantilla Excel</button><button class="primary" id="homeImport">Importar Excel</button></div></div>
+    <div class="status-grid simple-status-grid">
+      ${statusCard('dnf','1. Detección de Necesidades de Formación')}
+      ${statusCard('plan','2. Plan de Formación Docente')}
+      ${statusCard('informe','3. Informe de Cumplimiento del Plan de Formación')}
     </div>`;
+
   $$('[data-go]').forEach(b=>b.onclick=()=>setView(b.dataset.go));
-  $('#homeTemplate').onclick=exportTemplate;
-  $('#homeImport').onclick=importExcel;
+  $$('[data-generate]').forEach(b=>b.onclick=()=>generateDocument(b.dataset.generate));
 }
+
 function metric(label,value){ return '<div class="card metric"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>'; }
 
 function renderPeriod() {
@@ -662,35 +689,35 @@ function renderFollowup() {
 
 function renderDocumentView(type) {
   const cfg={
-    dnf:{title:'Detección de Necesidades de Formación',description:'Documento 1. Diagnóstico institucional que alimenta el Plan.'},
-    plan:{title:'Plan de Formación Docente',description:'Documento 2. Convierte las necesidades detectadas en planificación.'},
-    informe:{title:'Informe de Cumplimiento del Plan',description:'Documento 3. Consolida la ejecución, el avance y las evidencias.'}
+    dnf:{title:'Detección de Necesidades de Formación'},
+    plan:{title:'Plan de Formación Docente'},
+    informe:{title:'Informe de Cumplimiento del Plan de Formación'}
   }[type];
   const s=documentStatus(type);
-  const approximate=s.ready?100:Math.max(10,100-Math.min(90,s.missing.length*12));
+
   $('#content').innerHTML = `
-    ${completionAlert(type)}
-    <div class="card doc-ready-panel">
-      <div>
-        <h2>${esc(cfg.title)}</h2>
-        <p class="muted">${esc(cfg.description)}</p>
-        <div class="completion-bar" style="margin:14px 0 7px"><span style="width:${approximate}%"></span></div>
-        <div class="small muted">${s.ready?'100% de requisitos mínimos completos':s.missing.length+' pendiente(s) detectado(s)'}</div>
-      </div>
-      <button class="primary" id="generateCurrent" ${s.ready?'':'disabled'}>Generar PDF</button>
+    <div class="simple-home-head">
+      <h2>${esc(cfg.title)}</h2>
+      <p>${s.ready?'El documento está listo para generar.':'Completa los siguientes datos para habilitar el PDF.'}</p>
     </div>
 
-    <div class="section-title"><div><h2>Revisión antes de generar</h2><p>El PDF final se habilita cuando la información mínima está completa.</p></div></div>
-    <div class="card">
-      ${s.ready
-        ? '<div class="alert-strip success"><div><strong>Listo para generar</strong>Los datos mínimos están completos.</div></div>'
-        : `<ul class="missing-list">${s.missing.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul>`}
-      <div class="toolbar" style="margin-top:16px">
-        ${type==='dnf'?'<button class="secondary" data-go="docentes">Editar docentes</button><button class="secondary" data-go="necesidades">Editar necesidades</button>':''}
-        ${type==='plan'?'<button class="secondary" data-go="planificacion">Editar planificación</button>':''}
-        ${type==='informe'?'<button class="secondary" data-go="seguimiento">Editar seguimiento</button>':''}
+    <div class="status-card simple-doc-card single-document">
+      <div class="status-head">
+        <h3>${esc(cfg.title)}</h3>
+        <span class="status-badge ${s.ready?'ready':'blocked'}">${s.ready?'Listo':'Pendiente'}</span>
       </div>
+
+      ${s.ready
+        ? `<div class="ready-message">Toda la información necesaria está completa.</div>
+           <div class="doc-actions">
+             <button class="secondary" data-go="inicio">Volver al inicio</button>
+             <button class="primary" id="generateCurrent">Generar PDF</button>
+           </div>`
+        : `<div class="missing-heading">Falta completar:</div>
+           <div class="missing-rows">${missingRows(type,s.missing)}</div>
+           <div class="doc-actions"><button class="secondary" data-go="inicio">Volver al inicio</button></div>`}
     </div>`;
+
   $$('[data-go]').forEach(b=>b.onclick=()=>setView(b.dataset.go));
   if($('#generateCurrent')) $('#generateCurrent').onclick=()=>generateDocument(type);
 }
