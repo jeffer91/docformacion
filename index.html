@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: file:; style-src 'self' 'unsafe-inline'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: file:; style-src 'self' 'unsafe-inline'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net https://repaso-fire-d8ceb-default-rtdb.firebaseio.com;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DocFormación ITSQMET</title>
   <link rel="stylesheet" href="styles.css" />
@@ -30,6 +30,8 @@
       <div class="sidebar-footer">
         <button id="btnTemplate" class="secondary full">Plantilla Excel global</button>
         <button id="btnImport" class="primary full">Importar Excel global</button>
+        <button id="btnFirebase" class="secondary full">Actualizar desde Firebase</button>
+        <div class="firebase-readonly-note">Solo lectura · Formación Docente</div>
       </div>
     </aside>
 
@@ -45,6 +47,22 @@
       <section id="content" class="content"></section>
     </main>
   </div>
+
+  <dialog id="firebaseDialog">
+    <div class="firebase-dialog-body">
+      <div class="dialog-header">
+        <div>
+          <h2>Actualización desde Firebase</h2>
+          <p>La base externa se consulta únicamente en modo lectura. Los registros de capacitación se ignoran.</p>
+        </div>
+        <button type="button" class="icon-btn" id="closeFirebase">×</button>
+      </div>
+      <div id="firebaseSummary"></div>
+      <div class="dialog-actions">
+        <button type="button" class="primary" id="closeFirebaseBottom">Cerrar</button>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="teacherDialog">
     <form method="dialog" id="teacherForm">
