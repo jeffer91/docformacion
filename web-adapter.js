@@ -4,6 +4,7 @@
 
   const STORAGE_KEY = 'docformacion-data-v1';
   const XLSX_CDN = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+  const FIREBASE_READ_URL = 'https://repaso-fire-d8ceb-default-rtdb.firebaseio.com/.json';
 
   function chooseFile(accept) {
     return new Promise((resolve) => {
@@ -66,6 +67,22 @@
     if (!file) return null;
     // En web no guardamos rutas locales por seguridad del navegador.
     return { path: file.name, name: file.name };
+  }
+
+  async function readFirebase() {
+    try {
+      const response = await fetch(FIREBASE_READ_URL, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        cache: 'no-store'
+      });
+      if (!response.ok) return { ok: false, error: 'Firebase respondió HTTP ' + response.status };
+      const data = await response.json();
+      if (data && data.error) return { ok: false, error: String(data.error) };
+      return { ok: true, data, readOnly: true, source: FIREBASE_READ_URL };
+    } catch (error) {
+      return { ok: false, error: error.message };
+    }
   }
 
   async function importExcel() {
@@ -208,6 +225,7 @@
     importExcel,
     exportExcelTemplate,
     pickEvidence,
-    generatePDF
+    generatePDF,
+    readFirebase
   };
 })();
