@@ -637,7 +637,7 @@ function teacherMissingEntries(t){
     ['estudiaActualmente','¿Estudia actualmente?'],['nivelDeseado','Nivel que desea alcanzar'],
     ['areaInteres','Área o programa de interés'],['dispuesto','Disposición para estudiar'],
     ['tipoFormacion','Tipo de formación'],['modalidadPreferida','Modalidad preferida'],
-    ['barrera','Barrera principal'],['actualizacionReciente','Actualización reciente']
+    ['barrera','Barrera principal']
   ];
   required.forEach(([key,label])=>{if(!norm(t[key])) missing.push({key,label});});
   if(!norm(t.carrera)) missing.push({key:'carrera',label:'Carrera principal'});
@@ -1097,7 +1097,7 @@ function openTeacher(teacherId=null,returnView=null,focusField=''){
     field('Modalidad preferida','modalidadPreferida',t.modalidadPreferida,'select',['Presencial','Virtual','Híbrida']),
     field('Inicio tentativo','inicioTentativo',t.inicioTentativo,'month'),
     field('Barrera principal','barrera',t.barrera,'select',['Ninguna','Económica','Tiempo','Carga laboral','Falta de oferta','Personal','Otra']),
-    field('Actualización reciente','actualizacionReciente',t.actualizacionReciente,'select',['Sí','No'])
+    field('Actualización reciente (opcional)','actualizacionReciente',t.actualizacionReciente,'select',['Sí','No'])
   ].join('');
   $('#teacherDialog').showModal();
   if(focusField){
