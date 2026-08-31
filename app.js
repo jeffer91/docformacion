@@ -792,19 +792,21 @@ function documentStatus(type){
     issues.push({kind:'teachers-empty',text:'Cargar al menos un docente',view:'docentes'});
   }
 
-  state.teachers.forEach(t=>{
-    const entries=teacherMissingEntriesForDocument(type,t);
-    if(entries.length){
-      issues.push({
-        kind:'teacher',
-        teacherId:t.id,
-        name:t.nombre||t.cedula||'Docente',
-        fields:entries,
-        text:(t.nombre||t.cedula||'Docente')+': falta '+entries.map(x=>x.label).join(', '),
-        view:'docentes'
-      });
-    }
-  });
+  if(type!=='dnf'){
+    state.teachers.forEach(t=>{
+      const entries=teacherMissingEntriesForDocument(type,t);
+      if(entries.length){
+        issues.push({
+          kind:'teacher',
+          teacherId:t.id,
+          name:t.nombre||t.cedula||'Docente',
+          fields:entries,
+          text:(t.nombre||t.cedula||'Docente')+': falta '+entries.map(x=>x.label).join(', '),
+          view:'docentes'
+        });
+      }
+    });
+  }
 
   const withoutProgram=careersInUse.filter(name=>{
     const p=programForCareer(name);
@@ -817,6 +819,18 @@ function documentStatus(type){
       text:withoutProgram.length+' carrera(s) sin programa definido',
       view:'carreras'
     });
+  }
+
+  if(type==='dnf'){
+    const withoutNeeds=careersInUse.filter(name=>!needsFor(name).filter(norm).length);
+    if(withoutNeeds.length){
+      issues.push({
+        kind:'career-needs',
+        names:withoutNeeds,
+        text:withoutNeeds.length+' carrera(s) sin necesidad de formación definida',
+        view:'necesidades'
+      });
+    }
   }
 
   const noCoordinator=careersInUse.filter(name=>!norm(state.coordinations.find(c=>c.carrera===name)?.coordinador));
@@ -930,7 +944,7 @@ function renderIssues(type,issues){
   const teachers=issues.filter(x=>x.kind==='teacher');
   const planTeachers=issues.filter(x=>x.kind==='plan-teacher');
   const followTeachers=issues.filter(x=>x.kind==='follow-teacher');
-  const groupedKinds=new Set(['teacher','plan-teacher','follow-teacher','career-program','coordinator']);
+  const groupedKinds=new Set(['teacher','plan-teacher','follow-teacher','career-program','career-needs','coordinator']);
 
   issues.filter(x=>!groupedKinds.has(x.kind)).forEach(issue=>{
     out.push(issueLine(issue,esc(issue.text),`Corregir en ${correctionLabel(issue.view)}`));
@@ -953,6 +967,17 @@ function renderIssues(type,issues){
       careerProgram.names.map(name=>issueLine(
         {view:'carreras',careerName:name},
         `<strong>${esc(name)}</strong><span>Programa sin definir</span>`
+      ))
+    ));
+  }
+
+  const careerNeeds=issues.find(x=>x.kind==='career-needs');
+  if(careerNeeds){
+    out.push(issueGroup(
+      careerNeeds.names.length+' carrera(s) sin necesidad de formación',
+      careerNeeds.names.map(name=>issueLine(
+        {view:'necesidades',careerName:name},
+        '<strong>'+esc(name)+'</strong><span>Definir al menos una necesidad de formación</span>'
       ))
     ));
   }
