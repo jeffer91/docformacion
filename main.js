@@ -1,7 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 const XLSX = require('xlsx');
+
+const FIREBASE_READ_URL = 'https://repaso-fire-d8ceb-default-rtdb.firebaseio.com/.json';
 
 let mainWindow;
 
@@ -53,6 +56,53 @@ ipcMain.handle('data:save', async (_event, data) => {
   } catch (error) {
     return { ok: false, error: error.message };
   }
+});
+
+function readFirebaseJson() {
+  return new Promise((resolve) => {
+    const request = https.get(FIREBASE_READ_URL, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'DocFormacion-ReadOnly' }
+    }, (response) => {
+      let body = '';
+      let size = 0;
+      const maxBytes = 25 * 1024 * 1024;
+
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => {
+        size += Buffer.byteLength(chunk, 'utf8');
+        if (size > maxBytes) {
+          request.destroy(new Error('La respuesta de Firebase supera 25 MB.'));
+          return;
+        }
+        body += chunk;
+      });
+
+      response.on('end', () => {
+        if (response.statusCode !== 200) {
+          resolve({ ok: false, error: 'Firebase respondió HTTP ' + response.statusCode });
+          return;
+        }
+        try {
+          const data = JSON.parse(body || 'null');
+          if (data && data.error) {
+            resolve({ ok: false, error: String(data.error) });
+            return;
+          }
+          resolve({ ok: true, data, readOnly: true, source: FIREBASE_READ_URL });
+        } catch (error) {
+          resolve({ ok: false, error: 'Respuesta JSON inválida: ' + error.message });
+        }
+      });
+    });
+
+    request.on('error', (error) => resolve({ ok: false, error: error.message }));
+    request.setTimeout(20000, () => request.destroy(new Error('Tiempo de espera agotado al leer Firebase.')));
+  });
+}
+
+ipcMain.handle('firebase:read', async () => {
+  // Integración deliberadamente de solo lectura: este proceso únicamente ejecuta GET.
+  return readFirebaseJson();
 });
 
 ipcMain.handle('evidence:pick', async () => {
