@@ -92,3 +92,16 @@ Versión inicial funcional con:
 - selección de docentes para el Plan;
 - seguimiento con estado, avance y evidencias;
 - generación PDF de DNF, Plan e Informe.
+
+
+## Integración Firebase
+
+DocFormación puede consultar la base Realtime Database del proyecto Repaso-Fire en modo estrictamente de solo lectura.
+
+- La integración usa únicamente solicitudes GET.
+- Los registros de capacitación, talleres, seminarios, webinars y ramas como `capacitacionesGenericas` se excluyen del análisis.
+- Firebase solo completa campos vacíos de DocFormación.
+- Un dato local existente nunca se reemplaza silenciosamente; las diferencias se registran como conflictos.
+- La cédula funciona como llave principal para evitar duplicar docentes.
+- Firebase no crea necesidades de formación ni prioridades: esas siguen siendo calculadas por DocFormación.
+- Se conserva trazabilidad interna de los campos completados desde Firebase y la fecha de lectura.
