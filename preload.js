@@ -6,5 +6,6 @@ contextBridge.exposeInMainWorld('docformacion', {
   importExcel: () => ipcRenderer.invoke('excel:import'),
   exportExcelTemplate: () => ipcRenderer.invoke('excel:template'),
   pickEvidence: () => ipcRenderer.invoke('evidence:pick'),
-  generatePDF: (payload) => ipcRenderer.invoke('pdf:generate', payload)
+  generatePDF: (payload) => ipcRenderer.invoke('pdf:generate', payload),
+  readFirebase: () => ipcRenderer.invoke('firebase:read')
 });
