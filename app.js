@@ -630,17 +630,39 @@ function renderFollowup() {
   };
 }
 
-function renderDocuments() {
-  const s=stats();
+function renderDocumentView(type) {
+  const cfg={
+    dnf:{title:'Detección de Necesidades de Formación',description:'Documento 1. Diagnóstico institucional que alimenta el Plan.'},
+    plan:{title:'Plan de Formación Docente',description:'Documento 2. Convierte las necesidades detectadas en planificación.'},
+    informe:{title:'Informe de Cumplimiento del Plan',description:'Documento 3. Consolida la ejecución, el avance y las evidencias.'}
+  }[type];
+  const s=documentStatus(type);
+  const approximate=s.ready?100:Math.max(10,100-Math.min(90,s.missing.length*12));
   $('#content').innerHTML = `
-    <div class="success-box">Los PDF se generan directamente desde Electron en formato A4. Antes de guardar se usan los datos actuales de la base.</div>
-    <div class="section-title"><div><h2>Documentos del proceso</h2><p>Una sola base, tres salidas coherentes.</p></div></div>
-    <div class="card doc-card"><div><h3>1. Detección de Necesidades de Formación</h3><p>${s.total} docentes disponibles para el diagnóstico.</p></div><button class="primary" id="pdfDNF">Generar PDF</button></div>
-    <div class="card doc-card"><div><h3>2. Plan de Formación Docente</h3><p>${s.selected} docentes seleccionados.</p></div><button class="primary" id="pdfPlan">Generar PDF</button></div>
-    <div class="card doc-card"><div><h3>3. Informe de Cumplimiento del Plan</h3><p>${s.started} docentes con ejecución registrada.</p></div><button class="primary" id="pdfInforme">Generar PDF</button></div>`;
-  $('#pdfDNF').onclick=()=>generateDocument('dnf');
-  $('#pdfPlan').onclick=()=>generateDocument('plan');
-  $('#pdfInforme').onclick=()=>generateDocument('informe');
+    ${completionAlert(type)}
+    <div class="card doc-ready-panel">
+      <div>
+        <h2>${esc(cfg.title)}</h2>
+        <p class="muted">${esc(cfg.description)}</p>
+        <div class="completion-bar" style="margin:14px 0 7px"><span style="width:${approximate}%"></span></div>
+        <div class="small muted">${s.ready?'100% de requisitos mínimos completos':s.missing.length+' pendiente(s) detectado(s)'}</div>
+      </div>
+      <button class="primary" id="generateCurrent" ${s.ready?'':'disabled'}>Generar PDF</button>
+    </div>
+
+    <div class="section-title"><div><h2>Revisión antes de generar</h2><p>El PDF final se habilita cuando la información mínima está completa.</p></div></div>
+    <div class="card">
+      ${s.ready
+        ? '<div class="alert-strip success"><div><strong>Listo para generar</strong>Los datos mínimos están completos.</div></div>'
+        : `<ul class="missing-list">${s.missing.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul>`}
+      <div class="toolbar" style="margin-top:16px">
+        ${type==='dnf'?'<button class="secondary" data-go="docentes">Editar docentes</button><button class="secondary" data-go="necesidades">Editar necesidades</button>':''}
+        ${type==='plan'?'<button class="secondary" data-go="planificacion">Editar planificación</button>':''}
+        ${type==='informe'?'<button class="secondary" data-go="seguimiento">Editar seguimiento</button>':''}
+      </div>
+    </div>`;
+  $$('[data-go]').forEach(b=>b.onclick=()=>setView(b.dataset.go));
+  if($('#generateCurrent')) $('#generateCurrent').onclick=()=>generateDocument(type);
 }
 
 async function exportTemplate(){
