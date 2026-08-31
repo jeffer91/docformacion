@@ -60,3 +60,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .completion-bar{height:10px;background:#e7ecf3;border-radius:999px;overflow:hidden}
 .completion-bar>span{display:block;height:100%;background:#2d6ea4}
 @media(max-width:1000px){.status-grid{grid-template-columns:1fr}.catalog-row{grid-template-columns:1fr}.doc-ready-panel{grid-template-columns:1fr}.missing-row,.issue-line{grid-template-columns:1fr}.missing-row button,.issue-line button{width:100%}.doc-actions{justify-content:stretch}.doc-actions button{flex:1}.issue-group summary{align-items:flex-start}.issue-group-hint{display:none}}
+
+
+.field.is-missing label{color:#b42318!important}
+.field.is-missing input,.field.is-missing select,.field.is-missing textarea,
+.is-missing-control{border:2px solid #dc2626!important;background:#fff5f5!important;box-shadow:0 0 0 2px rgba(220,38,38,.08)!important}
+.field.is-missing input:focus,.field.is-missing select:focus,.field.is-missing textarea:focus,
+.is-missing-control:focus{outline:none;box-shadow:0 0 0 3px rgba(220,38,38,.16)!important}
+button.is-missing-control{color:#b42318!important;border-color:#dc2626!important;background:#fff5f5!important}
+.missing-note{display:block;margin-top:2px;font-size:11px;font-weight:700;color:#b42318}
+.field.is-missing.needs-attention{background:#fff1f1!important;outline:2px solid #dc2626!important}
