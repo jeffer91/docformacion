@@ -141,22 +141,36 @@ function setView(view) {
   currentView = view;
   $$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
   const meta = {
-    inicio:['Inicio','Resumen del proceso integrado de Formación Docente.'],
-    periodo:['Período','Datos institucionales compartidos por los tres documentos.'],
-    docentes:['Docentes','Base única para Detección, Plan y Seguimiento.'],
-    deteccion:['Detección de Necesidades','Diagnóstico automático con datos editables.'],
-    plan:['Plan de Formación','Planificación derivada de la DNF, sin repetir información.'],
-    seguimiento:['Seguimiento','Actualización de avance y evidencias de los docentes planificados.'],
-    documentos:['Documentos PDF','Generación de los tres documentos institucionales.']
-  }[view];
+    inicio:['Inicio','Completa primero los datos y luego genera los tres documentos.'],
+    periodo:['Datos generales','Información institucional y del período.'],
+    carreras:['Carreras','Catálogo inicial de carreras y tipo de programa; puedes agregar más.'],
+    docentes:['Docentes','Base única de información para los tres documentos.'],
+    necesidades:['Necesidades y líneas','Datos derivados para completar la Detección de Necesidades.'],
+    planificacion:['Planificación','Selecciona docentes y completa los datos que requiere el Plan.'],
+    seguimiento:['Seguimiento','Registra ejecución, avance y evidencias para el Informe.'],
+    'doc-dnf':['Detección de Necesidades','Estado y generación del primer documento.'],
+    'doc-plan':['Plan de Formación Docente','Estado y generación del segundo documento.'],
+    'doc-informe':['Informe de Cumplimiento','Estado y generación del tercer documento.']
+  }[view] || ['DocFormación',''];
   $('#viewTitle').textContent = meta[0];
   $('#viewSubtitle').textContent = meta[1];
   render();
 }
 
 function render() {
-  const renderers = {inicio:renderHome,periodo:renderPeriod,docentes:renderTeachers,deteccion:renderDNF,plan:renderPlan,seguimiento:renderFollowup,documentos:renderDocuments};
-  renderers[currentView]();
+  const renderers = {
+    inicio:renderHome,
+    periodo:renderPeriod,
+    carreras:renderCareers,
+    docentes:renderTeachers,
+    necesidades:renderDNF,
+    planificacion:renderPlan,
+    seguimiento:renderFollowup,
+    'doc-dnf':()=>renderDocumentView('dnf'),
+    'doc-plan':()=>renderDocumentView('plan'),
+    'doc-informe':()=>renderDocumentView('informe')
+  };
+  (renderers[currentView]||renderHome)();
 }
 
 function stats() {
@@ -170,25 +184,121 @@ function stats() {
   return {total,masters,doctors,willing,studying,selected,started};
 }
 
+function isPlaceholderCode(v){
+  return !v || /0X|AÑO|MES/i.test(String(v));
+}
+function teacherMissing(t){
+  const missing=[];
+  const required=[
+    ['cedula','Cédula'],['nombre','Nombre'],['carrera','Carrera principal'],['dedicacion','Dedicación'],
+    ['nivelActual','Nivel académico actual'],['tituloActual','Título académico actual'],['afinidad','Afinidad del título'],
+    ['estudiaActualmente','¿Estudia actualmente?'],['nivelDeseado','Nivel que desea alcanzar'],
+    ['areaInteres','Área o programa de interés'],['dispuesto','Disposición para estudiar'],
+    ['tipoFormacion','Tipo de formación'],['modalidadPreferida','Modalidad preferida'],
+    ['inicioTentativo','Inicio tentativo'],['barrera','Barrera principal'],['actualizacionReciente','Actualización reciente']
+  ];
+  required.forEach(([k,label])=>{if(!norm(t[k])) missing.push(label);});
+  if(t.estudiaActualmente==='Sí'){
+    if(!norm(t.nivelCurso)) missing.push('Nivel de formación en curso');
+    if(!norm(t.programaCurso)) missing.push('Programa en curso');
+    if(!norm(t.institucionCurso)) missing.push('Institución de estudio');
+  }
+  return missing;
+}
+function periodMissing(type){
+  const p=state.period, miss=[];
+  if(!p.start) miss.push('Fecha de inicio del período');
+  if(!p.end) miss.push('Fecha de fin del período');
+  if(!p.elaborationDate) miss.push('Fecha de elaboración');
+  if(!p.preparedBy) miss.push('Elaborado por');
+  if(!p.reviewedBy) miss.push('Revisado por');
+  if(!p.approvedBy) miss.push('Aprobado por');
+  const code=type==='dnf'?p.dnfCode:type==='plan'?p.planCode:p.reportCode;
+  if(isPlaceholderCode(code)) miss.push('Código documental definitivo');
+  return miss;
+}
+function documentStatus(type){
+  const missing=[...periodMissing(type)];
+  const incompleteTeachers=state.teachers.filter(t=>teacherMissing(t).length);
+  const careersInUse=[...new Set(state.teachers.map(t=>t.carrera).filter(Boolean))];
+
+  if(!state.teachers.length) missing.push('Cargar al menos un docente');
+  if(incompleteTeachers.length) missing.push(`${incompleteTeachers.length} docente(s) con campos obligatorios pendientes`);
+
+  const noCoordinator=careersInUse.filter(name=>!norm(state.coordinations.find(c=>c.carrera===name)?.coordinador));
+  if(type==='dnf' && noCoordinator.length) missing.push(`${noCoordinator.length} carrera(s) sin coordinador`);
+  if(type==='dnf' && !(state.settings.genericLines||[]).filter(norm).length) missing.push('Definir al menos una línea genérica');
+
+  if(type==='plan' || type==='informe'){
+    ensurePlanRows();
+    const selected=state.plan.filter(p=>p.selected);
+    if(!selected.length) missing.push('Seleccionar al menos un docente en Planificación');
+    const incomplete=selected.filter(p=>!p.level||!p.program||!p.modality||!p.plannedStart||!p.plannedEnd||!p.supportType||(p.supportType==='Económico'&&!n(p.supportAmount)));
+    if(incomplete.length) missing.push(`${incomplete.length} docente(s) del Plan con planificación incompleta`);
+  }
+
+  if(type==='informe'){
+    ensureFollowRows();
+    const selected=state.plan.filter(p=>p.selected);
+    const bad=selected.filter(p=>{
+      const f=followByTeacher(p.teacherId);
+      if(!f||!f.status||!f.plannedEnd) return true;
+      if(['En proceso','Finalizado'].includes(f.status)){
+        return !f.realStart || n(f.progress)<=0 || !norm(f.evidenceTitle) || !norm(f.evidencePath);
+      }
+      return false;
+    });
+    if(bad.length) missing.push(`${bad.length} seguimiento(s) incompleto(s) o sin evidencia`);
+  }
+
+  return { ready: missing.length===0, missing };
+}
+function statusCard(type,title,go){
+  const s=documentStatus(type);
+  const label=s.ready?'Completo':(s.missing.length<=2?'Casi listo':'Pendiente');
+  const cls=s.ready?'ready':(s.missing.length<=2?'pending':'blocked');
+  return `<div class="status-card">
+    <div class="status-head"><h3>${esc(title)}</h3><span class="status-badge ${cls}">${label}</span></div>
+    ${s.ready?'<div class="small muted">Ya tiene la información mínima necesaria.</div>':`<ul class="missing-list">${s.missing.slice(0,4).map(x=>'<li>'+esc(x)+'</li>').join('')}${s.missing.length>4?'<li>+'+(s.missing.length-4)+' pendiente(s) más</li>':''}</ul>`}
+    <button class="${s.ready?'primary':'secondary'}" data-go="${go}">${s.ready?'Abrir documento':'Corregir pendientes'}</button>
+  </div>`;
+}
+function completionAlert(type){
+  const s=documentStatus(type);
+  if(s.ready) return '<div class="alert-strip success"><div><strong>Documento completo</strong>Ya puedes generar el PDF con la información actual.</div></div>';
+  return `<div class="alert-strip warning"><div><strong>Falta información para completar este documento</strong><ul class="missing-list">${s.missing.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul></div></div>`;
+}
+
 function renderHome() {
   const s = stats();
+  const dnf=documentStatus('dnf'), plan=documentStatus('plan'), report=documentStatus('informe');
+  const done=[dnf,plan,report].filter(x=>x.ready).length;
   $('#content').innerHTML = `
     <div class="grid cards">
       ${metric('Docentes',s.total)}
-      ${metric('Con maestría',s.masters)}
-      ${metric('Dispuestos a estudiar',s.willing)}
+      ${metric('Carreras configuradas',(state.careers||[]).length)}
       ${metric('Incluidos en el Plan',s.selected)}
+      ${metric('Documentos completos',done+' / 3')}
     </div>
-    <div class="section-title"><div><h2>Flujo del proceso</h2><p>Los datos se reutilizan de una etapa a la siguiente.</p></div></div>
+
+    <div class="section-title"><div><h2>Qué falta para completar los documentos</h2><p>Estas alertas se actualizan automáticamente mientras llenas la información.</p></div></div>
+    <div class="status-grid">
+      ${statusCard('dnf','1. Detección de Necesidades','doc-dnf')}
+      ${statusCard('plan','2. Plan de Formación','doc-plan')}
+      ${statusCard('informe','3. Informe de Cumplimiento','doc-informe')}
+    </div>
+
+    <div class="section-title"><div><h2>Orden recomendado de trabajo</h2><p>Primero completas los datos. Después generas los documentos.</p></div></div>
     <div class="grid">
-      <div class="card"><strong>1. Detección de Necesidades de Formación</strong><p class="muted">Caracteriza el claustro, calcula brechas y genera necesidades específicas por carrera.</p></div>
-      <div class="card"><strong>2. Plan de Formación Docente</strong><p class="muted">Hereda la DNF, propone candidatos y permite definir la planificación sin volver a cargar datos.</p></div>
-      <div class="card"><strong>3. Informe de Cumplimiento</strong><p class="muted">Consolida el seguimiento real, porcentajes de avance, abandono y evidencias.</p></div>
+      <div class="card"><strong>1. Datos generales y carreras</strong><p class="muted">Revisa período, autoridades, códigos y catálogo de carreras/programas.</p><div class="toolbar"><button class="secondary" data-go="periodo">Datos generales</button><button class="secondary" data-go="carreras">Carreras</button></div></div>
+      <div class="card"><strong>2. Docentes y necesidades</strong><p class="muted">Carga el Excel global o llena los formularios. La app calcula brechas y necesidades.</p><div class="toolbar"><button class="secondary" data-go="docentes">Docentes</button><button class="secondary" data-go="necesidades">Necesidades</button></div></div>
+      <div class="card"><strong>3. Planificación y seguimiento</strong><p class="muted">Completa solo la información adicional que requiere el Plan y luego el Informe.</p><div class="toolbar"><button class="secondary" data-go="planificacion">Planificación</button><button class="secondary" data-go="seguimiento">Seguimiento</button></div></div>
     </div>
-    <div class="section-title"><div><h2>Carga de información</h2><p>Formulario y Excel escriben sobre la misma base.</p></div></div>
+
+    <div class="section-title"><div><h2>Carga de información</h2><p>Formulario y Excel global escriben sobre la misma base.</p></div></div>
     <div class="split">
-      <div class="card"><h3>Formulario</h3><p class="muted">Agrega o corrige docentes individualmente.</p><button class="primary" data-go="docentes">Gestionar docentes</button></div>
-      <div class="card"><h3>Excel global</h3><p class="muted">PERIODO, DOCENTES, COORDINACIONES, PLAN y SEGUIMIENTO.</p><div class="toolbar"><button class="secondary" id="homeTemplate">Plantilla Excel</button><button class="primary" id="homeImport">Importar Excel</button></div></div>
+      <div class="card"><h3>Formulario</h3><p class="muted">Puedes editar cualquier dato manualmente después de importar.</p><button class="primary" data-go="docentes">Gestionar docentes</button></div>
+      <div class="card"><h3>Excel global</h3><p class="muted">Incluye CARRERAS, PERIODO, DOCENTES, COORDINACIONES, PLAN y SEGUIMIENTO.</p><div class="toolbar"><button class="secondary" id="homeTemplate">Plantilla Excel</button><button class="primary" id="homeImport">Importar Excel</button></div></div>
     </div>`;
   $$('[data-go]').forEach(b=>b.onclick=()=>setView(b.dataset.go));
   $('#homeTemplate').onclick=exportTemplate;
