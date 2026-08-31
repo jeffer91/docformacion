@@ -453,6 +453,13 @@ function renderIssues(type,issues){
   return `<div class="issue-list">${out.join('')}</div>`;
 }
 
+function issueTotal(issues){
+  return issues.reduce((total,issue)=>{
+    if((issue.kind==='career-program'||issue.kind==='coordinator')&&Array.isArray(issue.names)) return total+issue.names.length;
+    return total+1;
+  },0);
+}
+
 function docViewForType(type){
   return type==='dnf'?'doc-dnf':type==='plan'?'doc-plan':'doc-informe';
 }
@@ -500,14 +507,14 @@ function statusCard(type,title){
     ${s.ready
       ? `<div class="ready-message">Toda la información necesaria está completa.</div>
          <div class="doc-actions"><button class="primary" data-generate="${type}">Generar PDF</button></div>`
-      : `<div class="missing-heading">${s.issues.length} pendiente(s) por completar</div>${renderIssues(type,s.issues)}`}
+      : `<div class="missing-heading">${issueTotal(s.issues)} pendiente(s) por completar</div>${renderIssues(type,s.issues)}`}
   </div>`;
 }
 
 function completionAlert(type){
   const s=documentStatus(type);
   if(s.ready) return '<div class="alert-strip success"><div><strong>Documento listo</strong>La información mínima está completa.</div></div>';
-  return `<div class="alert-strip warning"><div><strong>${s.issues.length} pendiente(s)</strong>Guarda la corrección y vuelve al documento para verificar el estado.</div></div>`;
+  return `<div class="alert-strip warning"><div><strong>${issueTotal(s.issues)} pendiente(s)</strong>Guarda la corrección y vuelve al documento para verificar el estado.</div></div>`;
 }
 
 function renderHome(){
@@ -890,7 +897,7 @@ function renderDocumentView(type){
       ${s.ready
         ? `<div class="ready-message">Toda la información requerida está completa.</div>
            <div class="doc-actions"><button class="primary" id="generateCurrent">Generar PDF</button></div>`
-        : `<div class="issue-count">${s.issues.length} pendiente(s) detectado(s)</div>${renderIssues(type,s.issues)}`}
+        : `<div class="issue-count">${issueTotal(s.issues)} pendiente(s) detectado(s)</div>${renderIssues(type,s.issues)}`}
     </div>`;
   bindCorrectionActions(type);
   if($('#generateCurrent')) $('#generateCurrent').onclick=()=>generateDocument(type);
