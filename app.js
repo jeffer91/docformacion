@@ -1861,7 +1861,16 @@ function basePdfCss(exactPages=false){
       '.needs-grid{display:block}.need-card{border:.55pt solid #9da8b2;padding:2.5mm 3mm;break-inside:avoid;min-height:0;margin:0 0 3mm;background:#fbfcfd}.need-card-title{font-size:10pt;font-weight:700;margin-bottom:1mm;color:#24394d}.need-coord{font-size:9pt;color:#444;margin-bottom:1.2mm}.need-line{display:grid;grid-template-columns:1fr auto;gap:2mm;font-size:9.5pt;line-height:1.3;margin:1mm 0}.priority{border:.5pt solid #555;border-radius:2mm;padding:.5mm 1.5mm;font-size:8.5pt;white-space:nowrap;align-self:start}'+
       '.needs-grid.dense .need-card{padding:2.2mm 2.7mm;margin-bottom:2.5mm}.needs-grid.dense .need-card-title{font-size:10pt}.needs-grid.dense .need-coord{font-size:9pt}.needs-grid.dense .need-line{font-size:9pt;line-height:1.25;margin:.8mm 0}'+
       '.bullet-list{margin:1mm 0 2mm;padding-left:6mm}.bullet-list li{margin:0 0 1.5mm;text-align:justify}.compact-list{font-size:9.5pt;line-height:1.4}.compact-list li{margin-bottom:1.2mm}.chart-grid{display:block;margin:3mm 0}.apa-figure-block{display:block;width:100%;min-width:0;break-inside:avoid;margin:0 0 5mm}.apa-figure-block.full{width:100%}.visual-context,.visual-analysis{font-size:11pt;line-height:1.5;text-align:justify;text-indent:12.7mm;margin:2mm 0}.visual-analysis strong{color:#24394d}.figure-note{font-size:10pt;line-height:1.35;margin-top:1.5mm;color:#4f5963}.figure-note em{font-weight:400;font-style:italic}.chart-box{counter-increment:apafigure;border:0;padding:1mm 0 2mm;background:#fff;break-inside:avoid;box-shadow:none;width:100%}.chart-box::before{content:\"Figura \" counter(apafigure);display:block;font-size:11pt;font-weight:700;color:#1f2d3d;margin-bottom:.8mm}.chart-title{font-size:11pt;font-style:italic;font-weight:400;margin-bottom:2.2mm;color:#1f2d3d}.chart-subtitle{font-size:10pt;color:#5e6872;margin-top:-.5mm;margin-bottom:2mm}.chart-row{display:grid;grid-template-columns:48mm 1fr 25mm;gap:2mm;align-items:center;margin:1.8mm 0;font-size:10pt}.chart-label{overflow:hidden;text-overflow:ellipsis;white-space:normal;line-height:1.2}.chart-track{height:5.5mm;background:#eef1f3;border:.35pt solid #d1d6db;position:relative;border-radius:.7mm;overflow:hidden}.chart-fill{height:100%}.chart-c1{background:#29445c}.chart-c2{background:#9b7a45}.chart-c3{background:#4f7775}.chart-c4{background:#76515a}.chart-c5{background:#6b7785}.chart-value{text-align:right;font-size:10pt}.stacked{display:flex;width:100%;height:9mm;border:.4pt solid #9da8b2;margin:2.5mm 0 1.5mm;border-radius:.8mm;overflow:hidden}.stacked>span{display:flex;align-items:center;justify-content:center;font-size:9pt;overflow:hidden;white-space:nowrap}.stacked-a{background:#29445c;color:#fff}.stacked-b{background:#b89557;color:#111}.legend{display:flex;gap:5mm;flex-wrap:wrap;font-size:10pt;margin-top:1.5mm}.legend i{display:inline-block;width:3.5mm;height:3.5mm;margin-right:1.2mm;vertical-align:-.5mm;border:.35pt solid #777}.group-row{display:grid;grid-template-columns:48mm 1fr 1fr;gap:2mm;align-items:center;margin:1.8mm 0;font-size:10pt}.group-bar{height:5.5mm;background:#eef1f3;border:.35pt solid #d1d6db;border-radius:.7mm;overflow:hidden}.group-current{height:100%;background:#29445c}.group-desired{height:100%;background:#b89557}.priority-high{background:#76515a;color:#fff}.priority-medium{background:#b89557}.priority-low{background:#4f7775;color:#fff}.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:2.5mm;margin:3mm 0}.kpi{border:.6pt solid #aeb7c0;border-top:2mm solid #314b63;padding:2.5mm;text-align:center;background:#fbfcfd}.kpi:nth-child(2){border-top-color:#9b7a45}.kpi:nth-child(3){border-top-color:#4f7775}.kpi:nth-child(4){border-top-color:#76515a}.kpi strong{display:block;font-size:14pt;line-height:1.05;color:#24394d}.kpi span{font-size:8.5pt}.flow{display:flex;gap:1.5mm;align-items:stretch;margin:3mm 0}.flow-box{flex:1;border:.6pt solid #aeb7c0;border-top:1.8mm solid #314b63;background:#fbfcfd;padding:2.5mm;text-align:center;font-size:8.5pt}.flow-arrow{display:flex;align-items:center;font-size:12pt;color:#9b7a45}.matrix{width:100%;border-collapse:collapse;margin:2.5mm 0;border-top:1pt solid #26384a;border-bottom:1pt solid #26384a}.matrix th,.matrix td{border:0;padding:1.8mm;font-size:10pt;text-align:center}.matrix th{background:#fff;color:#1f2d3d;border-bottom:1pt solid #52687a}.matrix th:first-child,.matrix td:first-child{text-align:left}.toc{width:100%;border-collapse:collapse;margin-top:3mm}.toc td{padding:1.8mm 0;border-bottom:.35pt dotted #9aa4ad;font-size:10pt}.toc td:last-child{text-align:right;width:14mm;font-weight:700;color:#24394d}.annex-table th,.annex-table td{font-size:8.5pt!important;padding:1.2mm 1.4mm!important}'+
-      '.footer-note{position:absolute;left:10mm;right:10mm;bottom:4mm;text-align:center;font-size:5.8pt;color:#666}'+
+      '.footer-note{position:absolute;left:10mm;right:10mm;bottom:4mm;text-align:center;font-size:6.2pt;color:#7a848d;letter-spacing:.08px}'+
+      '.institution-header td{border-color:#7c8791;border-width:.5pt}.institution-header .unit-cell{color:#233b4d;font-weight:600;letter-spacing:.15px}.institution-header .doc-cell{background:#f7f9fa;color:#233b4d}.institution-header .meta-cell{color:#384957}.signature-table td{border-color:#8b959d;border-width:.5pt}'+
+      '.cover-title h1{font-size:22pt;color:#17384d;letter-spacing:-.2px;line-height:1.15}.cover-title .period{font-size:11.5pt;color:#65727c;font-weight:600;margin-top:3mm}'+
+      '.sec-title{font-size:16pt;line-height:1.15;color:#17384d;margin:0 0 4mm;padding-bottom:2.2mm;border-bottom:.8pt solid #caa45b}.sub-title{font-size:12pt;line-height:1.25;color:#29485e;margin:4mm 0 2mm}.mini-title{font-size:10.5pt;color:#38556a}.page-topic{font-size:12.5pt;font-weight:700;color:#29485e;border-left:1.6mm solid #caa45b;padding:1.3mm 0 1.3mm 3mm;margin:0 0 4mm;line-height:1.2}'+
+      '.criteria div{border:0;border-radius:1.8mm;background:#f3f6f8;padding:3mm}.info-box{border:0;border-left:1.6mm solid #29485e;border-radius:0 1.5mm 1.5mm 0;background:#f4f7f9;padding:3mm 3.5mm}.quote-box{border:0;border-left:1.2mm solid #9b7a45;border-radius:0 1.5mm 1.5mm 0;background:#faf8f3}.panel{border:0;border-radius:1.8mm;background:#f4f7f9;padding:3.2mm}.callout{border-left:1.6mm solid #b28c48;border-radius:0 1.5mm 1.5mm 0;background:#fbf8f1}'+
+      '.info-item{border:0;border-radius:1.8mm;background:#f4f7f9;box-shadow:inset 0 1.2mm 0 #29485e;padding:3mm}.info-item:nth-child(2){box-shadow:inset 0 1.2mm 0 #9b7a45}.info-item:nth-child(3){box-shadow:inset 0 1.2mm 0 #4f7775}'+
+      '.kpi{border:0;border-radius:1.8mm;background:#f4f7f9;box-shadow:inset 0 1.2mm 0 #29485e;padding:3mm}.kpi:nth-child(2){border:0;box-shadow:inset 0 1.2mm 0 #9b7a45}.kpi:nth-child(3){border:0;box-shadow:inset 0 1.2mm 0 #4f7775}.kpi:nth-child(4){border:0;box-shadow:inset 0 1.2mm 0 #76515a}'+
+      '.flow-box{border:0;border-radius:1.5mm;background:#f3f6f8;padding:2.8mm}.flow-arrow{color:#b28c48}.need-card{border:0;border-left:1.5mm solid #29485e;border-radius:0 1.5mm 1.5mm 0;background:#f5f7f9;padding:3mm 3.5mm}'+
+      '.chart-track,.group-bar{border:0;background:#eef1f3;border-radius:1mm;overflow:hidden}.chart-fill,.group-current,.group-desired{border-radius:0 1mm 1mm 0}.stacked{border:0;background:#eef1f3;box-shadow:inset 0 0 0 .3pt #dde2e6}.chart-c1{background:#24465d}.chart-c2{background:#b18a45}.chart-c3{background:#4d7773}.chart-c4{background:#7b5260}.chart-c5{background:#70808d}.group-current{background:#24465d}.group-desired{background:#b18a45}'+
+      '.toc td{border-bottom:.35pt solid #e2e6e9;padding:2mm .5mm}.toc td:last-child{color:#8b6c35}.apa-table-block{margin-top:4.5mm}.apa-table-number,.chart-box::before{color:#29485e}.apa-table-title,.chart-title{color:#2d3d49}.figure-note,.apa-table-note{color:#68747d}'+
       '</style>';
   }
   return '<style>'+
@@ -1917,36 +1926,62 @@ function compactDist(title,map,total){
 function reportEntries(map){
   return Object.entries(map||{}).filter(([,v])=>Number(v)>0).sort((a,b)=>b[1]-a[1]);
 }
+function figureContextFor(title){
+  const t=norm(title).toLowerCase();
+  if(t.includes('nivel académico actual')) return 'Para establecer el punto de partida de la cualificación docente, se examina la distribución de los niveles académicos registrados.';
+  if(t.includes('nivel académico deseado')) return 'Para reconocer la dirección de la progresión académica, se analizan los niveles que los docentes proyectan alcanzar.';
+  if(t.includes('docentes por carrera')||t.includes('número de docentes por carrera')) return 'La distribución por carrera permite dimensionar el peso relativo de cada grupo dentro de la base institucional.';
+  if(t.includes('dedicación')) return 'La dedicación docente se analiza porque puede incidir en la disponibilidad y continuidad de una ruta formativa.';
+  if(t.includes('modalidad')) return 'Las preferencias de modalidad permiten anticipar condiciones de acceso que deberán considerarse al estructurar las rutas formativas.';
+  if(t.includes('barrera')) return 'Las barreras declaradas permiten identificar factores que podrían dificultar el inicio o la continuidad de los estudios.';
+  if(t.includes('tipo de formación')) return 'La preferencia entre formación específica y genérica ayuda a distinguir necesidades disciplinares de necesidades transversales.';
+  if(t.includes('necesidad')) return 'La concentración de necesidades permite reconocer cuáles requieren mayor atención dentro de la planificación institucional.';
+  if(t.includes('prioridad')) return 'La distribución de prioridades permite ordenar la intervención institucional de acuerdo con la incidencia de las necesidades registradas.';
+  if(t.includes('institucion')) return 'Las instituciones registradas aportan información operativa sobre las trayectorias ya iniciadas y las opciones de articulación disponibles.';
+  if(t.includes('afinidad')) return 'La afinidad entre la formación y el campo de trabajo permite valorar la pertinencia académica del perfil docente.';
+  return 'La distribución de esta variable permite identificar concentraciones y diferencias relevantes para el diagnóstico.';
+}
+function figureImplicationFor(title){
+  const t=norm(title).toLowerCase();
+  if(t.includes('nivel académico')) return 'La lectura conjunta de estos niveles orienta la definición de rutas de progresión y cierre de brechas.';
+  if(t.includes('modalidad')) return 'Esta preferencia debe considerarse al buscar programas viables, sin desplazar el criterio de pertinencia académica.';
+  if(t.includes('barrera')) return 'El resultado permite anticipar medidas de apoyo o alternativas de acceso antes de incorporar una ruta al Plan.';
+  if(t.includes('necesidad')||t.includes('prioridad')) return 'La concentración observada aporta un criterio directo para ordenar las acciones que pasarán al Plan de Formación.';
+  if(t.includes('carrera')) return 'La concentración por carrera permite dimensionar el alcance potencial de una intervención y comparar necesidades entre grupos.';
+  if(t.includes('dedicación')) return 'La distribución debe considerarse junto con disponibilidad, modalidad y condiciones de acceso.';
+  return 'El resultado aporta evidencia para la interpretación de la sección y debe contrastarse con las demás variables del diagnóstico.';
+}
 function barChart(title,map,total,subtitle='',limit=10){
   const rows=reportEntries(map).slice(0,limit);
   const max=Math.max(1,...rows.map(([,v])=>Number(v)||0));
-  if(!rows.length) return '<div class="apa-figure-block"><p class="visual-context">La siguiente figura presenta '+esc(title.toLowerCase())+'; no existen registros suficientes para representar la distribución.</p><div class="chart-box"><div class="chart-title">'+esc(title)+'</div><div class="small muted">Sin información disponible.</div></div><div class="figure-note"><em>Nota.</em> Elaboración propia a partir de los registros consolidados en DocFormación.</div><p class="visual-analysis"><strong>Análisis.</strong> La ausencia de datos debe ser revisada antes del cierre formal del diagnóstico.</p></div>';
+  const context=figureContextFor(title);
+  if(!rows.length) return '<div class="apa-figure-block"><p class="visual-context">'+esc(context)+'</p><div class="chart-box"><div class="chart-title">'+esc(title)+'</div><div class="small muted">Sin información disponible.</div></div><div class="figure-note"><em>Nota.</em> Elaboración propia a partir de los registros consolidados en DocFormación.</div><p class="visual-analysis"><strong>Análisis.</strong> No existen registros suficientes para interpretar esta variable; la información deberá completarse antes del cierre formal del diagnóstico.</p></div>';
   const top=rows[0], topPct=pct(top[1],total);
-  return '<div class="apa-figure-block"><p class="visual-context">La siguiente figura presenta '+esc(title.toLowerCase())+' y permite comparar la participación relativa de las categorías registradas durante el período.</p>'+
+  return '<div class="apa-figure-block"><p class="visual-context">'+esc(context)+'</p>'+
     '<div class="chart-box"><div class="chart-title">'+esc(title)+'</div>'+(subtitle?'<div class="chart-subtitle">'+esc(subtitle)+'</div>':'')+
     rows.map(([label,value],idx)=>'<div class="chart-row"><div class="chart-label" title="'+esc(label)+'">'+esc(label)+'</div><div class="chart-track"><div class="chart-fill chart-c'+((idx%5)+1)+'" style="width:'+Math.max(2,100*value/max)+'%"></div></div><div class="chart-value">'+value+' · '+fmtPct(pct(value,total))+'</div></div>').join('')+
     '</div><div class="figure-note"><em>Nota.</em> N = '+total+'. Elaboración propia a partir de los registros consolidados en DocFormación.</div>'+
-    '<p class="visual-analysis"><strong>Análisis.</strong> La categoría con mayor presencia es <strong>'+esc(top[0])+'</strong>, con '+top[1]+' registros ('+fmtPct(topPct)+'). Este resultado debe interpretarse junto con las demás variables de la sección para determinar su implicación en el Plan de Formación.</p></div>';
+    '<p class="visual-analysis"><strong>Análisis.</strong> La mayor concentración corresponde a <strong>'+esc(top[0])+'</strong>, con '+top[1]+' registros ('+fmtPct(topPct)+'). '+esc(figureImplicationFor(title))+'</p></div>';
 }
 function stackedChart(title,yesCount,total,yesLabel='Sí',noLabel='No'){
   const yesPct=pct(yesCount,total),noCount=Math.max(0,total-yesCount),noPct=pct(noCount,total);
   const majority=yesCount>=noCount?yesLabel:noLabel,majorityCount=Math.max(yesCount,noCount),majorityPct=Math.max(yesPct,noPct);
-  return '<div class="apa-figure-block"><p class="visual-context">La siguiente figura compara '+esc(yesLabel.toLowerCase())+' y '+esc(noLabel.toLowerCase())+' para visualizar la relación entre ambos grupos en la base analizada.</p>'+
+  return '<div class="apa-figure-block"><p class="visual-context">La comparación entre ambos grupos permite establecer su peso relativo dentro de la población analizada y valorar su efecto sobre la viabilidad de la planificación.</p>'+
     '<div class="chart-box"><div class="chart-title">'+esc(title)+'</div>'+
     '<div class="stacked"><span class="stacked-a" style="width:'+yesPct+'%">'+(yesPct>=12?fmtPct(yesPct):'')+'</span><span class="stacked-b" style="width:'+noPct+'%">'+(noPct>=12?fmtPct(noPct):'')+'</span></div>'+
     '<div class="legend"><span><i class="stacked-a"></i>'+esc(yesLabel)+': '+yesCount+' ('+fmtPct(yesPct)+')</span><span><i class="stacked-b"></i>'+esc(noLabel)+': '+noCount+' ('+fmtPct(noPct)+')</span></div></div>'+
     '<div class="figure-note"><em>Nota.</em> N = '+total+'. Elaboración propia a partir de los registros consolidados en DocFormación.</div>'+
-    '<p class="visual-analysis"><strong>Análisis.</strong> Predomina el grupo <strong>'+esc(majority)+'</strong>, con '+majorityCount+' docentes ('+fmtPct(majorityPct)+'). La diferencia observada constituye un criterio de contexto para la planificación y no una selección automática de beneficiarios.</p></div>';
+    '<p class="visual-analysis"><strong>Análisis.</strong> Predomina <strong>'+esc(majority)+'</strong>, con '+majorityCount+' docentes ('+fmtPct(majorityPct)+'). La diferencia observada permite estimar la condición de viabilidad de este grupo antes de trasladar decisiones al Plan.</p></div>';
 }
 function groupedLevelChart(currentMap,desiredMap,total){
   const currentTop=reportEntries(currentMap)[0]||['Sin información',0];
   const desiredTop=reportEntries(desiredMap)[0]||['Sin información',0];
-  return '<div class="apa-figure-block full"><p class="visual-context">La siguiente figura contrasta el nivel académico actual con el nivel que los docentes desean alcanzar, permitiendo visualizar la dirección de la brecha de progresión académica.</p>'+
+  return '<div class="apa-figure-block full"><p class="visual-context">El contraste entre la situación observada y la proyección declarada permite estimar la dirección de la brecha de progresión académica.</p>'+
     '<div class="chart-box"><div class="chart-title">Comparación entre nivel académico actual y nivel deseado</div><div class="chart-subtitle">Cada barra se expresa respecto del total de docentes del período.</div>'+
     LEVELS.map(level=>{const current=Number(currentMap[level]||0),desired=Number(desiredMap[level]||0);return '<div class="group-row"><div>'+esc(level)+'</div><div class="group-bar"><div class="group-current" style="width:'+pct(current,total)+'%"></div></div><div class="group-bar"><div class="group-desired" style="width:'+pct(desired,total)+'%"></div></div></div>';}).join('')+
-    '<div class="legend"><span><i style="background:#29445c"></i>Nivel actual</span><span><i style="background:#b89557"></i>Nivel deseado</span></div></div>'+
+    '<div class="legend"><span><i style="background:#24465d"></i>Nivel actual</span><span><i style="background:#b18a45"></i>Nivel deseado</span></div></div>'+
     '<div class="figure-note"><em>Nota.</em> N = '+total+'. Las categorías se presentan con la misma base porcentual para facilitar la comparación.</div>'+
-    '<p class="visual-analysis"><strong>Análisis.</strong> El nivel actual más frecuente es <strong>'+esc(currentTop[0])+'</strong> ('+fmtPct(pct(currentTop[1],total))+'), mientras que el nivel deseado con mayor presencia es <strong>'+esc(desiredTop[0])+'</strong> ('+fmtPct(pct(desiredTop[1],total))+'). La diferencia orienta la identificación de rutas de progresión.</p></div>';
+    '<p class="visual-analysis"><strong>Análisis.</strong> El nivel actual más frecuente es <strong>'+esc(currentTop[0])+'</strong> ('+fmtPct(pct(currentTop[1],total))+'), mientras que la proyección se concentra en <strong>'+esc(desiredTop[0])+'</strong> ('+fmtPct(pct(desiredTop[1],total))+'). La diferencia evidencia la dirección de las rutas de progresión que deberán analizarse en el Plan.</p></div>';
 }
 function careerCountMap(careers){
   const map={};careers.forEach(career=>map[career]=state.teachers.filter(t=>careerKey(t.carrera)===careerKey(career)).length);return map;
@@ -2030,7 +2065,8 @@ function enhanceApaTables(html){
     table.parentNode.insertBefore(block,table);
     const context=document.createElement('p');
     context.className='apa-table-context';
-    context.textContent='La Tabla '+number+' presenta '+title.toLowerCase()+' con base en los registros consolidados del período y permite comparar los resultados relevantes para el diagnóstico.';
+    const headerSummary=headers.slice(0,3).map(x=>x.toLowerCase()).join(', ');
+    context.textContent=headerSummary?('Para sustentar la lectura de esta sección, se contrastan '+headerSummary+' mediante la siguiente tabla.'):('Para sustentar la lectura de esta sección, los resultados se organizan en la siguiente tabla.');
     block.appendChild(context);
     const num=document.createElement('div');num.className='apa-table-number';num.textContent='Tabla '+number;block.appendChild(num);
     const ttl=document.createElement('div');ttl.className='apa-table-title';ttl.textContent=title;block.appendChild(ttl);
@@ -2309,8 +2345,8 @@ function dnfHtml(){
     const coord=p.coord?.coordinador||'Por definir';
     const firstNeed=p.items[0];
     const firstAffected=firstNeed?affectedCountForNeed(career,firstNeed.text):0;
-    add(null,
-      '<div class="sec-title">7.'+(index+2)+' Carrera: '+esc(career)+'</div>'+
+    add('7.'+(index+2)+' Carrera: '+career,
+      '<div class="sec-title">7.'+(index+2)+' '+esc(career)+'</div>'+
       '<p class="section-intro">La caracterización de la carrera permite interpretar las necesidades específicas dentro de su propio contexto académico y evita trasladar automáticamente tendencias generales a realidades disciplinares diferentes.</p>'+
       '<div class="kpi-row"><div class="kpi"><strong>'+p.count+'</strong><span>Docentes</span></div><div class="kpi"><strong>'+fmtPct(pct(p.masters+p.doctors,p.count))+'</strong><span>Maestría o doctorado</span></div><div class="kpi"><strong>'+fmtPct(pct(p.willing,p.count))+'</strong><span>Dispuestos</span></div><div class="kpi"><strong>'+esc(p.highest)+'</strong><span>Prioridad mayor</span></div></div>'+
       '<p class="small"><strong>Coordinador/a:</strong> '+esc(coord)+' · <strong>Programa:</strong> '+esc(programForCareer(career)||'Por definir')+'</p>'+
@@ -2535,6 +2571,21 @@ function dnfHtml(){
       '</table>'+
       '<p class="small muted">La base consolidada se incluye como anexo de trazabilidad. Los campos vacíos corresponden a información pendiente en la aplicación.</p>'
     );
+  });
+
+  // Editorial cleanup: a major section title is printed only on its opening page.
+  pages.forEach(page=>{
+    if(page.tocLabel!==null) return;
+    const match=page.body.match(/^<div class="sec-title">([^<]+)<\/div>/);
+    if(!match) return;
+    const full=match[1];
+    let replacement='';
+    const dashIndex=full.indexOf(' - ');
+    if(dashIndex>=0){
+      const topic=full.slice(dashIndex+3).trim();
+      if(topic) replacement='<div class="page-topic">'+topic.charAt(0).toUpperCase()+topic.slice(1)+'</div>';
+    }
+    page.body=replacement+page.body.slice(match[0].length);
   });
 
   // Build a concise institutional index. Career subsections and graphic listings are intentionally omitted.
