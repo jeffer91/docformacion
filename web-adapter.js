@@ -190,6 +190,38 @@
     }
   }
 
+  async function generateExactPages(payload, frame) {
+    if (typeof window.html2canvas !== 'function' || !window.jspdf?.jsPDF) {
+      return { ok: false, error: 'No se cargaron las librerías necesarias para crear el PDF.' };
+    }
+
+    const pages = [...frame.contentDocument.querySelectorAll('.pdf-page')];
+    if (!pages.length) return { ok: false, error: 'No se encontraron páginas para generar el PDF.' };
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+
+    for (let i = 0; i < pages.length; i++) {
+      const canvas = await window.html2canvas(pages[i], {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: pages[i].scrollWidth,
+        height: pages[i].scrollHeight,
+        windowWidth: pages[i].scrollWidth,
+        windowHeight: pages[i].scrollHeight
+      });
+
+      const image = canvas.toDataURL('image/jpeg', 0.98);
+      if (i > 0) pdf.addPage('a4', 'portrait');
+      pdf.addImage(image, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+    }
+
+    pdf.save(payload.filename || 'documento.pdf');
+    return { ok: true, filePath: payload.filename || 'documento.pdf', downloaded: true, pages: pages.length };
+  }
+
   async function generatePDF(payload) {
     let frame = null;
     let timeoutId = null;
@@ -197,17 +229,14 @@
       if (!payload?.html) {
         return { ok: false, error: 'No se recibió contenido para generar el PDF.' };
       }
-      if (typeof window.html2pdf !== 'function') {
-        return { ok: false, error: 'El generador PDF no se cargó. Recarga la página e inténtalo nuevamente.' };
-      }
 
       frame = document.createElement('iframe');
       frame.setAttribute('aria-hidden', 'true');
       frame.style.position = 'fixed';
       frame.style.left = '-12000px';
       frame.style.top = '0';
-      frame.style.width = '210mm';
-      frame.style.height = '297mm';
+      frame.style.width = '794px';
+      frame.style.height = '1123px';
       frame.style.border = '0';
       frame.style.background = '#fff';
       frame.style.visibility = 'hidden';
@@ -232,6 +261,21 @@
 
       const doc = frame.contentDocument;
       if (!doc?.body) throw new Error('El documento PDF no pudo renderizarse.');
+
+      if (doc.fonts?.ready) {
+        await Promise.race([
+          doc.fonts.ready,
+          new Promise(resolve => setTimeout(resolve, 1500))
+        ]);
+      }
+
+      if (payload.exactPages || doc.querySelector('.pdf-page')) {
+        return await generateExactPages(payload, frame);
+      }
+
+      if (typeof window.html2pdf !== 'function') {
+        return { ok: false, error: 'El generador PDF no se cargó. Recarga la página e inténtalo nuevamente.' };
+      }
 
       const filename = payload.filename || 'documento.pdf';
       const options = {
@@ -258,7 +302,6 @@
         }
       };
 
-      // html2pdf maneja la descarga directamente; no usamos ventana de impresión.
       const work = window.html2pdf().set(options).from(doc.body).save();
       await Promise.race([
         work,
