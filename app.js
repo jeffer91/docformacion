@@ -1832,74 +1832,189 @@ function applyExcel(sheets){
   dedupeCareerState();
 }
 
-function basePdfCss(){
-  return `<style>
-  @page{size:A4;margin:18mm 16mm 18mm 16mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:10.5pt;line-height:1.45;margin:0}.page-break{page-break-before:always}.avoid{page-break-inside:avoid}.header{border:1px solid #333;display:grid;grid-template-columns:22% 58% 20%;align-items:stretch;margin-bottom:18px}.header>div{padding:8px;border-right:1px solid #333;text-align:center}.header>div:last-child{border-right:0}.logo{font-weight:800;font-size:18px}.doc-title{font-weight:700}.meta{font-size:8.5pt}.cover{min-height:245mm;display:flex;flex-direction:column;justify-content:space-between}.cover h1{text-align:center;margin-top:75mm;font-size:23pt}.sign{width:100%;border-collapse:collapse}.sign td{border:1px solid #333;padding:10px;vertical-align:top;height:70px}.sign small{display:block}.h1{font-size:17pt;margin:18px 0 10px}.h2{font-size:13pt;margin:18px 0 7px}.h3{font-size:11pt;margin:14px 0 6px}table.data{width:100%;border-collapse:collapse;margin:8px 0 12px}table.data th,table.data td{border:1px solid #666;padding:6px 7px;font-size:9.2pt}table.data th{background:#e9edf2}.note{font-size:8.5pt;color:#555}.analysis{margin:8px 0 14px}.bar{display:grid;grid-template-columns:190px 1fr 55px;gap:8px;align-items:center;margin:6px 0}.track{height:12px;background:#e8edf3}.fill{height:100%;background:#365f86}.footer{position:fixed;bottom:-10mm;left:0;right:0;text-align:center;font-size:8pt;color:#666}
-  </style>`;
+function basePdfCss(exactPages=false){
+  if(exactPages){
+    return '<style>'+
+      '@page{size:A4;margin:0}'+
+      '*{box-sizing:border-box}html,body{margin:0!important;padding:0!important;width:210mm!important;background:#fff!important;font-family:Arial,Helvetica,sans-serif;color:#111}'+
+      'body{font-size:9pt;line-height:1.25}'+
+      '.pdf-document{width:210mm!important;margin:0!important;padding:0!important;background:#fff}'+
+      '.pdf-page{width:210mm!important;height:297mm!important;min-height:297mm!important;max-height:297mm!important;margin:0!important;padding:8mm 10mm 9mm!important;background:#fff!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;break-after:page;page-break-after:always;position:relative}'+
+      '.pdf-page:last-child{break-after:auto;page-break-after:auto}'+
+      '.institution-header{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 5mm 0;font-size:7.2pt;line-height:1.08;flex:0 0 auto}'+
+      '.institution-header td{border:.65pt solid #222;padding:1.5mm 1.8mm;vertical-align:middle;text-align:center}'+
+      '.institution-header .brand-cell{width:24%;font-weight:700}.institution-header .unit-cell{width:52%;font-weight:700;font-size:7.7pt}.institution-header .meta-cell{width:24%;font-size:6.9pt}'+
+      '.institution-header .brand-main{font-size:12pt;font-weight:800;letter-spacing:.2px}.institution-header .brand-sub{font-size:5.7pt;font-weight:400;margin-top:.5mm}'+
+      '.institution-header .doc-cell{font-weight:700;font-size:7.2pt}.institution-header .date-cell,.institution-header .page-cell{font-size:6.8pt}'+
+      '.pdf-body{flex:1 1 auto;min-height:0;overflow:hidden}'+
+      '.cover-body{height:100%;display:flex;flex-direction:column;justify-content:space-between;padding-top:8mm}'+
+      '.cover-title{text-align:center;margin-top:48mm}.cover-title h1{font-size:18pt;line-height:1.18;margin:0;font-weight:700}.cover-title .period{font-size:13pt;font-weight:700;margin-top:2mm}'+
+      '.signature-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:3mm;font-size:6.8pt}.signature-table td{border:.65pt solid #222;padding:2mm;vertical-align:top;height:30mm}.signature-table .sig-label{font-size:6pt;margin-bottom:13mm}.signature-table strong{font-size:6.8pt}.signature-table .sig-role{display:block;margin-top:1mm;text-transform:uppercase;font-size:6.2pt}'+
+      '.sec-title{font-size:12.5pt;font-weight:700;margin:0 0 2.2mm}.sub-title{font-size:10pt;font-weight:700;margin:3mm 0 1.2mm}.mini-title{font-size:8.5pt;font-weight:700;margin:2mm 0 1mm}'+
+      'p{margin:0 0 2.5mm;text-align:justify}.lead{font-size:9.2pt;line-height:1.32}.small{font-size:7.4pt}.muted{color:#555}.tight{margin-bottom:1.5mm}'+
+      '.info-box{border:.65pt solid #777;background:#f3f4f6;padding:2.5mm 3mm;margin:2.5mm 0}.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2mm;margin:2.5mm 0}.info-item{border:.65pt solid #777;padding:2mm;text-align:center}.info-item strong{display:block;font-size:12pt}.info-item span{font-size:6.8pt}'+
+      '.two-col{display:grid;grid-template-columns:1fr 1fr;gap:3mm}.panel{border:.65pt solid #777;padding:2.2mm;break-inside:avoid}.panel h3{font-size:8.5pt;margin:0 0 1.5mm}'+
+      'table.data{width:100%;border-collapse:collapse;table-layout:fixed;margin:1.5mm 0 2mm}table.data th,table.data td{border:.55pt solid #555;padding:1.2mm 1.4mm;font-size:7.1pt;line-height:1.12;vertical-align:top}table.data th{background:#e5e7eb;font-weight:700;text-align:center}table.data td.num{text-align:center;white-space:nowrap}'+
+      '.summary-table th:first-child,.summary-table td:first-child{width:72%}.summary-table th:last-child,.summary-table td:last-child{width:28%}'+
+      '.needs-grid{display:grid;grid-template-columns:1fr 1fr;gap:2mm 3mm;align-content:start}.need-card{border:.55pt solid #666;padding:1.7mm 2mm;break-inside:avoid;min-height:0}.need-card-title{font-size:7.5pt;font-weight:700;margin-bottom:.6mm}.need-coord{font-size:6.2pt;color:#444;margin-bottom:.8mm}.need-line{display:grid;grid-template-columns:1fr auto;gap:1.5mm;font-size:6.5pt;line-height:1.12;margin:.5mm 0}.priority{border:.5pt solid #555;border-radius:2mm;padding:.2mm 1mm;font-size:5.8pt;white-space:nowrap;align-self:start}'+
+      '.needs-grid.dense{gap:1.4mm 2.2mm}.needs-grid.dense .need-card{padding:1.25mm 1.5mm}.needs-grid.dense .need-card-title{font-size:7pt}.needs-grid.dense .need-coord{font-size:5.8pt}.needs-grid.dense .need-line{font-size:6pt;line-height:1.05;margin:.35mm 0}'+
+      '.bullet-list{margin:1mm 0 2mm;padding-left:5mm}.bullet-list li{margin:0 0 1.2mm;text-align:justify}.compact-list{font-size:7.4pt;line-height:1.18}.compact-list li{margin-bottom:.8mm}'+
+      '.footer-note{position:absolute;left:10mm;right:10mm;bottom:4mm;text-align:center;font-size:5.8pt;color:#666}'+
+      '</style>';
+  }
+  return '<style>'+
+    '@page{size:A4;margin:18mm 16mm 18mm 16mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:10.5pt;line-height:1.45;margin:0}.page-break{page-break-before:always}.avoid{page-break-inside:avoid}.header{border:1px solid #333;display:grid;grid-template-columns:22% 58% 20%;align-items:stretch;margin-bottom:18px}.header>div{padding:8px;border-right:1px solid #333;text-align:center}.header>div:last-child{border-right:0}.logo{font-weight:800;font-size:18px}.doc-title{font-weight:700}.meta{font-size:8.5pt}.cover{min-height:245mm;display:flex;flex-direction:column;justify-content:space-between}.cover h1{text-align:center;margin-top:75mm;font-size:23pt}.sign{width:100%;border-collapse:collapse}.sign td{border:1px solid #333;padding:10px;vertical-align:top;height:70px}.sign small{display:block}.h1{font-size:17pt;margin:18px 0 10px}.h2{font-size:13pt;margin:18px 0 7px}.h3{font-size:11pt;margin:14px 0 6px}table.data{width:100%;border-collapse:collapse;margin:8px 0 12px}table.data th,table.data td{border:1px solid #666;padding:6px 7px;font-size:9.2pt}table.data th{background:#e9edf2}.note{font-size:8.5pt;color:#555}.analysis{margin:8px 0 14px}.bar{display:grid;grid-template-columns:190px 1fr 55px;gap:8px;align-items:center;margin:6px 0}.track{height:12px;background:#e8edf3}.fill{height:100%;background:#365f86}.footer{position:fixed;bottom:-10mm;left:0;right:0;text-align:center;font-size:8pt;color:#666}'+
+    '</style>';
 }
 function pdfHeader(title,code){
-  return `<div class="header"><div class="logo">ITSQMET</div><div><div>UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS</div><div class="doc-title">${esc(title)}</div></div><div class="meta">Código:<br>${esc(code)}<br>Versión: ${esc(state.period.version)}</div></div>`;
+  return '<div class="header"><div class="logo">ITSQMET</div><div><div>UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS</div><div class="doc-title">'+esc(title)+'</div></div><div class="meta">Código:<br>'+esc(code)+'<br>Versión: '+esc(state.period.version)+'</div></div>';
 }
 function cover(title,code){
   const p=state.period;
-  return `<section class="cover">${pdfHeader(title,code)}<h1>${esc(title)}<br><small>${esc(periodLabel())}</small></h1>
-  <table class="sign"><tr><td>ELABORADO POR:<br><br><small>NOMBRE: ${esc(p.preparedBy)}<br>CARGO: ${esc(p.preparedRole)}</small></td><td>REVISADO POR:<br><br><small>NOMBRE: ${esc(p.reviewedBy)}<br>CARGO: ${esc(p.reviewedRole)}</small></td><td>APROBADO POR:<br><br><small>NOMBRE: ${esc(p.approvedBy)}<br>CARGO: ${esc(p.approvedRole)}</small></td></tr></table></section>`;
+  return '<section class="cover">'+pdfHeader(title,code)+'<h1>'+esc(title)+'<br><small>'+esc(periodLabel())+'</small></h1>'+
+    '<table class="sign"><tr><td>ELABORADO POR:<br><br><small>NOMBRE: '+esc(p.preparedBy)+'<br>CARGO: '+esc(p.preparedRole)+'</small></td><td>REVISADO POR:<br><br><small>NOMBRE: '+esc(p.reviewedBy)+'<br>CARGO: '+esc(p.reviewedRole)+'</small></td><td>APROBADO POR:<br><br><small>NOMBRE: '+esc(p.approvedBy)+'<br>CARGO: '+esc(p.approvedRole)+'</small></td></tr></table></section>';
+}
+function formatMonthYear(value,hyphen=false){
+  if(!value) return '';
+  const months=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const m=String(value).match(/^(\d{4})-(\d{2})/);
+  if(!m) return String(value);
+  const label=months[Math.max(0,Math.min(11,Number(m[2])-1))]+' '+m[1];
+  return hyphen?label.replace(' ','-'):label;
 }
 function periodLabel(){
   const p=state.period;
   if(!p.start&&!p.end)return 'Período de Formación Docente';
-  return [p.start,p.end].filter(Boolean).join(' a ');
+  const a=formatMonthYear(p.start),b=formatMonthYear(p.end);
+  return [a,b].filter(Boolean).join(' a ');
+}
+function dnfHeader(title,code,page,totalPages){
+  const p=state.period;
+  return '<table class="institution-header">'+
+    '<tr><td class="brand-cell"><div class="brand-main">ITSQMET</div><div class="brand-sub">Instituto Superior Tecnológico Quito Metropolitano</div></td>'+
+    '<td class="unit-cell">UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS</td>'+
+    '<td class="meta-cell">Código:<br><strong>'+esc(code)+'</strong><br>Versión: '+esc(p.version||'1.0')+'</td></tr>'+
+    '<tr><td class="date-cell">Fecha de Elaboración:<br><strong>'+esc(formatMonthYear(p.elaborationDate,true)||p.elaborationDate||'')+'</strong></td>'+
+    '<td class="doc-cell">'+esc(title)+'<br>'+esc(periodLabel())+'</td>'+
+    '<td class="page-cell">Página '+page+' de '+totalPages+'</td></tr>'+
+    '</table>';
+}
+function dnfPage(title,code,page,totalPages,body,extraClass=''){
+  return '<section class="pdf-page '+extraClass+'" data-pdf-page="'+page+'">'+dnfHeader(title,code,page,totalPages)+'<div class="pdf-body">'+body+'</div><div class="footer-note">ITSQMET · Unidad de Gestión de Procesos Académicos</div></section>';
 }
 function dist(field,filter=()=>true){
   const map={};state.teachers.filter(filter).forEach(t=>{const k=t[field]||'Sin información';map[k]=(map[k]||0)+1;});return map;
 }
 function distRows(map,total){
-  return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v}</td><td>${fmtPct(pct(v,total))}</td></tr>`).join('');
+  return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td class="num">'+v+'</td><td class="num">'+fmtPct(pct(v,total))+'</td></tr>').join('');
 }
 function bars(map,total){
-  return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar"><div>${esc(k)}</div><div class="track"><div class="fill" style="width:${pct(v,total)}%"></div></div><div>${fmtPct(pct(v,total))}</div></div>`).join('');
+  return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<div class="bar"><div>'+esc(k)+'</div><div class="track"><div class="fill" style="width:'+pct(v,total)+'%"></div></div><div>'+fmtPct(pct(v,total))+'</div></div>').join('');
 }
-
+function compactDist(title,map,total){
+  return '<div class="panel"><h3>'+esc(title)+'</h3><table class="data"><tr><th>Condición</th><th>N</th><th>%</th></tr>'+distRows(map,total)+'</table></div>';
+}
 function dnfHtml(){
-  const total=state.teachers.length,s=stats();
+  const title='Detección de Necesidades de Formación';
+  const code=state.period.dnfCode;
+  const total=state.teachers.length;
+  const s=stats();
   const level=dist('nivelActual'),ded=dist('dedicacion'),wish=dist('nivelDeseado'),type=dist('tipoFormacion'),mod=dist('modalidadPreferida'),barrier=dist('barrera');
-  const intro=`La Detección de Necesidades de Formación consolida la situación académica del claustro docente, sus aspiraciones de desarrollo y las brechas que deben orientar la planificación institucional. Para el período analizado se consideran ${total} docentes, todos asociados a su carrera principal y a la función de docencia.`;
-  return htmlDoc('Detección de Necesidades de Formación',`
-    ${cover('Detección de Necesidades de Formación',state.period.dnfCode)}
-    <div class="page-break"></div>${pdfHeader('Detección de Necesidades de Formación',state.period.dnfCode)}
-    <div class="h1">1. Introducción</div><p>${intro}</p>
-    <div class="h1">2. Metodología y enfoque</div><p>La información procede de la base institucional cargada mediante formulario o Excel global. La aplicación utiliza únicamente datos registrados y cálculos derivados; no modifica las cifras de origen.</p>
-    <div class="h1">3. Caracterización del claustro docente</div>
-    <div class="h2">3.1 Nivel académico actual</div><p>El nivel académico constituye la línea base para identificar brechas y proyectar rutas de formación.</p>
-    <table class="data"><tr><th>Nivel</th><th>Docentes</th><th>Porcentaje</th></tr>${distRows(level,total)}</table>${bars(level,total)}
-    <p class="analysis">El ${fmtPct(pct(s.masters+s.doctors,total))} del claustro registra maestría o doctorado. La planificación deberá concentrarse en los docentes con niveles inferiores y en quienes proyectan continuidad doctoral.</p>
-    <div class="h2">3.2 Dedicación</div><p>La dedicación permite contextualizar la disponibilidad y las condiciones de acceso a procesos formativos.</p>
-    <table class="data"><tr><th>Dedicación</th><th>Docentes</th><th>Porcentaje</th></tr>${distRows(ded,total)}</table>
-    <div class="h2">3.3 Disposición para iniciar o continuar estudios</div>
-    <table class="data"><tr><th>Condición</th><th>Docentes</th><th>Porcentaje</th></tr><tr><td>Sí</td><td>${s.willing}</td><td>${fmtPct(pct(s.willing,total))}</td></tr><tr><td>No</td><td>${Math.max(0,total-s.willing)}</td><td>${fmtPct(pct(total-s.willing,total))}</td></tr></table>
-    <p class="analysis">La disposición declarada constituye el principal insumo para seleccionar candidatos viables dentro del Plan de Formación.</p>
-    <div class="h2">3.4 Nivel académico que desean alcanzar</div><table class="data"><tr><th>Nivel deseado</th><th>Docentes</th><th>Porcentaje</th></tr>${distRows(wish,total)}</table>
-    <div class="h2">3.5 Formación específica y genérica</div><table class="data"><tr><th>Tipo</th><th>Docentes</th><th>Porcentaje</th></tr>${distRows(type,total)}</table>
-    <div class="h2">3.6 Modalidad preferida</div><table class="data"><tr><th>Modalidad</th><th>Docentes</th><th>Porcentaje</th></tr>${distRows(mod,total)}</table>
-    <div class="h2">3.7 Barreras principales</div><table class="data"><tr><th>Barrera</th><th>Docentes</th><th>Porcentaje</th></tr>${distRows(barrier,total)}</table>
-    <div class="page-break"></div>${pdfHeader('Detección de Necesidades de Formación',state.period.dnfCode)}
-    <div class="h1">4. Necesidades específicas por carrera</div><p>Las necesidades específicas se obtienen de la información registrada por los docentes. La prioridad se determina para cada necesidad de manera independiente.</p>
-    <table class="data"><tr><th>Carrera</th><th>Necesidad específica</th><th>Prioridad sugerida</th><th>Prioridad final</th></tr>${
-      specificCareerNames().flatMap(career=>ensureNeedItems(career).map(item=>`<tr><td>${esc(career)}</td><td>${esc(item.text)}</td><td>${esc(autoPriorityForNeed(career,item.text))}</td><td>${esc(item.priorityOverride||autoPriorityForNeed(career,item.text))}</td></tr>`)).join('')
-    }</table>
-    <div class="h2">4.1 Coordinadores por carrera</div><p>Los coordinadores se registran como responsables administrativos de cada carrera y se mantienen separados de las necesidades de formación.</p>
-    <table class="data"><tr><th>Carrera</th><th>Coordinador</th></tr>${
-      specificCareerNames().map(career=>`<tr><td>${esc(career)}</td><td>${esc(ensureCoordination(career)?.coordinador||'Por definir')}</td></tr>`).join('')
-    }</table>
-    <div class="h2">4.2 Formación genérica institucional</div><p>Las siguientes líneas transversales se mantienen como catálogo editable para el período:</p><ul>${state.settings.genericLines.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul>
-    <div class="h1">5. Conclusiones</div>
-    <p>El diagnóstico evidencia una base de ${total} docentes y permite diferenciar brechas por nivel académico, carrera, disposición y tipo de formación. Las prioridades generadas deben utilizarse como insumo directo para la selección y planificación del Plan de Formación Docente.</p>
-    <div class="h1">6. Recomendaciones</div><p>Priorizar las carreras con brecha Alta, aprovechar la disposición declarada de los docentes y mantener rutas diferenciadas para formación específica y genérica, evitando duplicar información entre el diagnóstico y el Plan.</p>
-    <div class="h1">7. Anexo: Base consolidada</div>
-    <table class="data"><tr><th>Docente</th><th>Carrera</th><th>Programa</th><th>Nivel actual</th><th>Nivel deseado</th><th>Tipo</th><th>Modalidad</th></tr>${
-      state.teachers.map(t=>`<tr><td>${esc(t.nombre)}</td><td>${esc(t.carrera)}</td><td>${esc(programForCareer(t.carrera)||'Por definir')}</td><td>${esc(t.nivelActual)}</td><td>${esc(t.nivelDeseado)}</td><td>${esc(t.tipoFormacion)}</td><td>${esc(t.modalidadPreferida)}</td></tr>`).join('')
-    }</table>
-  `);
+  const careers=[...new Set(state.teachers.map(t=>t.carrera).filter(validCareerName))];
+  const careerCount=careers.length;
+  const mastersDoctors=s.masters+s.doctors;
+  const genericLines=(state.settings.genericLines||[]).filter(norm);
+  const needsCareers=specificCareerNames();
+  const needsDensity=needsCareers.length>14?'dense':'';
+
+  const coverBody='<div class="cover-body">'+
+    '<div class="cover-title"><h1>'+esc(title)+'</h1><div class="period">'+esc(periodLabel())+'</div></div>'+
+    '<table class="signature-table"><tr>'+
+      '<td><div class="sig-label">ELABORADO POR:</div><strong>NOMBRE: '+esc(state.period.preparedBy)+'</strong><span class="sig-role">CARGO: '+esc(state.period.preparedRole)+'</span></td>'+
+      '<td><div class="sig-label">REVISADO POR:</div><strong>NOMBRE: '+esc(state.period.reviewedBy)+'</strong><span class="sig-role">CARGO: '+esc(state.period.reviewedRole)+'</span></td>'+
+      '<td><div class="sig-label">APROBADO POR:</div><strong>NOMBRE: '+esc(state.period.approvedBy)+'</strong><span class="sig-role">CARGO: '+esc(state.period.approvedRole)+'</span></td>'+
+    '</tr></table></div>';
+
+  const page2='<div class="sec-title">1. Introducción</div>'+
+    '<p class="lead">La Detección de Necesidades de Formación consolida la situación académica del claustro docente, sus aspiraciones de desarrollo y las brechas que orientan la planificación institucional. Para el período analizado se consideran <strong>'+total+' docentes</strong>, asociados a su carrera principal.</p>'+
+    '<div class="sec-title">2. Objetivo general</div>'+
+    '<p>Identificar de manera técnica las necesidades de formación académica del personal docente, con el fin de establecer prioridades y lineamientos que permitan estructurar un Plan de Formación pertinente y verificable.</p>'+
+    '<div class="sec-title">3. Metodología y enfoque</div>'+
+    '<p>El diagnóstico se construye con la información institucional registrada en la aplicación, mediante formulario, Excel global o actualización desde Firebase en modo de solo lectura. La aplicación utiliza los datos registrados y cálculos derivados, sin alterar las cifras de origen.</p>'+
+    '<div class="sub-title">3.1 Cobertura del levantamiento</div>'+
+    '<div class="info-grid">'+
+      '<div class="info-item"><strong>'+total+'</strong><span>Docentes analizados</span></div>'+
+      '<div class="info-item"><strong>'+careerCount+'</strong><span>Carreras representadas</span></div>'+
+      '<div class="info-item"><strong>'+fmtPct(pct(s.willing,total))+'</strong><span>Disposición para estudiar</span></div>'+
+    '</div>'+
+    '<div class="sub-title">3.2 Alineación institucional</div>'+
+    '<p class="tight">El diagnóstico se articula con la planificación institucional, el desarrollo profesional docente y los mecanismos de aseguramiento de la calidad. Sus resultados constituyen el insumo directo para la elaboración del Plan de Formación Docente del mismo período.</p>'+
+    '<div class="info-box small"><strong>Criterio de trabajo:</strong> la DNF identifica brechas y prioridades; el Plan transforma esas prioridades en rutas formativas; y el Informe de Cumplimiento verifica su ejecución.</div>';
+
+  const page3='<div class="sec-title">4. Caracterización del claustro docente</div>'+
+    '<p class="small">La caracterización resume las variables principales utilizadas para reconocer brechas, preferencias y condiciones de acceso a procesos formativos.</p>'+
+    '<div class="two-col">'+
+      compactDist('4.1 Nivel académico actual',level,total)+
+      compactDist('4.2 Dedicación',ded,total)+
+      compactDist('4.3 Nivel académico deseado',wish,total)+
+      compactDist('4.4 Tipo de formación',type,total)+
+      compactDist('4.5 Modalidad preferida',mod,total)+
+      compactDist('4.6 Barrera principal',barrier,total)+
+    '</div>'+
+    '<div class="info-box small"><strong>Lectura institucional:</strong> '+fmtPct(pct(mastersDoctors,total))+' del claustro registra maestría o doctorado. '+s.willing+' de '+total+' docentes manifiestan disposición para iniciar o continuar estudios. Estos resultados orientan la priorización del Plan de Formación.</div>';
+
+  const needCards=needsCareers.map(career=>{
+    const items=ensureNeedItems(career).filter(x=>norm(x.text));
+    const coord=ensureCoordination(career);
+    const lines=items.map(item=>{
+      const priority=item.priorityOverride||autoPriorityForNeed(career,item.text);
+      return '<div class="need-line"><span>'+esc(item.text)+'</span><span class="priority">'+esc(priority)+'</span></div>';
+    }).join('');
+    return '<div class="need-card"><div class="need-card-title">'+esc(career)+'</div><div class="need-coord">Coordinador/a: '+esc(coord?.coordinador||'Por definir')+'</div>'+lines+'</div>';
+  }).join('');
+
+  const page4='<div class="sec-title">5. Necesidades de formación por carrera</div>'+
+    '<p class="small">Las necesidades específicas se presentan por carrera. La prioridad final corresponde al valor manual cuando existe; de lo contrario, se conserva la prioridad sugerida por la aplicación.</p>'+
+    '<div class="needs-grid '+needsDensity+'">'+needCards+'</div>';
+
+  const keyIndicators=[
+    ['Docentes analizados',String(total)],
+    ['Carreras representadas',String(careerCount)],
+    ['Docentes con maestría o doctorado',fmtPct(pct(mastersDoctors,total))],
+    ['Dispuestos a iniciar o continuar estudios',fmtPct(pct(s.willing,total))],
+    ['Docentes que estudian actualmente',fmtPct(pct(s.studying,total))]
+  ].map(x=>'<tr><td>'+esc(x[0])+'</td><td class="num">'+esc(x[1])+'</td></tr>').join('');
+
+  const genericHtml=genericLines.length
+    ? '<ul class="bullet-list compact-list">'+genericLines.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'
+    : '<p class="small muted">No se registraron líneas genéricas para el período.</p>';
+
+  const page5='<div class="sec-title">6. Resumen ejecutivo</div>'+
+    '<table class="data summary-table"><tr><th>Indicador</th><th>Resultado</th></tr>'+keyIndicators+'</table>'+
+    '<div class="sub-title">6.1 Líneas genéricas institucionales</div>'+genericHtml+
+    '<div class="sec-title">7. Conclusiones</div>'+
+    '<ol class="bullet-list compact-list">'+
+      '<li>La base consolidada permite identificar brechas de formación por nivel académico, carrera, disposición y preferencias de estudio.</li>'+
+      '<li>Las necesidades específicas y sus prioridades constituyen el insumo técnico para seleccionar docentes y definir rutas dentro del Plan de Formación.</li>'+
+      '<li>La información debe mantenerse vinculada entre DNF, Plan y seguimiento para conservar trazabilidad durante todo el período.</li>'+
+    '</ol>'+
+    '<div class="sec-title">8. Recomendaciones</div>'+
+    '<ul class="bullet-list compact-list">'+
+      '<li>Priorizar las necesidades clasificadas como Altas y las carreras con mayores brechas académicas.</li>'+
+      '<li>Aprovechar la disposición declarada por los docentes para establecer rutas de formación realistas y escalonadas.</li>'+
+      '<li>Mantener líneas diferenciadas para formación específica y genérica, evitando duplicar información entre documentos.</li>'+
+      '<li>Utilizar los resultados de esta DNF como base directa del Plan de Formación Docente y del posterior Informe de Cumplimiento.</li>'+
+    '</ul>';
+
+  const body='<div class="pdf-document">'+
+    dnfPage(title,code,1,5,coverBody,'cover-page')+
+    dnfPage(title,code,2,5,page2)+
+    dnfPage(title,code,3,5,page3)+
+    dnfPage(title,code,4,5,page4)+
+    dnfPage(title,code,5,5,page5)+
+    '</div>';
+
+  return htmlDoc(title,body,true);
 }
 function planHtml(){
   ensurePlanRows();
@@ -1950,8 +2065,9 @@ function informeHtml(){
     <div class="h1">7. Recomendaciones</div><p>Mantener el seguimiento periódico, exigir evidencia de avance en los hitos definidos y utilizar los resultados para retroalimentar la Detección de Necesidades del siguiente período.</p>
   `);
 }
-function htmlDoc(title,body){
-  return `<!doctype html><html><head><meta charset="UTF-8"><title>${esc(title)}</title>${basePdfCss()}</head><body>${body}<div class="footer">ITSQMET · Unidad de Gestión de Procesos Académicos</div></body></html>`;
+function htmlDoc(title,body,exactPages=false){
+  const footer=exactPages?'':'<div class="footer">ITSQMET · Unidad de Gestión de Procesos Académicos</div>';
+  return '<!doctype html><html><head><meta charset="UTF-8"><title>'+esc(title)+'</title>'+basePdfCss(exactPages)+'</head><body>'+body+footer+'</body></html>';
 }
 async function generateDocument(type){
   syncPeriodCodes(state.period);
@@ -1960,7 +2076,7 @@ async function generateDocument(type){
   if(type==='informe' && !state.plan.some(p=>p.selected)){toast('No hay docentes planificados');return;}
 
   const payload = type==='dnf'
-    ? {filename:'Deteccion_Necesidades_Formacion.pdf',html:dnfHtml()}
+    ? {filename:'Deteccion_Necesidades_Formacion.pdf',html:dnfHtml(),exactPages:true}
     : type==='plan'
     ? {filename:'Plan_Formacion_Docente.pdf',html:planHtml()}
     : {filename:'Informe_Cumplimiento_Plan_Formacion.pdf',html:informeHtml()};
