@@ -44,12 +44,27 @@ const DEFAULT_ACTIONS = [
 
 const LEVELS = ['Tecnólogo Superior','Tecnólogo Universitario','Licenciatura / Ingeniería','Maestría / Maestría Tecnológica','Doctorado'];
 
+function documentCodeFromDate(rgi,date){
+  const value=norm(date);
+  const match=value.match(/^(\d{4})-(\d{2})/);
+  if(!match) return '';
+  return 'UGPA-RGI'+rgi+'-01-PRO-31-'+match[1]+'-'+match[2];
+}
+
+function syncPeriodCodes(period){
+  if(!period) return;
+  period.dnfCode=documentCodeFromDate(1,period.elaborationDate);
+  period.planCode=documentCodeFromDate(2,period.elaborationDate);
+  period.reportCode=documentCodeFromDate(3,period.elaborationDate);
+}
+
 function defaultState() {
+  const elaborationDate=new Date().toISOString().slice(0,10);
   return {
     period: {
       start: '',
       end: '',
-      elaborationDate: new Date().toISOString().slice(0,10),
+      elaborationDate,
       version: '1.0',
       preparedBy: 'MSc. Jefferson Villarreal',
       preparedRole: 'Gestor de Procesos Académicos',
@@ -58,9 +73,9 @@ function defaultState() {
       approvedBy: 'Dr. Alex León T.',
       approvedRole: 'Vicerrector',
       targetPercent: 10,
-      dnfCode: 'UGPA-RGI1-0X-PRO-31-AÑO-MES',
-      planCode: 'UGPA-RGI2-0X-PRO-31-AÑO-MES',
-      reportCode: 'UGPA-RGI3-0X-PRO-31-AÑO-MES'
+      dnfCode: documentCodeFromDate(1,elaborationDate),
+      planCode: documentCodeFromDate(2,elaborationDate),
+      reportCode: documentCodeFromDate(3,elaborationDate)
     },
     careers: DEFAULT_CAREERS.map(x => ({ ...x })),
     teachers: [],
@@ -166,10 +181,7 @@ function refreshPeriodMissingStyles(){
     elaborationDate:!norm(root.querySelector('[name="elaborationDate"]')?.value),
     preparedBy:!norm(root.querySelector('[name="preparedBy"]')?.value),
     reviewedBy:!norm(root.querySelector('[name="reviewedBy"]')?.value),
-    approvedBy:!norm(root.querySelector('[name="approvedBy"]')?.value),
-    dnfCode:isPlaceholderCode(root.querySelector('[name="dnfCode"]')?.value),
-    planCode:isPlaceholderCode(root.querySelector('[name="planCode"]')?.value),
-    reportCode:isPlaceholderCode(root.querySelector('[name="reportCode"]')?.value)
+    approvedBy:!norm(root.querySelector('[name="approvedBy"]')?.value)
   };
   Object.entries(required).forEach(([name,missing])=>setMissingControl(root.querySelector('[name="'+name+'"]'),missing));
 }
@@ -779,8 +791,6 @@ function periodMissing(type){
   if(!p.preparedBy) miss.push('Elaborado por');
   if(!p.reviewedBy) miss.push('Revisado por');
   if(!p.approvedBy) miss.push('Aprobado por');
-  const code=type==='dnf'?p.dnfCode:type==='plan'?p.planCode:p.reportCode;
-  if(isPlaceholderCode(code)) miss.push('Código documental definitivo');
   return miss;
 }
 
@@ -1101,9 +1111,10 @@ function metric(label,value){ return '<div class="card metric"><span>'+esc(label
 
 function renderPeriod() {
   const p=state.period;
+  syncPeriodCodes(p);
   $('#content').innerHTML = `
     <div class="card">
-      <div class="notice">Estos valores vienen precargados cuando es posible. Puedes cambiarlos antes de generar cualquier PDF.</div>
+      <div class="notice">Los códigos documentales se generan automáticamente con la fecha de elaboración. No necesitas escribirlos manualmente.</div>
       <div class="form-grid" style="margin-top:18px">
         ${field('Inicio del período','start',p.start,'date')}
         ${field('Fin del período','end',p.end,'date')}
@@ -1116,20 +1127,47 @@ function renderPeriod() {
         ${field('Aprobado por','approvedBy',p.approvedBy)}
         ${field('Cargo','approvedRole',p.approvedRole)}
         ${field('Meta de docentes en formación (%)','targetPercent',p.targetPercent,'number')}
-        ${field('Código DNF','dnfCode',p.dnfCode)}
-        ${field('Código Plan','planCode',p.planCode)}
-        ${field('Código Informe','reportCode',p.reportCode)}
+        <div class="field"><label>Código DNF</label><input name="dnfCode" value="${esc(p.dnfCode)}" readonly class="auto-code"><span class="hint">Automático según fecha de elaboración.</span></div>
+        <div class="field"><label>Código Plan</label><input name="planCode" value="${esc(p.planCode)}" readonly class="auto-code"><span class="hint">Automático según fecha de elaboración.</span></div>
+        <div class="field"><label>Código Informe</label><input name="reportCode" value="${esc(p.reportCode)}" readonly class="auto-code"><span class="hint">Automático según fecha de elaboración.</span></div>
       </div>
       <div class="dialog-actions"><button class="primary" id="savePeriod">Guardar</button></div>
     </div>`;
+
+  const updateCodesFromDate=()=>{
+    const date=$('#content').querySelector('[name="elaborationDate"]')?.value||'';
+    const codes={
+      dnfCode:documentCodeFromDate(1,date),
+      planCode:documentCodeFromDate(2,date),
+      reportCode:documentCodeFromDate(3,date)
+    };
+    Object.entries(codes).forEach(([name,value])=>{
+      const input=$('#content').querySelector('[name="'+name+'"]');
+      if(input) input.value=value;
+    });
+    refreshPeriodMissingStyles();
+  };
+
   refreshPeriodMissingStyles();
   $('#content').querySelectorAll('[name]').forEach(el=>{
-    el.addEventListener('input',refreshPeriodMissingStyles);
-    el.addEventListener('change',refreshPeriodMissingStyles);
+    el.addEventListener('input',()=>{
+      if(el.name==='elaborationDate') updateCodesFromDate();
+      else refreshPeriodMissingStyles();
+    });
+    el.addEventListener('change',()=>{
+      if(el.name==='elaborationDate') updateCodesFromDate();
+      else refreshPeriodMissingStyles();
+    });
   });
+
   $('#savePeriod').onclick=async()=>{
-    $('#content').querySelectorAll('[name]').forEach(el=>state.period[el.name]=el.name==='targetPercent'?n(el.value):el.value);
-    await save(); toast('Período actualizado');
+    $('#content').querySelectorAll('[name]').forEach(el=>{
+      state.period[el.name]=el.name==='targetPercent'?n(el.value):el.value;
+    });
+    syncPeriodCodes(state.period);
+    await save();
+    renderPeriod();
+    toast('Período actualizado');
   };
 }
 
@@ -1638,9 +1676,7 @@ function applyExcel(sheets){
     state.period.approvedBy=p.APROBADO_POR||state.period.approvedBy;
     state.period.approvedRole=p.CARGO_APROBADO||state.period.approvedRole;
     state.period.targetPercent=n(p.META_FORMACION_PORCENTAJE)||state.period.targetPercent;
-    state.period.dnfCode=p.CODIGO_DNF||state.period.dnfCode;
-    state.period.planCode=p.CODIGO_PLAN||state.period.planCode;
-    state.period.reportCode=p.CODIGO_INFORME||state.period.reportCode;
+    syncPeriodCodes(state.period);
   }
 
   if(sheets.DOCENTES?.length){
@@ -1918,6 +1954,7 @@ function htmlDoc(title,body){
   return `<!doctype html><html><head><meta charset="UTF-8"><title>${esc(title)}</title>${basePdfCss()}</head><body>${body}<div class="footer">ITSQMET · Unidad de Gestión de Procesos Académicos</div></body></html>`;
 }
 async function generateDocument(type){
+  syncPeriodCodes(state.period);
   if(type==='dnf' && !state.teachers.length){toast('Carga docentes antes de generar la DNF');return;}
   if(type==='plan' && !state.plan.some(p=>p.selected)){toast('Selecciona docentes en el Plan');return;}
   if(type==='informe' && !state.plan.some(p=>p.selected)){toast('No hay docentes planificados');return;}
@@ -1970,7 +2007,9 @@ $('#closeFirebase').onclick=$('#closeFirebaseBottom').onclick=()=>$('#firebaseDi
     state.teachers=loaded.teachers||[];
     state.plan=loaded.plan||[];
     state.followup=loaded.followup||[];
+    syncPeriodCodes(state.period);
   }
+  syncPeriodCodes(state.period);
   const cleanedInvalidCareers=cleanupInvalidCareers();
   const dedupedCareers=dedupeCareerState();
   if(cleanedInvalidCareers||dedupedCareers) await save();
