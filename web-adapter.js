@@ -226,12 +226,20 @@
       frame.style.background = '#fff';
 
       const loaded = new Promise((resolve, reject) => {
-        frame.onload = () => resolve();
-        frame.onerror = () => reject(new Error('No se pudo preparar el documento para PDF.'));
+        const timeout = setTimeout(() => reject(new Error('La preparación del PDF tardó demasiado.')), 15000);
+        frame.onload = () => {
+          clearTimeout(timeout);
+          resolve();
+        };
+        frame.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error('No se pudo preparar el documento para PDF.'));
+        };
       });
 
-      document.body.appendChild(frame);
+      // Asignar srcdoc antes de insertar el iframe evita capturar el load inicial de about:blank.
       frame.srcdoc = payload.html;
+      document.body.appendChild(frame);
       await loaded;
 
       const pdfStyle = frame.contentDocument.createElement('style');
@@ -239,7 +247,13 @@
       frame.contentDocument.head.appendChild(pdfStyle);
 
       const html2pdf = await loadHtml2PdfInFrame(frame);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      if (frame.contentDocument.fonts?.ready) {
+        await Promise.race([
+          frame.contentDocument.fonts.ready,
+          new Promise(resolve => setTimeout(resolve, 1500))
+        ]);
+      }
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       const source = frame.contentDocument.body;
       const filename = payload.filename || 'documento.pdf';
