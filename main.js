@@ -247,7 +247,7 @@ ipcMain.handle('pdf:generate', async (_event, payload) => {
     const pdf = await pdfWindow.webContents.printToPDF({
       printBackground: true,
       pageSize: 'A4',
-      margins: { marginType: 'default' },
+      margins: { marginType: payload.exactPages ? 'none' : 'default' },
       preferCSSPageSize: true
     });
 
