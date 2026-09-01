@@ -2621,6 +2621,20 @@ async function generateDocument(type){
   }
   toast('Generando PDF…');
 
+  const onPdfProgress=(event)=>{
+    if(type!=='dnf') return;
+    const d=event?.detail||{};
+    if(!button) return;
+    if(d.phase==='assembling'){
+      button.textContent='Armando PDF…';
+    }else if(d.phase==='done'){
+      button.textContent='Descargando…';
+    }else if(d.total){
+      button.textContent='Generando PDF '+d.current+'/'+d.total+'…';
+    }
+  };
+  window.addEventListener('docformacion-pdf-progress',onPdfProgress);
+
   try{
     const r=await window.docformacion.generatePDF(payload);
     if(r?.ok) toast(r.downloaded ? ('PDF descargado correctamente'+(r.pages?' · '+r.pages+' páginas':'')) : 'PDF generado correctamente');
@@ -2630,6 +2644,7 @@ async function generateDocument(type){
     console.error('Error al generar PDF', error);
     toast('Error al generar PDF: '+(error?.message||error));
   }finally{
+    window.removeEventListener('docformacion-pdf-progress',onPdfProgress);
     if(button){
       button.disabled = false;
       button.textContent = previousText;
