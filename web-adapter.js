@@ -203,7 +203,7 @@
 
     for (let i = 0; i < pages.length; i++) {
       const canvas = await window.html2canvas(pages[i], {
-        scale: 2,
+        scale: 1.55,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
@@ -213,9 +213,12 @@
         windowHeight: pages[i].scrollHeight
       });
 
-      const image = canvas.toDataURL('image/jpeg', 0.98);
+      const image = canvas.toDataURL('image/jpeg', 0.9);
       if (i > 0) pdf.addPage('a4', 'portrait');
       pdf.addImage(image, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      canvas.width = 1;
+      canvas.height = 1;
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
 
     pdf.save(payload.filename || 'documento.pdf');
