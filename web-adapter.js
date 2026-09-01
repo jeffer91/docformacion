@@ -4,6 +4,7 @@
 
   const STORAGE_KEY = 'docformacion-data-v1';
   const XLSX_CDN = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+  const HTML2PDF_CDN = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
   const FIREBASE_READ_URL = 'https://repaso-fire-d8ceb-default-rtdb.firebaseio.com/.json';
 
   function chooseFile(accept) {
@@ -190,31 +191,93 @@
     }
   }
 
-  async function generatePDF(payload) {
-    try {
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        return { ok: false, error: 'El navegador bloqueó la ventana de impresión. Habilita ventanas emergentes para este sitio.' };
+  function loadHtml2PdfInFrame(frame) {
+    return new Promise((resolve, reject) => {
+      if (typeof frame.contentWindow?.html2pdf === 'function') {
+        resolve(frame.contentWindow.html2pdf);
+        return;
       }
 
-      printWindow.document.open();
-      printWindow.document.write(payload.html);
-      printWindow.document.close();
+      const script = frame.contentDocument.createElement('script');
+      script.src = HTML2PDF_CDN;
+      script.onload = () => {
+        if (typeof frame.contentWindow?.html2pdf === 'function') resolve(frame.contentWindow.html2pdf);
+        else reject(new Error('La librería de PDF no quedó disponible.'));
+      };
+      script.onerror = () => reject(new Error('No se pudo cargar el generador de PDF.'));
+      frame.contentDocument.head.appendChild(script);
+    });
+  }
 
-      const runPrint = () => {
-        printWindow.focus();
-        printWindow.print();
+  async function generatePDF(payload) {
+    let frame;
+    try {
+      if (!payload?.html) return { ok: false, error: 'No se recibió contenido para generar el PDF.' };
+
+      frame = document.createElement('iframe');
+      frame.setAttribute('aria-hidden', 'true');
+      frame.style.position = 'fixed';
+      frame.style.left = '-10000px';
+      frame.style.top = '0';
+      frame.style.width = '178mm';
+      frame.style.height = '297mm';
+      frame.style.border = '0';
+      frame.style.pointerEvents = 'none';
+      frame.style.background = '#fff';
+
+      const loaded = new Promise((resolve, reject) => {
+        frame.onload = () => resolve();
+        frame.onerror = () => reject(new Error('No se pudo preparar el documento para PDF.'));
+      });
+
+      document.body.appendChild(frame);
+      frame.srcdoc = payload.html;
+      await loaded;
+
+      const pdfStyle = frame.contentDocument.createElement('style');
+      pdfStyle.textContent = 'html,body{width:178mm!important;max-width:178mm!important;background:#fff!important;}';
+      frame.contentDocument.head.appendChild(pdfStyle);
+
+      const html2pdf = await loadHtml2PdfInFrame(frame);
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const source = frame.contentDocument.body;
+      const filename = payload.filename || 'documento.pdf';
+      const options = {
+        margin: [18, 16, 18, 16],
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait',
+          compress: true
+        },
+        pagebreak: {
+          mode: ['css', 'legacy'],
+          before: '.page-break',
+          avoid: ['.avoid', 'tr']
+        }
       };
 
-      if (printWindow.document.readyState === 'complete') {
-        setTimeout(runPrint, 250);
-      } else {
-        printWindow.addEventListener('load', () => setTimeout(runPrint, 250), { once: true });
-      }
+      const blob = await html2pdf()
+        .set(options)
+        .from(source)
+        .toPdf()
+        .outputPdf('blob');
 
-      return { ok: true, printMode: true };
+      saveBlob(blob, filename);
+      return { ok: true, filePath: filename, downloaded: true };
     } catch (error) {
       return { ok: false, error: error.message };
+    } finally {
+      if (frame?.parentNode) frame.remove();
     }
   }
 
