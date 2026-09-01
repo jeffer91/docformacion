@@ -2026,8 +2026,9 @@ function dnfHtml(){
     '</tr></table></div>';
   add(null,coverBody,'cover-page');
 
-  // Placeholder for the index. It is replaced after every section page has been built.
-  add('Índice general','__DNF_TOC__');
+  // Two index pages are reserved so the report remains readable even with many careers.
+  add('Índice general','__DNF_TOC_MAIN__');
+  add(null,'__DNF_TOC_DETAIL__');
 
   add('1. Introducción',
     '<div class="sec-title">1. Introducción</div>'+
@@ -2169,7 +2170,7 @@ function dnfHtml(){
     const coord=p.coord?.coordinador||'Por definir';
     const firstNeed=p.items[0];
     const firstAffected=firstNeed?affectedCountForNeed(career,firstNeed.text):0;
-    add(index===0?null:null,
+    add('7.'+(index+2)+' Carrera: '+career,
       '<div class="sec-title">7.'+(index+2)+' Carrera: '+esc(career)+'</div>'+
       '<div class="kpi-row"><div class="kpi"><strong>'+p.count+'</strong><span>Docentes</span></div><div class="kpi"><strong>'+fmtPct(pct(p.masters+p.doctors,p.count))+'</strong><span>Maestría o doctorado</span></div><div class="kpi"><strong>'+fmtPct(pct(p.willing,p.count))+'</strong><span>Dispuestos</span></div><div class="kpi"><strong>'+esc(p.highest)+'</strong><span>Prioridad mayor</span></div></div>'+
       '<p class="small"><strong>Coordinador/a:</strong> '+esc(coord)+' · <strong>Programa:</strong> '+esc(programForCareer(career)||'Por definir')+'</p>'+
@@ -2283,14 +2284,18 @@ function dnfHtml(){
     );
   });
 
-  // Build a real index using the final dynamic page count.
+  // Build a real two-page index using the final dynamic page count.
   const tocRows=[];
   pages.forEach((page,index)=>{
     if(page.tocLabel && page.tocLabel!=='Índice general') tocRows.push([page.tocLabel,index+1]);
   });
-  const toc='<div class="sec-title">Índice general</div><table class="toc">'+tocRows.map(([label,page])=>'<tr><td>'+esc(label)+'</td><td>'+page+'</td></tr>').join('')+'</table>'+
-    '<div class="sub-title">Lista de gráficos principales</div><p class="small">Distribución por carrera; dedicación; nivel académico actual; nivel deseado; estudios en curso; disposición para estudiar; tipo de formación; modalidad preferida; barreras; comparación actual vs. deseado; brechas por carrera; ranking de necesidades; prioridades institucionales.</p>';
-  pages[1].body=toc;
+  const mainRows=tocRows.filter(([label])=>!/^7\.\d+\sCarrera:/.test(label));
+  const careerRowsToc=tocRows.filter(([label])=>/^7\.\d+\sCarrera:/.test(label));
+  pages[1].body='<div class="sec-title">Índice general</div><table class="toc">'+mainRows.map(([label,page])=>'<tr><td>'+esc(label)+'</td><td>'+page+'</td></tr>').join('')+'</table>'+
+    '<div class="sub-title">Estructura del análisis</div><p class="small">El documento se organiza desde el marco institucional y metodológico hacia la caracterización, el análisis de brechas, las necesidades por carrera, la priorización y los lineamientos del Plan. El Resumen Ejecutivo se presenta después de la propuesta de lineamientos.</p>';
+  pages[2].body='<div class="sec-title">Índice por carrera y elementos gráficos</div>'+
+    (careerRowsToc.length?'<div class="sub-title">Carreras analizadas</div><table class="toc">'+careerRowsToc.map(([label,page])=>'<tr><td>'+esc(label)+'</td><td>'+page+'</td></tr>').join('')+'</table>':'<p class="small muted">No existen carreras con datos para listar.</p>')+
+    '<div class="sub-title">Gráficos incluidos</div><p class="small">Docentes por carrera; dedicación; nivel académico actual; nivel académico deseado; estudios en curso; disposición para estudiar; tipo de formación; modalidad preferida; barreras principales; comparación actual vs. deseado; brecha por carrera; ranking de necesidades; distribución de prioridades; gráficos individuales por carrera; indicadores ejecutivos y distribuciones consolidadas en anexos.</p>';
 
   const totalPages=pages.length;
   const body='<div class="pdf-document">'+pages.map((page,index)=>dnfPage(title,code,index+1,totalPages,page.body,page.extraClass||'')).join('')+'</div>';
@@ -2371,7 +2376,7 @@ async function generateDocument(type){
 
   try{
     const r=await window.docformacion.generatePDF(payload);
-    if(r?.ok) toast(r.downloaded ? 'PDF descargado correctamente' : 'PDF generado correctamente');
+    if(r?.ok) toast(r.downloaded ? ('PDF descargado correctamente'+(r.pages?' · '+r.pages+' páginas':'')) : 'PDF generado correctamente');
     else if(r?.error) toast('Error al generar PDF: '+r.error);
     else toast('No se pudo generar el PDF');
   }catch(error){
