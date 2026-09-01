@@ -1958,14 +1958,35 @@ async function generateDocument(type){
   if(type==='dnf' && !state.teachers.length){toast('Carga docentes antes de generar la DNF');return;}
   if(type==='plan' && !state.plan.some(p=>p.selected)){toast('Selecciona docentes en el Plan');return;}
   if(type==='informe' && !state.plan.some(p=>p.selected)){toast('No hay docentes planificados');return;}
+
   const payload = type==='dnf'
     ? {filename:'Deteccion_Necesidades_Formacion.pdf',html:dnfHtml()}
     : type==='plan'
     ? {filename:'Plan_Formacion_Docente.pdf',html:planHtml()}
     : {filename:'Informe_Cumplimiento_Plan_Formacion.pdf',html:informeHtml()};
-  const r=await window.docformacion.generatePDF(payload);
-  if(r?.ok) toast('PDF generado correctamente');
-  else if(r?.error) toast('Error al generar PDF: '+r.error);
+
+  const button = $('#generateCurrent') || document.querySelector('[data-generate="'+type+'"]');
+  const previousText = button?.textContent || 'Generar PDF';
+  if(button){
+    button.disabled = true;
+    button.textContent = 'Generando PDF…';
+  }
+  toast('Generando PDF…');
+
+  try{
+    const r=await window.docformacion.generatePDF(payload);
+    if(r?.ok) toast(r.downloaded ? 'PDF descargado correctamente' : 'PDF generado correctamente');
+    else if(r?.error) toast('Error al generar PDF: '+r.error);
+    else toast('No se pudo generar el PDF');
+  }catch(error){
+    console.error('Error al generar PDF', error);
+    toast('Error al generar PDF: '+(error?.message||error));
+  }finally{
+    if(button){
+      button.disabled = false;
+      button.textContent = previousText;
+    }
+  }
 }
 
 $$('.nav-item').forEach(b=>b.onclick=()=>setView(b.dataset.view));
