@@ -1832,6 +1832,8 @@ function applyExcel(sheets){
   dedupeCareerState();
 }
 
+const INSTITUTION_LOGO_DATA="data:image/jpeg;base64,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";
+
 function basePdfCss(exactPages=false){
   if(exactPages){
     return '<style>'+
@@ -1844,17 +1846,17 @@ function basePdfCss(exactPages=false){
       '.institution-header{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 5mm 0;font-size:7.2pt;line-height:1.08;flex:0 0 auto}'+
       '.institution-header td{border:.65pt solid #222;padding:1.5mm 1.8mm;vertical-align:middle;text-align:center}'+
       '.institution-header .brand-cell{width:24%;font-weight:700}.institution-header .unit-cell{width:52%;font-weight:700;font-size:7.7pt}.institution-header .meta-cell{width:24%;font-size:6.9pt}'+
-      '.institution-header .brand-main{font-size:12pt;font-weight:800;letter-spacing:.2px}.institution-header .brand-sub{font-size:5.7pt;font-weight:400;margin-top:.5mm}'+
+      '.institution-header .brand-cell{padding:1mm 1.5mm}.institution-logo{display:block;max-width:100%;height:13mm;object-fit:contain;margin:0 auto}.institution-header .brand-main{font-size:12pt;font-weight:800;letter-spacing:.2px}.institution-header .brand-sub{font-size:5.7pt;font-weight:400;margin-top:.5mm}'+
       '.institution-header .doc-cell{font-weight:700;font-size:7.2pt}.institution-header .date-cell,.institution-header .page-cell{font-size:6.8pt}'+
       '.pdf-body{flex:1 1 auto;min-height:0;overflow:hidden}'+
       '.cover-body{height:100%;display:flex;flex-direction:column;justify-content:space-between;padding-top:8mm}'+
       '.cover-title{text-align:center;margin-top:48mm}.cover-title h1{font-size:18pt;line-height:1.18;margin:0;font-weight:700}.cover-title .period{font-size:13pt;font-weight:700;margin-top:2mm}'+
       '.signature-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:3mm;font-size:6.8pt}.signature-table td{border:.65pt solid #222;padding:2mm;vertical-align:top;height:30mm}.signature-table .sig-label{font-size:6pt;margin-bottom:13mm}.signature-table strong{font-size:6.8pt}.signature-table .sig-role{display:block;margin-top:1mm;text-transform:uppercase;font-size:6.2pt}'+
-      '.sec-title{font-size:12.5pt;font-weight:700;margin:0 0 2.2mm}.sub-title{font-size:10pt;font-weight:700;margin:3mm 0 1.2mm}.mini-title{font-size:8.5pt;font-weight:700;margin:2mm 0 1mm}'+
-      'p{margin:0 0 2.5mm;text-align:justify}.lead{font-size:9.2pt;line-height:1.32}.small{font-size:7.4pt}.muted{color:#555}.tight{margin-bottom:1.5mm}'+
+      '.sec-title{font-size:12pt;font-weight:700;margin:0 0 1.8mm}.sub-title{font-size:9.4pt;font-weight:700;margin:2.3mm 0 1mm}.mini-title{font-size:8.2pt;font-weight:700;margin:1.7mm 0 .8mm}.section-rule{border:0;border-top:.5pt solid #bbb;margin:2mm 0}'+
+      'p{margin:0 0 1.8mm;text-align:justify}.lead{font-size:8.9pt;line-height:1.28}.small{font-size:7.2pt}.muted{color:#555}.tight{margin-bottom:1.2mm}.body-list{margin:0 0 1.6mm;padding-left:5mm}.body-list li{margin:.35mm 0;text-align:justify}.criteria{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5mm;margin:1.5mm 0 2mm}.criteria div{border:.55pt solid #777;padding:1.5mm;text-align:center;font-size:6.5pt}.criteria strong{display:block;font-size:8pt;margin-bottom:.4mm}'+
       '.info-box{border:.65pt solid #777;background:#f3f4f6;padding:2.5mm 3mm;margin:2.5mm 0}.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2mm;margin:2.5mm 0}.info-item{border:.65pt solid #777;padding:2mm;text-align:center}.info-item strong{display:block;font-size:12pt}.info-item span{font-size:6.8pt}'+
       '.two-col{display:grid;grid-template-columns:1fr 1fr;gap:3mm}.panel{border:.65pt solid #777;padding:2.2mm;break-inside:avoid}.panel h3{font-size:8.5pt;margin:0 0 1.5mm}'+
-      'table.data{width:100%;border-collapse:collapse;table-layout:fixed;margin:1.5mm 0 2mm}table.data th,table.data td{border:.55pt solid #555;padding:1.2mm 1.4mm;font-size:7.1pt;line-height:1.12;vertical-align:top}table.data th{background:#e5e7eb;font-weight:700;text-align:center}table.data td.num{text-align:center;white-space:nowrap}'+
+      'table.data{width:100%;border-collapse:collapse;table-layout:fixed;margin:1.2mm 0 1.8mm}table.data th,table.data td{border:.55pt solid #555;padding:1.05mm 1.25mm;font-size:6.8pt;line-height:1.12;vertical-align:top}table.data th{background:#e5e7eb;font-weight:700;text-align:center}table.data td.num{text-align:center;white-space:nowrap}.career-summary th:nth-child(1){width:34%}.career-summary th:nth-child(2){width:10%}.career-summary th:nth-child(3){width:12%}.career-summary th:nth-child(4){width:22%}.career-summary th:nth-child(5){width:22%}'+
       '.summary-table th:first-child,.summary-table td:first-child{width:72%}.summary-table th:last-child,.summary-table td:last-child{width:28%}'+
       '.needs-grid{display:grid;grid-template-columns:1fr 1fr;gap:2mm 3mm;align-content:start}.need-card{border:.55pt solid #666;padding:1.7mm 2mm;break-inside:avoid;min-height:0}.need-card-title{font-size:7.5pt;font-weight:700;margin-bottom:.6mm}.need-coord{font-size:6.2pt;color:#444;margin-bottom:.8mm}.need-line{display:grid;grid-template-columns:1fr auto;gap:1.5mm;font-size:6.5pt;line-height:1.12;margin:.5mm 0}.priority{border:.5pt solid #555;border-radius:2mm;padding:.2mm 1mm;font-size:5.8pt;white-space:nowrap;align-self:start}'+
       '.needs-grid.dense{gap:1.4mm 2.2mm}.needs-grid.dense .need-card{padding:1.25mm 1.5mm}.needs-grid.dense .need-card-title{font-size:7pt}.needs-grid.dense .need-coord{font-size:5.8pt}.needs-grid.dense .need-line{font-size:6pt;line-height:1.05;margin:.35mm 0}'+
@@ -1891,7 +1893,7 @@ function periodLabel(){
 function dnfHeader(title,code,page,totalPages){
   const p=state.period;
   return '<table class="institution-header">'+
-    '<tr><td class="brand-cell"><div class="brand-main">ITSQMET</div><div class="brand-sub">Instituto Superior Tecnológico Quito Metropolitano</div></td>'+
+    '<tr><td class="brand-cell"><img class="institution-logo" src="'+INSTITUTION_LOGO_DATA+'" alt="ITSQMET"></td>'+
     '<td class="unit-cell">UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS</td>'+
     '<td class="meta-cell">Código:<br><strong>'+esc(code)+'</strong><br>Versión: '+esc(p.version||'1.0')+'</td></tr>'+
     '<tr><td class="date-cell">Fecha de Elaboración:<br><strong>'+esc(formatMonthYear(p.elaborationDate,true)||p.elaborationDate||'')+'</strong></td>'+
@@ -1920,91 +1922,116 @@ function dnfHtml(){
   const total=state.teachers.length;
   const s=stats();
   const level=dist('nivelActual'),ded=dist('dedicacion'),wish=dist('nivelDeseado'),type=dist('tipoFormacion'),mod=dist('modalidadPreferida'),barrier=dist('barrera');
+  const studyMap=dist('estudiaActualmente');
+  const willingness={Sí:s.willing,No:Math.max(0,total-s.willing)};
   const careers=[...new Set(state.teachers.map(t=>t.carrera).filter(validCareerName))];
   const careerCount=careers.length;
   const mastersDoctors=s.masters+s.doctors;
   const genericLines=(state.settings.genericLines||[]).filter(norm);
   const needsCareers=specificCareerNames();
-  const needsDensity=needsCareers.length>14?'dense':'';
+  const needsDensity=needsCareers.length>12?'dense':'';
+
+  const dominant=(map)=>{
+    const rows=Object.entries(map).filter(([k])=>k!=='Sin información').sort((a,b)=>b[1]-a[1]);
+    return rows[0]||['Sin información',0];
+  };
+  const dLevel=dominant(level),dWish=dominant(wish),dType=dominant(type),dMod=dominant(mod),dBarrier=dominant(barrier);
+
+  const careerRows=careers.map(career=>{
+    const teachers=state.teachers.filter(t=>t.carrera===career);
+    const items=ensureNeedItems(career).filter(x=>norm(x.text));
+    const highest=items.map(x=>x.priorityOverride||autoPriorityForNeed(career,x.text)).sort((a,b)=>({Alta:3,Media:2,Baja:1}[b]||0)-({Alta:3,Media:2,Baja:1}[a]||0))[0]||'Sin registrar';
+    const coord=ensureCoordination(career)?.coordinador||'Por definir';
+    return '<tr><td>'+esc(career)+'</td><td class="num">'+teachers.length+'</td><td class="num">'+fmtPct(pct(teachers.length,total))+'</td><td>'+esc(highest)+'</td><td>'+esc(coord)+'</td></tr>';
+  }).join('');
 
   const coverBody='<div class="cover-body">'+
-    '<div class="cover-title"><h1>'+esc(title)+'</h1><div class="period">'+esc(periodLabel())+'</div></div>'+
+    '<div class="cover-title"><img src="'+INSTITUTION_LOGO_DATA+'" alt="ITSQMET" style="width:74mm;max-height:30mm;object-fit:contain;margin-bottom:10mm"><h1>'+esc(title)+'</h1><div class="period">'+esc(periodLabel())+'</div></div>'+
     '<table class="signature-table"><tr>'+
       '<td><div class="sig-label">ELABORADO POR:</div><strong>NOMBRE: '+esc(state.period.preparedBy)+'</strong><span class="sig-role">CARGO: '+esc(state.period.preparedRole)+'</span></td>'+
       '<td><div class="sig-label">REVISADO POR:</div><strong>NOMBRE: '+esc(state.period.reviewedBy)+'</strong><span class="sig-role">CARGO: '+esc(state.period.reviewedRole)+'</span></td>'+
       '<td><div class="sig-label">APROBADO POR:</div><strong>NOMBRE: '+esc(state.period.approvedBy)+'</strong><span class="sig-role">CARGO: '+esc(state.period.approvedRole)+'</span></td>'+
     '</tr></table></div>';
 
-  const page2='<div class="sec-title">1. Introducción</div>'+
-    '<p class="lead">La Detección de Necesidades de Formación consolida la situación académica del claustro docente, sus aspiraciones de desarrollo y las brechas que orientan la planificación institucional. Para el período analizado se consideran <strong>'+total+' docentes</strong>, asociados a su carrera principal.</p>'+
-    '<div class="sec-title">2. Objetivo general</div>'+
-    '<p>Identificar de manera técnica las necesidades de formación académica del personal docente, con el fin de establecer prioridades y lineamientos que permitan estructurar un Plan de Formación pertinente y verificable.</p>'+
-    '<div class="sec-title">3. Metodología y enfoque</div>'+
-    '<p>El diagnóstico se construye con la información institucional registrada en la aplicación, mediante formulario, Excel global o actualización desde Firebase en modo de solo lectura. La aplicación utiliza los datos registrados y cálculos derivados, sin alterar las cifras de origen.</p>'+
-    '<div class="sub-title">3.1 Cobertura del levantamiento</div>'+
-    '<div class="info-grid">'+
-      '<div class="info-item"><strong>'+total+'</strong><span>Docentes analizados</span></div>'+
-      '<div class="info-item"><strong>'+careerCount+'</strong><span>Carreras representadas</span></div>'+
-      '<div class="info-item"><strong>'+fmtPct(pct(s.willing,total))+'</strong><span>Disposición para estudiar</span></div>'+
-    '</div>'+
-    '<div class="sub-title">3.2 Alineación institucional</div>'+
-    '<p class="tight">El diagnóstico se articula con la planificación institucional, el desarrollo profesional docente y los mecanismos de aseguramiento de la calidad. Sus resultados constituyen el insumo directo para la elaboración del Plan de Formación Docente del mismo período.</p>'+
-    '<div class="info-box small"><strong>Criterio de trabajo:</strong> la DNF identifica brechas y prioridades; el Plan transforma esas prioridades en rutas formativas; y el Informe de Cumplimiento verifica su ejecución.</div>';
+  const page2=
+    '<div class="sec-title">1. Introducción</div>'+
+    '<p class="lead">La Detección de Necesidades de Formación constituye el diagnóstico técnico que precede al Plan de Formación Docente. Su finalidad es identificar brechas entre la situación académica actual del claustro y las trayectorias formativas que la institución necesita promover, considerando el perfil docente, la carrera en la que participa, sus expectativas de desarrollo y las condiciones reales de acceso a estudios.</p>'+
+    '<p>Para el período '+esc(periodLabel())+' se analizan <strong>'+total+' docentes</strong> distribuidos en <strong>'+careerCount+' carreras</strong>. El documento consolida información individual y la transforma en resultados institucionales, sin sustituir la valoración técnica de las coordinaciones académicas.</p>'+
+    '<div class="sec-title">2. Marco institucional y alcance</div>'+
+    '<p>El diagnóstico se integra al sistema institucional de formación docente y mantiene coherencia con la normativa nacional de educación superior, los lineamientos del CACES, la planificación estratégica institucional, el reglamento de formación docente y los procesos académicos internos. Su alcance se limita a <strong>formación académica</strong>; no incorpora capacitación, talleres, seminarios o webinars como si fueran equivalentes.</p>'+
+    '<div class="sec-title">3. Objetivos</div>'+
+    '<div class="sub-title">3.1 Objetivo general</div>'+
+    '<p>Identificar y priorizar las necesidades de formación académica del personal docente para orientar decisiones institucionales y estructurar un Plan de Formación pertinente, trazable y evaluable.</p>'+
+    '<div class="sub-title">3.2 Objetivos específicos</div>'+
+    '<ul class="body-list small"><li>Caracterizar el nivel académico, dedicación y situación formativa actual del claustro.</li><li>Reconocer aspiraciones de formación, modalidad preferida y principales barreras de acceso.</li><li>Identificar necesidades específicas por carrera y líneas genéricas institucionales.</li><li>Establecer prioridades que sirvan como entrada directa al Plan de Formación Docente.</li></ul>'+
+    '<div class="sec-title">4. Metodología y criterios de priorización</div>'+
+    '<p class="small">La información procede del registro institucional de la aplicación, importación de Excel global y actualización desde Firebase en modo de solo lectura. La unidad de análisis es cada docente activo y su carrera principal. Las variables consideradas incluyen nivel académico actual, estudios en curso, nivel deseado, disposición para estudiar, tipo de formación, modalidad preferida y barrera principal.</p>'+
+    '<div class="criteria"><div><strong>Alta</strong>La necesidad aparece en 50% o más de los docentes de la carrera.</div><div><strong>Media</strong>La necesidad aparece en 25% a 49.9% de los docentes.</div><div><strong>Baja</strong>La necesidad aparece en menos del 25% de los docentes.</div></div>'+
+    '<div class="info-box small"><strong>Trazabilidad:</strong> DNF → identifica brechas y prioridades; Plan → selecciona docentes y define rutas; Informe de Cumplimiento → verifica avance, evidencias y resultados.</div>';
 
-  const page3='<div class="sec-title">4. Caracterización del claustro docente</div>'+
-    '<p class="small">La caracterización resume las variables principales utilizadas para reconocer brechas, preferencias y condiciones de acceso a procesos formativos.</p>'+
+  const page3=
+    '<div class="sec-title">5. Caracterización del claustro docente</div>'+
+    '<p class="small">La caracterización permite establecer la línea base del período y reconocer qué variables deben influir en las decisiones del Plan de Formación.</p>'+
+    '<div class="info-grid"><div class="info-item"><strong>'+total+'</strong><span>Docentes analizados</span></div><div class="info-item"><strong>'+careerCount+'</strong><span>Carreras representadas</span></div><div class="info-item"><strong>'+fmtPct(pct(mastersDoctors,total))+'</strong><span>Maestría o doctorado</span></div></div>'+
     '<div class="two-col">'+
-      compactDist('4.1 Nivel académico actual',level,total)+
-      compactDist('4.2 Dedicación',ded,total)+
-      compactDist('4.3 Nivel académico deseado',wish,total)+
-      compactDist('4.4 Tipo de formación',type,total)+
-      compactDist('4.5 Modalidad preferida',mod,total)+
-      compactDist('4.6 Barrera principal',barrier,total)+
+      compactDist('5.1 Nivel académico actual',level,total)+
+      compactDist('5.2 Dedicación',ded,total)+
+      compactDist('5.3 Estudios en curso',studyMap,total)+
+      compactDist('5.4 Disposición para estudiar',willingness,total)+
+      compactDist('5.5 Nivel académico deseado',wish,total)+
+      compactDist('5.6 Tipo de formación',type,total)+
+      compactDist('5.7 Modalidad preferida',mod,total)+
+      compactDist('5.8 Barrera principal',barrier,total)+
     '</div>'+
-    '<div class="info-box small"><strong>Lectura institucional:</strong> '+fmtPct(pct(mastersDoctors,total))+' del claustro registra maestría o doctorado. '+s.willing+' de '+total+' docentes manifiestan disposición para iniciar o continuar estudios. Estos resultados orientan la priorización del Plan de Formación.</div>';
+    '<div class="sub-title">5.9 Interpretación de resultados</div>'+
+    '<p class="small">El nivel académico predominante es <strong>'+esc(dLevel[0])+'</strong> ('+fmtPct(pct(dLevel[1],total))+'). La principal aspiración declarada corresponde a <strong>'+esc(dWish[0])+'</strong> ('+fmtPct(pct(dWish[1],total))+'), mientras que la formación <strong>'+esc(dType[0])+'</strong> concentra la mayor preferencia ('+fmtPct(pct(dType[1],total))+'). La modalidad más elegida es <strong>'+esc(dMod[0])+'</strong> y la barrera más frecuente es <strong>'+esc(dBarrier[0])+'</strong>. En conjunto, estos resultados permiten diferenciar entre una brecha académica objetiva y una preferencia formativa declarada.</p>'+
+    '<div class="info-box small"><strong>Hallazgo central:</strong> '+s.willing+' de '+total+' docentes manifiestan disposición para iniciar o continuar estudios; esta disponibilidad debe contrastarse con pertinencia de carrera, nivel actual, prioridad de la necesidad y factibilidad institucional antes de incluirlos en el Plan.</div>';
 
   const needCards=needsCareers.map(career=>{
     const items=ensureNeedItems(career).filter(x=>norm(x.text));
     const coord=ensureCoordination(career);
+    const teacherN=state.teachers.filter(t=>t.carrera===career).length;
     const lines=items.map(item=>{
       const priority=item.priorityOverride||autoPriorityForNeed(career,item.text);
-      return '<div class="need-line"><span>'+esc(item.text)+'</span><span class="priority">'+esc(priority)+'</span></div>';
+      const affected=state.teachers.filter(t=>t.carrera===career && needTextFromTeacher(t).some(v=>norm(v).toLowerCase()===norm(item.text).toLowerCase())).length;
+      return '<div class="need-line"><span>'+esc(item.text)+' <span class="muted">('+affected+'/'+teacherN+')</span></span><span class="priority">'+esc(priority)+'</span></div>';
     }).join('');
-    return '<div class="need-card"><div class="need-card-title">'+esc(career)+'</div><div class="need-coord">Coordinador/a: '+esc(coord?.coordinador||'Por definir')+'</div>'+lines+'</div>';
+    return '<div class="need-card"><div class="need-card-title">'+esc(career)+'</div><div class="need-coord">Coordinador/a: '+esc(coord?.coordinador||'Por definir')+' · Docentes: '+teacherN+'</div>'+lines+'</div>';
   }).join('');
 
-  const page4='<div class="sec-title">5. Necesidades de formación por carrera</div>'+
-    '<p class="small">Las necesidades específicas se presentan por carrera. La prioridad final corresponde al valor manual cuando existe; de lo contrario, se conserva la prioridad sugerida por la aplicación.</p>'+
-    '<div class="needs-grid '+needsDensity+'">'+needCards+'</div>';
+  const genericHtml=genericLines.length
+    ? '<ul class="body-list small">'+genericLines.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'
+    : '<p class="small muted">No se registraron líneas genéricas para el período.</p>';
+
+  const page4=
+    '<div class="sec-title">6. Necesidades de formación por carrera</div>'+
+    '<p class="small">Las necesidades específicas deben expresar la formación académica requerida para fortalecer el perfil docente de cada carrera. La prioridad automática se calcula con la proporción de docentes afectados y puede ser ajustada manualmente cuando exista una justificación académica documentada.</p>'+
+    '<div class="needs-grid '+needsDensity+'">'+needCards+'</div>'+
+    '<div class="sub-title">6.1 Síntesis comparativa por carrera</div>'+
+    '<table class="data career-summary"><tr><th>Carrera</th><th>Doc.</th><th>% base</th><th>Prioridad mayor</th><th>Coordinador/a</th></tr>'+careerRows+'</table>'+
+    '<div class="sub-title">6.2 Líneas genéricas institucionales</div>'+genericHtml+
+    '<div class="info-box small"><strong>Criterio de decisión:</strong> una necesidad genérica no reemplaza una necesidad específica de carrera. Ambas se registran separadamente para evitar que el diagnóstico pierda pertinencia disciplinar.</div>';
 
   const keyIndicators=[
     ['Docentes analizados',String(total)],
     ['Carreras representadas',String(careerCount)],
     ['Docentes con maestría o doctorado',fmtPct(pct(mastersDoctors,total))],
+    ['Docentes que estudian actualmente',fmtPct(pct(s.studying,total))],
     ['Dispuestos a iniciar o continuar estudios',fmtPct(pct(s.willing,total))],
-    ['Docentes que estudian actualmente',fmtPct(pct(s.studying,total))]
-  ].map(x=>'<tr><td>'+esc(x[0])+'</td><td class="num">'+esc(x[1])+'</td></tr>').join('');
+    ['Tipo de formación predominante',dType[0]+' ('+fmtPct(pct(dType[1],total))+')'],
+    ['Modalidad predominante',dMod[0]+' ('+fmtPct(pct(dMod[1],total))+')']
+  ].map(x=>'<tr><td>'+esc(x[0])+'</td><td>'+esc(x[1])+'</td></tr>').join('');
 
-  const genericHtml=genericLines.length
-    ? '<ul class="bullet-list compact-list">'+genericLines.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'
-    : '<p class="small muted">No se registraron líneas genéricas para el período.</p>';
-
-  const page5='<div class="sec-title">6. Resumen ejecutivo</div>'+
-    '<table class="data summary-table"><tr><th>Indicador</th><th>Resultado</th></tr>'+keyIndicators+'</table>'+
-    '<div class="sub-title">6.1 Líneas genéricas institucionales</div>'+genericHtml+
-    '<div class="sec-title">7. Conclusiones</div>'+
-    '<ol class="bullet-list compact-list">'+
-      '<li>La base consolidada permite identificar brechas de formación por nivel académico, carrera, disposición y preferencias de estudio.</li>'+
-      '<li>Las necesidades específicas y sus prioridades constituyen el insumo técnico para seleccionar docentes y definir rutas dentro del Plan de Formación.</li>'+
-      '<li>La información debe mantenerse vinculada entre DNF, Plan y seguimiento para conservar trazabilidad durante todo el período.</li>'+
-    '</ol>'+
-    '<div class="sec-title">8. Recomendaciones</div>'+
-    '<ul class="bullet-list compact-list">'+
-      '<li>Priorizar las necesidades clasificadas como Altas y las carreras con mayores brechas académicas.</li>'+
-      '<li>Aprovechar la disposición declarada por los docentes para establecer rutas de formación realistas y escalonadas.</li>'+
-      '<li>Mantener líneas diferenciadas para formación específica y genérica, evitando duplicar información entre documentos.</li>'+
-      '<li>Utilizar los resultados de esta DNF como base directa del Plan de Formación Docente y del posterior Informe de Cumplimiento.</li>'+
-    '</ul>';
+  const page5=
+    '<div class="sec-title">7. Resumen ejecutivo</div>'+
+    '<p class="small">El diagnóstico del período consolida la información de '+total+' docentes y permite establecer una línea base institucional para la planificación de formación. Los resultados muestran la composición académica actual del claustro, su disposición para continuar estudios, las aspiraciones de nivel, las preferencias de modalidad y las necesidades específicas reportadas por carrera. La utilidad del documento no radica únicamente en describir porcentajes, sino en convertirlos en criterios de selección y priorización para el Plan de Formación Docente.</p>'+
+    '<table class="data summary-table"><tr><th>Indicador clave</th><th>Resultado</th></tr>'+keyIndicators+'</table>'+
+    '<div class="sec-title">8. Conclusiones</div>'+
+    '<ol class="body-list small"><li>La información consolidada permite diferenciar brechas académicas, aspiraciones personales y necesidades institucionales por carrera.</li><li>El '+fmtPct(pct(mastersDoctors,total))+' del claustro registra maestría o doctorado; el grupo restante requiere análisis individual según el nivel exigido por su trayectoria y la pertinencia con la carrera.</li><li>La disposición para iniciar o continuar estudios alcanza '+fmtPct(pct(s.willing,total))+', lo que representa una condición favorable, pero no constituye por sí sola un criterio de inclusión automática en el Plan.</li><li>Las necesidades específicas por carrera deben conservar prioridad sobre opciones genéricas cuando estén directamente vinculadas con el perfil académico y disciplinar.</li><li>La DNF deja establecida la base técnica para el Plan de Formación y posteriormente debe ser contrastada con la ejecución registrada en el Informe de Cumplimiento.</li></ol>'+
+    '<div class="sec-title">9. Recomendaciones</div>'+
+    '<ul class="body-list small"><li>Priorizar necesidades clasificadas como Altas y carreras con brechas académicas objetivas.</li><li>Seleccionar docentes considerando simultáneamente nivel actual, pertinencia de la formación, disposición, barreras y capacidad institucional de apoyo.</li><li>Definir rutas diferenciadas para licenciaturas/ingenierías, maestrías y doctorados, evitando aplicar una misma solución a todo el claustro.</li><li>Mantener separadas la formación académica y la capacitación de corta duración para conservar la naturaleza del proceso.</li><li>Revisar este diagnóstico al cierre del período y utilizar los resultados del Informe de Cumplimiento como insumo para la siguiente DNF.</li></ul>'+
+    '<div class="sub-title">9.1 Referentes considerados</div>'+
+    '<p class="small muted">Normativa nacional de educación superior; lineamientos del CACES; planificación estratégica institucional; reglamento y manual institucional de formación docente; registros académicos y resultados del levantamiento del período.</p>';
 
   const body='<div class="pdf-document">'+
     dnfPage(title,code,1,5,coverBody,'cover-page')+
