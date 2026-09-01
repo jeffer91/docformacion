@@ -105,3 +105,14 @@ DocFormación puede consultar la base Realtime Database del proyecto Repaso-Fire
 - La cédula funciona como llave principal para evitar duplicar docentes.
 - Firebase no crea necesidades de formación ni prioridades: esas siguen siendo calculadas por DocFormación.
 - Se conserva trazabilidad interna de los campos completados desde Firebase y la fecha de lectura.
+
+
+## Códigos documentales
+
+Los códigos documentales se generan automáticamente a partir de la fecha de elaboración y no se editan manualmente:
+
+- DNF: `UGPA-RGI1-01-PRO-31-AAAA-MM`
+- Plan: `UGPA-RGI2-01-PRO-31-AAAA-MM`
+- Informe: `UGPA-RGI3-01-PRO-31-AAAA-MM`
+
+El año y mes corresponden a la fecha de elaboración del documento.
