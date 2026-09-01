@@ -41,7 +41,7 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 
   async function loadData() {
@@ -190,6 +190,22 @@
     }
   }
 
+  function emitPdfProgress(current, total, phase='render') {
+    window.dispatchEvent(new CustomEvent('docformacion-pdf-progress', {
+      detail: { current, total, phase }
+    }));
+  }
+
+  function canvasToJpegBlob(canvas, quality) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        blob => blob ? resolve(blob) : reject(new Error('No se pudo convertir una página del PDF.')),
+        'image/jpeg',
+        quality
+      );
+    });
+  }
+
   async function generateExactPages(payload, frame) {
     if (typeof window.html2canvas !== 'function' || !window.jspdf?.jsPDF) {
       return { ok: false, error: 'No se cargaron las librerías necesarias para crear el PDF.' };
@@ -199,30 +215,97 @@
     if (!pages.length) return { ok: false, error: 'No se encontraron páginas para generar el PDF.' };
 
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+    const filename = payload.filename || 'documento.pdf';
+
+    // En documentos largos reducimos ligeramente la resolución para evitar
+    // agotar la memoria del navegador sin perder legibilidad en A4.
+    const scale = pages.length >= 55 ? 1.0 : pages.length >= 40 ? 1.12 : 1.28;
+    const quality = pages.length >= 55 ? 0.76 : pages.length >= 40 ? 0.8 : 0.84;
+
+    const pdf = new jsPDF({
+      unit: 'mm',
+      format: 'a4',
+      orientation: 'portrait',
+      compress: true,
+      putOnlyUsedFonts: true,
+      precision: 2
+    });
+
+    emitPdfProgress(0, pages.length, 'render');
 
     for (let i = 0; i < pages.length; i++) {
-      const canvas = await window.html2canvas(pages[i], {
-        scale: 1.55,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: pages[i].scrollWidth,
-        height: pages[i].scrollHeight,
-        windowWidth: pages[i].scrollWidth,
-        windowHeight: pages[i].scrollHeight
-      });
+      let canvas = null;
+      try {
+        canvas = await window.html2canvas(pages[i], {
+          scale,
+          useCORS: true,
+          allowTaint: false,
+          logging: false,
+          imageTimeout: 8000,
+          removeContainer: true,
+          backgroundColor: '#ffffff',
+          width: pages[i].scrollWidth,
+          height: pages[i].scrollHeight,
+          windowWidth: pages[i].scrollWidth,
+          windowHeight: pages[i].scrollHeight
+        });
 
-      const image = canvas.toDataURL('image/jpeg', 0.9);
-      if (i > 0) pdf.addPage('a4', 'portrait');
-      pdf.addImage(image, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
-      canvas.width = 1;
-      canvas.height = 1;
-      await new Promise(resolve => setTimeout(resolve, 0));
+        const jpegBlob = await canvasToJpegBlob(canvas, quality);
+        const imageBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+
+        if (i > 0) pdf.addPage('a4', 'portrait');
+        pdf.addImage(
+          imageBytes,
+          'JPEG',
+          0,
+          0,
+          210,
+          297,
+          'dnf-page-' + i,
+          'FAST'
+        );
+
+        emitPdfProgress(i + 1, pages.length, 'render');
+      } catch (error) {
+        throw new Error('Error al generar la página ' + (i + 1) + ' de ' + pages.length + ': ' + (error?.message || error));
+      } finally {
+        if (canvas) {
+          canvas.width = 1;
+          canvas.height = 1;
+          canvas = null;
+        }
+      }
+
+      // Cede tiempo al navegador para liberar memoria y mantener la interfaz activa.
+      if ((i + 1) % 3 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
     }
 
-    pdf.save(payload.filename || 'documento.pdf');
-    return { ok: true, filePath: payload.filename || 'documento.pdf', downloaded: true, pages: pages.length };
+    emitPdfProgress(pages.length, pages.length, 'assembling');
+    await new Promise(resolve => setTimeout(resolve, 30));
+
+    let pdfBlob;
+    try {
+      pdfBlob = pdf.output('blob');
+    } catch (error) {
+      throw new Error('No se pudo ensamblar el archivo PDF: ' + (error?.message || error));
+    }
+
+    if (!pdfBlob || !pdfBlob.size) {
+      throw new Error('El PDF se generó vacío.');
+    }
+
+    saveBlob(pdfBlob, filename);
+    emitPdfProgress(pages.length, pages.length, 'done');
+
+    return {
+      ok: true,
+      filePath: filename,
+      downloaded: true,
+      pages: pages.length,
+      size: pdfBlob.size
+    };
   }
 
   async function generatePDF(payload) {
