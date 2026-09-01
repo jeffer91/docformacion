@@ -1931,6 +1931,21 @@ function dnfHtml(){
   const needsCareers=specificCareerNames();
   const needsDensity=needsCareers.length>12?'dense':'';
 
+  const affectedForNeed=(career,need)=>{
+    const list=state.teachers.filter(t=>careerKey(t.carrera)===careerKey(career));
+    const target=norm(need).toLowerCase();
+    if(target==='fortalecimiento de formación de cuarto nivel'){
+      return list.filter(t=>!String(t.nivelActual).includes('Maestr') && t.nivelActual!=='Doctorado').length;
+    }
+    if(target==='formación doctoral'){
+      return list.filter(t=>t.nivelDeseado==='Doctorado').length;
+    }
+    return list.filter(t=>{
+      const candidates=[t.areaInteres,t.programaCurso,t.nivelDeseado].map(x=>norm(x).toLowerCase()).filter(Boolean);
+      return candidates.includes(target);
+    }).length;
+  };
+
   const dominant=(map)=>{
     const rows=Object.entries(map).filter(([k])=>k!=='Sin información').sort((a,b)=>b[1]-a[1]);
     return rows[0]||['Sin información',0];
@@ -1993,7 +2008,7 @@ function dnfHtml(){
     const teacherN=state.teachers.filter(t=>t.carrera===career).length;
     const lines=items.map(item=>{
       const priority=item.priorityOverride||autoPriorityForNeed(career,item.text);
-      const affected=state.teachers.filter(t=>t.carrera===career && needTextFromTeacher(t).some(v=>norm(v).toLowerCase()===norm(item.text).toLowerCase())).length;
+      const affected=affectedForNeed(career,item.text);
       return '<div class="need-line"><span>'+esc(item.text)+' <span class="muted">('+affected+'/'+teacherN+')</span></span><span class="priority">'+esc(priority)+'</span></div>';
     }).join('');
     return '<div class="need-card"><div class="need-card-title">'+esc(career)+'</div><div class="need-coord">Coordinador/a: '+esc(coord?.coordinador||'Por definir')+' · Docentes: '+teacherN+'</div>'+lines+'</div>';
