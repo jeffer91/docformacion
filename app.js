@@ -1843,15 +1843,15 @@ function basePdfCss(exactPages=false){
       '.pdf-document{width:210mm!important;margin:0!important;padding:0!important;background:#fff;counter-reset:apafigure}'+
       '.pdf-page{width:210mm!important;height:297mm!important;min-height:297mm!important;max-height:297mm!important;margin:0!important;padding:8mm 10mm 9mm!important;background:#fff!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;break-after:page;page-break-after:always;position:relative}'+
       '.pdf-page:last-child{break-after:auto;page-break-after:auto}'+
-      '.institution-header{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 5mm 0;font-size:7.2pt;line-height:1.08;flex:0 0 auto}'+
-      '.institution-header td{border:.65pt solid #222;padding:1.5mm 1.8mm;vertical-align:middle;text-align:center}'+
-      '.institution-header .brand-cell{width:24%;font-weight:700}.institution-header .unit-cell{width:52%;font-weight:700;font-size:7.7pt}.institution-header .meta-cell{width:24%;font-size:6.9pt}'+
-      '.institution-header .brand-cell{padding:1mm 1.5mm}.institution-logo{display:block;max-width:100%;height:13mm;object-fit:contain;margin:0 auto}.institution-header .brand-main{font-size:12pt;font-weight:800;letter-spacing:.2px}.institution-header .brand-sub{font-size:5.7pt;font-weight:400;margin-top:.5mm}'+
-      '.institution-header .doc-cell{font-weight:700;font-size:7.2pt}.institution-header .date-cell,.institution-header .page-cell{font-size:6.8pt}'+
+      '.institution-header{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 6mm 0;font-size:7.5pt;line-height:1.12;flex:0 0 auto}'+
+      '.institution-header td{border:.75pt solid #111;padding:1.7mm 2mm;vertical-align:middle;text-align:center}'+
+      '.institution-header .brand-cell{width:27%;font-weight:700}.institution-header .unit-cell{width:53%;font-weight:500;font-size:8.2pt;height:15mm}.institution-header .meta-cell{width:20%;font-size:7.6pt;line-height:1.2}.institution-header .doc-cell{font-weight:700;font-size:8.2pt;height:9mm;line-height:1.12}'+
+      '.institution-header .brand-cell{padding:1.2mm 2mm}.institution-logo{display:block;max-width:100%;height:20mm;object-fit:contain;margin:0 auto}.institution-header .brand-main{font-size:12pt;font-weight:800;letter-spacing:.2px}.institution-header .brand-sub{font-size:5.7pt;font-weight:400;margin-top:.5mm}'+
+      '.institution-header .date-cell,.institution-header .page-cell{font-size:6.8pt}'+
       '.pdf-body{flex:1 1 auto;min-height:0;overflow:hidden}.pdf-body.content-page{padding:0 .5mm}'+
       '.cover-body{height:100%;display:flex;flex-direction:column;justify-content:space-between;padding-top:8mm}'+
       '.cover-title{text-align:center;margin-top:48mm}.cover-title h1{font-size:18pt;line-height:1.18;margin:0;font-weight:700}.cover-title .period{font-size:13pt;font-weight:700;margin-top:2mm}'+
-      '.signature-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:3mm;font-size:6.8pt}.signature-table td{border:.65pt solid #222;padding:2mm;vertical-align:top;height:31mm}.signature-table .sig-label{font-size:6pt;margin-bottom:11mm}.signature-table .sig-line{border-top:.7pt solid #222;padding-top:1.5mm;width:100%}.signature-table strong{font-size:6.8pt}.signature-table .sig-role{display:block;margin-top:1mm;text-transform:uppercase;font-size:6.2pt}'+
+      '.signature-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:3mm;font-size:7.2pt}.signature-table td{border:.75pt solid #111;padding:1.7mm 2mm;vertical-align:top}.signature-table .sig-space td{height:24mm;font-size:7pt}.signature-table .sig-name td{height:8.5mm;vertical-align:middle}.signature-table .sig-role-row td{height:10mm;vertical-align:middle;line-height:1.08;text-transform:uppercase;font-size:6.7pt}.signature-table strong{font-size:7.2pt}.signature-table .sig-label{font-size:7pt}.signature-table .label-inline{font-weight:700;margin-right:1mm}'+
       '.sec-title{font-size:13pt;font-weight:700;margin:0 0 3mm;color:#1f2d3d}.sub-title{font-size:11pt;font-weight:700;margin:3.2mm 0 1.5mm;color:#26384a}.mini-title{font-size:10pt;font-weight:700;margin:2.2mm 0 1.1mm}.section-rule{border:0;border-top:.7pt solid #aeb7c0;margin:2.5mm 0}.section-intro{font-size:10.5pt;line-height:1.6;margin-bottom:3mm;text-indent:12.7mm}'+
       'p{margin:0 0 2.4mm;text-align:justify;line-height:1.62;text-indent:12.7mm}.lead{font-size:10.5pt;line-height:1.65;text-indent:12.7mm}.small{font-size:8.2pt;line-height:1.35;text-indent:0}.muted{color:#5c6670}.tight{margin-bottom:1.4mm}.body-list{margin:0 0 2.3mm;padding-left:7mm}.body-list li{margin:1mm 0;text-align:justify;line-height:1.48}.number-list{margin:0 0 2.5mm;padding-left:7mm}.number-list li{margin:1.2mm 0;text-align:justify;line-height:1.48}.criteria{display:grid;grid-template-columns:repeat(3,1fr);gap:2mm;margin:2mm 0 3mm}.criteria div{border:.6pt solid #9da8b2;padding:2.2mm;text-align:center;font-size:7.2pt;background:#f5f7f9}.criteria strong{display:block;font-size:8.8pt;margin-bottom:.8mm;color:#24394d}'+
       '.info-box{border:.6pt solid #aeb7c0;border-left:3mm solid #314b63;background:#f6f8fa;padding:2.5mm 3mm;margin:3mm 0;font-size:8.5pt;line-height:1.4}.info-box p,.panel p,.callout p,.quote-box p{ text-indent:0}.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2.5mm;margin:3mm 0}.info-item{border:.6pt solid #aeb7c0;border-top:2mm solid #314b63;padding:2.4mm;text-align:center;background:#fbfcfd}.info-item strong{display:block;font-size:14pt;color:#24394d}.info-item span{font-size:7.2pt}'+
@@ -1891,18 +1891,15 @@ function periodLabel(){
   return [a,b].filter(Boolean).join(' a ');
 }
 function dnfHeader(title,code,page,totalPages){
-  const p=state.period;
   return '<table class="institution-header">'+
-    '<tr><td class="brand-cell"><img class="institution-logo" src="'+INSTITUTION_LOGO_DATA+'" alt="ITSQMET"></td>'+
+    '<tr><td class="brand-cell" rowspan="2"><img class="institution-logo" src="'+INSTITUTION_LOGO_DATA+'" alt="ITSQMET"></td>'+
     '<td class="unit-cell">UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS</td>'+
-    '<td class="meta-cell">Código:<br><strong>'+esc(code)+'</strong><br>Versión: '+esc(p.version||'1.0')+'</td></tr>'+
-    '<tr><td class="date-cell">Fecha de Elaboración:<br><strong>'+esc(formatMonthYear(p.elaborationDate,true)||p.elaborationDate||'')+'</strong></td>'+
-    '<td class="doc-cell">'+esc(title)+'<br>'+esc(periodLabel())+'</td>'+
-    '<td class="page-cell">Página '+page+' de '+totalPages+'</td></tr>'+
+    '<td class="meta-cell" rowspan="2">Código:<br><strong>'+esc(code)+'</strong></td></tr>'+
+    '<tr><td class="doc-cell">'+esc(title)+'</td></tr>'+
     '</table>';
 }
 function dnfPage(title,code,page,totalPages,body,extraClass=''){
-  return '<section class="pdf-page '+extraClass+'" data-pdf-page="'+page+'">'+dnfHeader(title,code,page,totalPages)+'<div class="pdf-body">'+body+'</div><div class="footer-note">ITSQMET · Unidad de Gestión de Procesos Académicos</div></section>';
+  return '<section class="pdf-page '+extraClass+'" data-pdf-page="'+page+'">'+dnfHeader(title,code,page,totalPages)+'<div class="pdf-body content-page">'+body+'</div><div class="footer-note">ITSQMET · Unidad de Gestión de Procesos Académicos · '+esc(periodLabel())+' · Página '+page+' de '+totalPages+'</div></section>';
 }
 function dist(field,filter=()=>true){
   const map={};state.teachers.filter(filter).forEach(t=>{const k=t[field]||'Sin información';map[k]=(map[k]||0)+1;});return map;
@@ -2052,11 +2049,15 @@ function dnfHtml(){
   const careers=specificCareerNames();
   careers.forEach(name=>ensureNeedItems(name));
   const careerCount=careers.length;
-  const level=dist('nivelActual'),dedication=dist('dedicacion'),desired=dist('nivelDeseado'),type=dist('tipoFormacion'),modality=dist('modalidadPreferida'),barrier=dist('barrera'),study=dist('estudiaActualmente');
+  const level=dist('nivelActual'),dedication=dist('dedicacion'),desired=dist('nivelDeseado'),type=dist('tipoFormacion'),modality=dist('modalidadPreferida'),barrier=dist('barrera'),study=dist('estudiaActualmente'),affinity=dist('afinidad'),courseLevel=dist('nivelCurso'),programCourse=dist('programaCurso'),institutionCourse=dist('institucionCurso'),interest=dist('areaInteres'),tentative=dist('inicioTentativo');
   const careerMap=careerCountMap(careers);
   const priorities=priorityDistribution(careers);
   const needRanking=overallNeedRanking(careers);
+  const needTotal=Math.max(1,Object.values(needRanking).reduce((a,b)=>a+Number(b||0),0));
   const mastersDoctors=s.masters+s.doctors;
+  const missingTeacherFields=state.teachers.reduce((sum,t)=>sum+teacherMissingEntries(t).length,0);
+  const expectedTeacherFields=Math.max(1,state.teachers.length*12);
+  const dataCompleteness=Math.max(0,100-(missingTeacherFields*100/expectedTeacherFields));
   const genericLines=(state.settings.genericLines||[]).filter(norm);
 
   const dominant=(map)=>{
@@ -2070,11 +2071,11 @@ function dnfHtml(){
 
   const coverBody='<div class="cover-body">'+
     '<div class="cover-title"><h1>'+esc(title)+'</h1><div class="period">'+esc(periodLabel())+'</div></div>'+
-    '<table class="signature-table"><tr>'+
-      '<td><div class="sig-label">ELABORADO POR:</div><div class="sig-line"><strong>NOMBRE: '+esc(state.period.preparedBy)+'</strong><span class="sig-role">CARGO: '+esc(state.period.preparedRole)+'</span></div></td>'+
-      '<td><div class="sig-label">REVISADO POR:</div><div class="sig-line"><strong>NOMBRE: '+esc(state.period.reviewedBy)+'</strong><span class="sig-role">CARGO: '+esc(state.period.reviewedRole)+'</span></div></td>'+
-      '<td><div class="sig-label">APROBADO POR:</div><div class="sig-line"><strong>NOMBRE: '+esc(state.period.approvedBy)+'</strong><span class="sig-role">CARGO: '+esc(state.period.approvedRole)+'</span></div></td>'+
-    '</tr></table></div>';
+    '<table class="signature-table">'+
+      '<tr class="sig-space"><td><span class="sig-label">ELABORADO POR:</span></td><td><span class="sig-label">REVISADO POR:</span></td><td><span class="sig-label">APROBADO POR:</span></td></tr>'+
+      '<tr class="sig-name"><td><span class="label-inline">NOMBRE:</span>'+esc(state.period.preparedBy)+'</td><td><span class="label-inline">NOMBRE:</span>'+esc(state.period.reviewedBy)+'</td><td><span class="label-inline">NOMBRE:</span>'+esc(state.period.approvedBy)+'</td></tr>'+
+      '<tr class="sig-role-row"><td><span class="label-inline">CARGO:</span>'+esc(state.period.preparedRole)+'</td><td><span class="label-inline">CARGO:</span>'+esc(state.period.reviewedRole)+'</td><td><span class="label-inline">CARGO:</span>'+esc(state.period.approvedRole)+'</td></tr>'+
+    '</table></div>';
   add(null,coverBody,'cover-page');
 
   // A single institutional index lists only the main report sections.
@@ -2090,6 +2091,18 @@ function dnfHtml(){
     '<div class="sub-title">1.2 Alcance</div>'+
     '<p>El alcance se concentra en <strong>formación académica</strong> y en trayectorias de titulación o cualificación formal. Los datos de capacitación, talleres, webinars, seminarios u otras actividades de actualización de corta duración no se integran como sustitutos de la formación académica, aunque pueden utilizarse como información complementaria.</p>'+
     '<div class="flow"><div class="flow-box"><strong>DNF</strong><br>Identifica brechas y prioridades</div><div class="flow-arrow">→</div><div class="flow-box"><strong>Plan de Formación</strong><br>Define docentes, programas y apoyos</div><div class="flow-arrow">→</div><div class="flow-box"><strong>Seguimiento</strong><br>Registra avance y evidencias</div><div class="flow-arrow">→</div><div class="flow-box"><strong>Informe</strong><br>Evalúa cumplimiento</div></div>'
+  );
+
+  add(null,
+    '<div class="sec-title">1. Introducción</div>'+
+    '<div class="sub-title">1.3 Importancia institucional del diagnóstico</div>'+
+    '<p>La DNF funciona como una herramienta de planificación porque permite pasar de percepciones aisladas a decisiones respaldadas por información. Su valor institucional aumenta cuando las necesidades se vinculan con la carrera, el nivel académico actual, la proyección formativa y las condiciones reales de acceso de cada docente.</p>'+
+    '<p>La información del período debe leerse en dos planos complementarios. En el plano individual se analiza la trayectoria de cada docente; en el plano institucional se observan patrones, concentraciones y brechas que justifican acciones colectivas, convenios, apoyos y mecanismos de seguimiento.</p>'+
+    '<div class="sub-title">1.4 Preguntas que orientan la DNF</div>'+
+    '<ol class="number-list"><li>¿Cuál es la composición académica actual del claustro?</li><li>¿Qué niveles de formación desean alcanzar los docentes?</li><li>¿Qué necesidades se repiten dentro de cada carrera?</li><li>¿Qué condiciones facilitan o limitan el acceso a procesos formativos?</li><li>¿Qué carreras presentan brechas que requieren intervención prioritaria?</li><li>¿Qué docentes podrían convertirse en candidatos viables para el Plan de Formación?</li></ol>'+
+    '<div class="sub-title">1.5 Productos esperados</div>'+
+    '<div class="three-col"><div class="panel"><h3>Línea base</h3><p class="small">Caracterización verificable del claustro y de su situación académica.</p></div><div class="panel"><h3>Mapa de necesidades</h3><p class="small">Necesidades específicas por carrera y líneas genéricas institucionales.</p></div><div class="panel"><h3>Priorización</h3><p class="small">Criterios para trasladar el diagnóstico al Plan de Formación.</p></div></div>'+
+    '<div class="callout"><strong>Uso del documento:</strong> la DNF no aprueba por sí misma un programa o apoyo; establece la evidencia técnica que debe anteceder a esa decisión.</div>'
   );
 
   add('2. Base legal y normativa',
@@ -2115,6 +2128,24 @@ function dnfHtml(){
     '<div class="info-box small"><strong>Nota metodológica:</strong> esta sección conserva la estructura y los referentes del documento institucional utilizado como ejemplo. La app no pretende sustituir una revisión jurídica de vigencia normativa.</div>'
   );
 
+  add(null,
+    '<div class="sec-title">2. Base legal y normativa</div>'+
+    '<div class="sub-title">2.6 Matriz de relación normativa</div>'+
+    '<p>La siguiente matriz organiza los referentes incluidos en el documento institucional de base y explica la función que cumplen dentro de la DNF. La finalidad es evitar una enumeración normativa sin conexión con el proceso de formación.</p>'+
+    '<table class="data"><tr><th>Referente</th><th>Aspecto relacionado</th><th>Aplicación en la DNF</th></tr><tr><td>Constitución de la República</td><td>Derecho a la educación, calidad y desarrollo profesional.</td><td>Sustenta la necesidad de fortalecer de manera sistemática las capacidades del personal docente.</td></tr><tr><td>LOES</td><td>Calidad de la educación superior y condiciones del personal académico.</td><td>Orienta la lectura de brechas de cualificación y la pertinencia de las rutas formativas.</td></tr><tr><td>Reglamento de Carrera y Escalafón</td><td>Desarrollo de la carrera académica.</td><td>Relaciona la formación con la trayectoria y el desarrollo profesional del docente.</td></tr><tr><td>Modelo de evaluación CACES</td><td>Aseguramiento de la calidad y evidencias de planificación.</td><td>Refuerza la necesidad de un diagnóstico, un plan y mecanismos de seguimiento.</td></tr><tr><td>PEDI / POA</td><td>Planificación estratégica y operativa.</td><td>Permite transformar las necesidades en acciones institucionales y metas del período.</td></tr></table>'+
+    '<div class="info-box"><strong>Criterio de aplicación:</strong> la normativa se utiliza para justificar la lógica del proceso, mientras que la selección concreta de docentes y programas se determina con los datos y prioridades del período.</div>'
+  );
+
+  add(null,
+    '<div class="sec-title">2. Base legal y normativa</div>'+
+    '<div class="sub-title">2.7 Responsabilidades derivadas para la gestión institucional</div>'+
+    '<p>El marco institucional utilizado como referencia implica que la formación docente debe planificarse, documentarse y evaluarse. Por ello, la DNF requiere responsabilidades diferenciadas entre la unidad responsable del proceso, las coordinaciones de carrera y los docentes.</p>'+
+    '<table class="data"><tr><th>Actor</th><th>Responsabilidad dentro de la DNF</th><th>Resultado esperado</th></tr><tr><td>UGPA / unidad responsable</td><td>Consolidar la base, aplicar criterios, generar análisis y mantener trazabilidad.</td><td>Diagnóstico institucional verificable.</td></tr><tr><td>Coordinaciones de carrera</td><td>Validar la pertinencia disciplinar, responsables y prioridades específicas.</td><td>Necesidades por carrera técnicamente justificadas.</td></tr><tr><td>Docentes</td><td>Proporcionar información completa sobre trayectoria, proyección y condiciones de acceso.</td><td>Registros confiables para la toma de decisiones.</td></tr><tr><td>Autoridades</td><td>Revisar y aprobar los lineamientos y decisiones institucionales posteriores.</td><td>Plan de Formación alineado con prioridades y capacidades institucionales.</td></tr></table>'+
+    '<div class="sub-title">2.8 Evidencia y trazabilidad documental</div>'+
+    '<p>El proceso debe conservar una secuencia verificable entre diagnóstico, planificación, seguimiento e informe. La app mantiene esta relación utilizando una misma base de docentes y evitando que cada documento se construya como un registro independiente.</p>'+
+    '<div class="flow"><div class="flow-box">Registro de datos</div><div class="flow-arrow">→</div><div class="flow-box">DNF</div><div class="flow-arrow">→</div><div class="flow-box">Plan</div><div class="flow-arrow">→</div><div class="flow-box">Seguimiento</div><div class="flow-arrow">→</div><div class="flow-box">Informe</div></div>'
+  );
+
   add('3. Alineación institucional y estratégica',
     '<div class="sec-title">3. Alineación institucional y estratégica</div>'+
     '<p class="lead">La DNF forma parte de un ciclo de gestión académica. Sus resultados deben integrarse con la planificación institucional, el desarrollo profesional docente, los procesos curriculares y los mecanismos de aseguramiento de la calidad.</p>'+
@@ -2125,6 +2156,16 @@ function dnfHtml(){
     '<div class="sub-title">3.3 Relación con otros procesos académicos</div>'+
     '<table class="data"><tr><th>Proceso relacionado</th><th>Aporte de la DNF</th></tr><tr><td>Planificación académica</td><td>Identifica necesidades de cualificación que pueden influir en la asignación y fortalecimiento del perfil docente.</td></tr><tr><td>Construcción curricular continua</td><td>Permite reconocer brechas que afectan el dominio disciplinar, curricular o metodológico.</td></tr><tr><td>Aseguramiento de la calidad</td><td>Genera evidencia diagnóstica, criterios de priorización y trazabilidad de decisiones.</td></tr><tr><td>Plan de Formación Docente</td><td>Entrega la base de docentes, carreras, necesidades y prioridades que deben convertirse en rutas concretas.</td></tr></table>'+
     '<div class="flow"><div class="flow-box">Datos institucionales</div><div class="flow-arrow">→</div><div class="flow-box">Análisis de brechas</div><div class="flow-arrow">→</div><div class="flow-box">Priorización</div><div class="flow-arrow">→</div><div class="flow-box">Planificación</div><div class="flow-arrow">→</div><div class="flow-box">Evaluación</div></div>'
+  );
+
+  add(null,
+    '<div class="sec-title">3. Alineación institucional y estratégica</div>'+
+    '<div class="sub-title">3.4 Cadena de contribución institucional</div>'+
+    '<p>La formación docente produce valor institucional cuando una necesidad diagnosticada se convierte en una ruta pertinente, la ruta es ejecutada y el resultado se transfiere a la actividad académica. Esta lógica permite vincular la DNF con resultados y no únicamente con participación.</p>'+
+    '<table class="data"><tr><th>Nivel</th><th>Pregunta orientadora</th><th>Evidencia esperada</th></tr><tr><td>Diagnóstico</td><td>¿Qué brecha o necesidad existe?</td><td>Datos, indicadores, necesidades y prioridad.</td></tr><tr><td>Planificación</td><td>¿Qué acción formativa responderá a la brecha?</td><td>Programa, institución, modalidad, fechas y apoyo.</td></tr><tr><td>Ejecución</td><td>¿El docente inició y mantiene la ruta?</td><td>Avance, evidencias y estado.</td></tr><tr><td>Transferencia</td><td>¿Cómo se utiliza el aprendizaje en la institución?</td><td>Productos, mejoras, investigación o efecto multiplicador.</td></tr><tr><td>Evaluación</td><td>¿Qué se cumplió y qué debe ajustarse?</td><td>Informe de Cumplimiento y nueva línea base.</td></tr></table>'+
+    '<div class="sub-title">3.5 Riesgos de una DNF no articulada</div>'+
+    '<ul class="body-list"><li>Seleccionar programas sin pertinencia con la carrera.</li><li>Priorizar únicamente el interés individual sin considerar brechas institucionales.</li><li>Duplicar información entre DNF, Plan e Informe.</li><li>Dificultar la medición del avance y del impacto.</li><li>Perder continuidad entre períodos académicos.</li></ul>'+
+    '<div class="callout"><strong>Enfoque adoptado:</strong> la app utiliza una sola fuente de datos y agrega decisiones progresivamente en cada documento del proceso.</div>'
   );
 
   add('4. Metodología y enfoque',
@@ -2147,6 +2188,25 @@ function dnfHtml(){
     '<div class="sub-title">4.7 Lectura de resultados</div>'+
     '<p>En cada apartado se aplica una secuencia de interpretación: <strong>dato → significado → brecha → implicación para el Plan</strong>. Este criterio busca que el documento no se reduzca a tablas y porcentajes, sino que explique qué decisiones se desprenden de la información.</p>'+
     '<div class="callout"><strong>Limitación:</strong> los resultados dependen de la calidad y completitud de los registros cargados. Los campos pendientes deben ser completados antes del cierre formal de la DNF.</div>'
+  );
+
+  add(null,
+    '<div class="sec-title">4. Metodología y enfoque</div>'+
+    '<div class="sub-title">4.8 Control de calidad de los datos</div>'+
+    '<p>Antes de interpretar resultados se evalúa la completitud de los registros. En la base actual se identifican <strong>'+missingTeacherFields+'</strong> campos obligatorios pendientes dentro de la estructura utilizada para el diagnóstico. El indicador aproximado de completitud alcanza <strong>'+fmtPct(dataCompleteness)+'</strong>.</p>'+
+    '<div class="kpi-row"><div class="kpi"><strong>'+total+'</strong><span>Registros docentes</span></div><div class="kpi"><strong>'+missingTeacherFields+'</strong><span>Campos pendientes</span></div><div class="kpi"><strong>'+fmtPct(dataCompleteness)+'</strong><span>Completitud estimada</span></div><div class="kpi"><strong>'+careerCount+'</strong><span>Carreras con datos</span></div></div>'+
+    '<div class="sub-title">4.9 Reglas de consistencia</div>'+
+    '<table class="data"><tr><th>Regla</th><th>Aplicación</th><th>Riesgo controlado</th></tr><tr><td>Identificación única</td><td>La cédula funciona como identificador principal del docente.</td><td>Duplicación de registros.</td></tr><tr><td>Carrera principal válida</td><td>Los programas de estudio no se incorporan como si fueran carreras institucionales.</td><td>Distorsión de resultados por carrera.</td></tr><tr><td>Separación formación/capacitación</td><td>Los registros de capacitación se excluyen de la DNF de formación académica.</td><td>Mezcla de procesos con objetivos diferentes.</td></tr><tr><td>Prioridad por necesidad</td><td>Cada necesidad conserva su propia prioridad.</td><td>Generalización excesiva a nivel de carrera.</td></tr></table>'
+  );
+
+  add(null,
+    '<div class="sec-title">4. Metodología y enfoque</div>'+
+    '<div class="sub-title">4.10 Indicadores utilizados</div>'+
+    '<p>Los indicadores se calculan con las frecuencias registradas en la base del período. Cada porcentaje utiliza como denominador el universo correspondiente: total institucional o total de docentes de una carrera.</p>'+
+    '<table class="data"><tr><th>Indicador</th><th>Cálculo</th><th>Interpretación</th></tr><tr><td>Cobertura por carrera</td><td>Docentes de la carrera / total institucional × 100</td><td>Peso relativo de cada carrera dentro de la base.</td></tr><tr><td>Brecha de cuarto nivel</td><td>Docentes sin maestría o doctorado / docentes de la carrera × 100</td><td>Necesidad potencial de progresión académica.</td></tr><tr><td>Disposición</td><td>Docentes dispuestos / total correspondiente × 100</td><td>Condición de viabilidad para iniciar o continuar estudios.</td></tr><tr><td>Incidencia de una necesidad</td><td>Docentes relacionados / docentes de la carrera × 100</td><td>Base para prioridad Alta, Media o Baja.</td></tr></table>'+
+    '<div class="sub-title">4.11 Secuencia de análisis</div>'+
+    '<div class="flow"><div class="flow-box">Frecuencia</div><div class="flow-arrow">→</div><div class="flow-box">Porcentaje</div><div class="flow-arrow">→</div><div class="flow-box">Comparación</div><div class="flow-arrow">→</div><div class="flow-box">Brecha</div><div class="flow-arrow">→</div><div class="flow-box">Prioridad</div><div class="flow-arrow">→</div><div class="flow-box">Lineamiento</div></div>'+
+    '<p>Esta secuencia se aplica a los resultados institucionales y se repite en cada carrera, de modo que las decisiones posteriores puedan rastrearse hasta el dato que las originó.</p>'
   );
 
   add('5. Caracterización general del claustro docente',
@@ -2182,6 +2242,24 @@ function dnfHtml(){
     '<p>La formación <strong>'+esc(dType[0])+'</strong> concentra la mayor preferencia ('+fmtPct(pct(dType[1],total))+'), la modalidad predominante es <strong>'+esc(dModality[0])+'</strong> y la barrera más frecuente corresponde a <strong>'+esc(dBarrier[0])+'</strong>. Estos resultados deben utilizarse para diseñar alternativas realistas de acceso y acompañamiento.</p>'
   );
 
+  add(null,
+    '<div class="sec-title">5. Caracterización general del claustro docente</div>'+
+    '<div class="sub-title">5.6 Afinidad, estudios en curso e interés formativo</div>'+
+    '<p>Además del nivel académico, el diagnóstico incorpora variables que permiten interpretar la pertinencia de las rutas futuras. La afinidad, los estudios en curso y el área de interés ayudan a diferenciar entre una necesidad de progresión y una necesidad disciplinar específica.</p>'+
+    '<div class="chart-grid">'+barChart('Afinidad del título con la carrera',affinity,total,'Relación declarada entre título y campo de trabajo',8)+barChart('Nivel de formación en curso',courseLevel,total,'Nivel de los estudios que actualmente realizan los docentes',8)+'</div>'+
+    '<div class="chart-grid">'+barChart('Programas actualmente cursados',programCourse,total,'Programas académicos registrados en la base',8)+barChart('Áreas o programas de interés',interest,total,'Preferencias declaradas para formación futura',10)+'</div>'
+  );
+
+  add(null,
+    '<div class="sec-title">5. Caracterización general del claustro docente</div>'+
+    '<div class="sub-title">5.7 Instituciones de estudio e inicio tentativo</div>'+
+    '<p>Las instituciones en las que actualmente estudian los docentes y las fechas tentativas de inicio aportan información operativa para la construcción del Plan. Estas variables permiten distinguir entre trayectorias ya iniciadas y necesidades que todavía requieren gestión institucional.</p>'+
+    '<div class="chart-grid">'+barChart('Instituciones de estudio registradas',institutionCourse,total,'Instituciones vinculadas con estudios en curso',10)+barChart('Inicio tentativo de formación',tentative,total,'Mes previsto para iniciar o continuar una ruta',10)+'</div>'+
+    '<div class="sub-title">5.8 Lectura integrada de la caracterización</div>'+
+    '<p>La caracterización completa combina cualificación, trayectoria, aspiración y condiciones de acceso. Esta lectura evita interpretar una sola variable como suficiente para decidir. Un docente puede presentar una brecha académica, pero estar ya estudiando; otro puede estar disponible, pero requerir primero validar la pertinencia del programa; y una carrera puede mostrar una necesidad prioritaria aunque su base docente sea pequeña.</p>'+
+    '<div class="info-box"><strong>Implicación:</strong> la selección para el Plan debe construirse mediante la combinación de variables y no mediante un único ranking institucional.</div>'
+  );
+
   add('6. Análisis de brechas de formación',
     '<div class="sec-title">6. Análisis de brechas de formación</div>'+
     '<p class="section-intro">La brecha se interpreta como la distancia entre la situación actual del docente y el nivel o área de formación que se pretende alcanzar, considerando además la pertinencia con la carrera y la factibilidad de continuar estudios.</p>'+
@@ -2202,9 +2280,19 @@ function dnfHtml(){
   add(null,
     '<div class="sec-title">6. Análisis de brechas de formación</div>'+
     '<div class="sub-title">6.3 Brecha por carrera</div>'+
-    '<div class="chart-grid">'+barChart('Docentes sin maestría o doctorado por carrera',belowMap,total,'Indicador de brecha académica relativa',12)+barChart('Necesidades más frecuentes en la institución',needRanking,Math.max(1,total),'Suma de docentes relacionados con cada necesidad',10)+'</div>'+
+    '<div class="chart-grid">'+barChart('Docentes sin maestría o doctorado por carrera',belowMap,total,'Indicador de brecha académica relativa',12)+barChart('Necesidades más frecuentes en la institución',needRanking,needTotal,'Suma de docentes relacionados con cada necesidad',10)+'</div>'+
     '<table class="data"><tr><th>Carrera</th><th>Docentes</th><th>Sin 4.º nivel</th><th>% carrera</th><th>Dispuestos</th><th>Prioridad mayor</th></tr>'+careerGapRows+'</table>'+
     '<p class="small">La priorización final no depende únicamente del porcentaje sin cuarto nivel. También debe considerar el área requerida, la afinidad con la carrera, los estudios ya iniciados y la capacidad de la institución para acompañar cada trayectoria.</p>'
+  );
+
+  add(null,
+    '<div class="sec-title">6. Análisis de brechas de formación</div>'+
+    '<div class="sub-title">6.4 Segmentación de la población potencial</div>'+
+    '<p>La segmentación organiza a los docentes de acuerdo con su situación académica y disponibilidad, con el fin de diferenciar acciones inmediatas de acciones que requieren validación o acompañamiento adicional.</p>'+
+    '<table class="data"><tr><th>Segmento</th><th>Criterio general</th><th>Respuesta sugerida</th></tr><tr><td>Trayectoria ya iniciada</td><td>Docente que registra estudios en curso.</td><td>Seguimiento, evidencia y apoyo según prioridad y pertinencia.</td></tr><tr><td>Brecha + disposición</td><td>Docente con necesidad identificada y disponibilidad para estudiar.</td><td>Analizar incorporación prioritaria al Plan.</td></tr><tr><td>Brecha + barrera</td><td>Docente con necesidad, pero con una condición que limita el acceso.</td><td>Gestionar alternativas de modalidad, convenio o apoyo.</td></tr><tr><td>Interés sin brecha prioritaria</td><td>Preferencia formativa que no coincide con una necesidad priorizada.</td><td>Mantener como opción secundaria o de desarrollo futuro.</td></tr></table>'+
+    '<div class="sub-title">6.5 Principio de selección</div>'+
+    '<p>La DNF no debe producir una lista automática de beneficiarios. Su resultado es una población potencial ordenada por evidencia. La decisión final pertenece al Plan, donde se incorporan programa, institución, modalidad, fechas, apoyo, costo y compromisos.</p>'+
+    '<div class="callout"><strong>Regla de trazabilidad:</strong> todo docente seleccionado posteriormente debe poder vincularse con una brecha o necesidad identificada en esta DNF.</div>'
   );
 
   add('7. Necesidades específicas por carrera',
@@ -2237,6 +2325,16 @@ function dnfHtml(){
       '<div class="sub-title">Interpretación integral de la carrera</div>'+
       '<p>La carrera registra '+p.count+' docentes. '+(firstNeed?('La necesidad con mayor presencia inicial es <strong>'+esc(firstNeed.text)+'</strong>, relacionada con '+firstAffected+' docentes ('+fmtPct(pct(firstAffected,p.count))+'). '):'No se dispone todavía de una necesidad específica consolidada. ')+'La prioridad mayor registrada es <strong>'+esc(p.highest)+'</strong>. La incorporación de docentes al Plan deberá contrastar esta prioridad con la pertinencia del programa, el nivel académico actual, las condiciones de acceso y la disponibilidad institucional de apoyo.</p>'
     );
+    const belowFourth=Math.max(0,p.count-p.masters-p.doctors);
+    add(null,
+      '<div class="sec-title">7.'+(index+2)+' Carrera: '+esc(career)+' - matriz de decisión</div>'+
+      '<p class="section-intro">La matriz integra brecha, disposición, estudios en curso y necesidades específicas para traducir el diagnóstico de la carrera en criterios de planificación.</p>'+
+      '<div class="kpi-row"><div class="kpi"><strong>'+belowFourth+'</strong><span>Sin maestría/doctorado</span></div><div class="kpi"><strong>'+p.studying+'</strong><span>En estudios</span></div><div class="kpi"><strong>'+p.willing+'</strong><span>Dispuestos</span></div><div class="kpi"><strong>'+p.items.length+'</strong><span>Necesidades</span></div></div>'+
+      '<table class="data"><tr><th>Dimensión</th><th>Resultado de la carrera</th><th>Lectura para el Plan</th></tr><tr><td>Brecha de cuarto nivel</td><td>'+fmtPct(pct(belowFourth,p.count))+'</td><td>'+(belowFourth?'Requiere valorar rutas de progresión académica.':'No constituye la principal brecha de la carrera con la base actual.')+'</td></tr><tr><td>Estudios en curso</td><td>'+fmtPct(pct(p.studying,p.count))+'</td><td>'+(p.studying?'Existen trayectorias que deben pasar a seguimiento.':'No se registran trayectorias activas para seguimiento.')+'</td></tr><tr><td>Disposición</td><td>'+fmtPct(pct(p.willing,p.count))+'</td><td>'+(p.willing?'Existe una condición favorable de viabilidad.':'La disponibilidad constituye una limitación para nuevas incorporaciones.')+'</td></tr><tr><td>Prioridad mayor</td><td>'+esc(p.highest)+'</td><td>Debe contrastarse con pertinencia, programa e institución antes de decidir.</td></tr></table>'+
+      '<div class="sub-title">Ruta sugerida para la planificación</div>'+
+      '<ol class="number-list"><li>Validar con la coordinación la necesidad o necesidades de mayor prioridad.</li><li>Identificar docentes relacionados con esas necesidades y revisar su trayectoria individual.</li><li>Diferenciar quienes ya estudian de quienes requieren una nueva ruta.</li><li>Definir programa, modalidad e institución únicamente cuando exista pertinencia.</li><li>Trasladar al Plan solo los casos con información suficiente para seguimiento.</li></ol>'+
+      '<div class="info-box"><strong>Resultado de la carrera:</strong> la DNF entrega una prioridad y una población potencial; el Plan deberá convertirlas en decisiones individualizadas y verificables.</div>'
+    );
   });
 
   add('8. Líneas genéricas institucionales de formación',
@@ -2248,11 +2346,20 @@ function dnfHtml(){
     '<div class="callout"><strong>Regla:</strong> una línea genérica no reemplaza una brecha académica específica. Ambas dimensiones deben conservarse separadas en la DNF y en el Plan.</div>'
   );
 
+  add(null,
+    '<div class="sec-title">8. Líneas genéricas institucionales de formación</div>'+
+    '<div class="sub-title">8.2 Criterios para incorporar una línea genérica al Plan</div>'+
+    '<p>Una línea genérica puede incorporarse al Plan cuando responde a una necesidad transversal verificable y existe una población docente claramente identificada. La existencia de una línea institucional no significa que todos los docentes deban cursarla.</p>'+
+    '<table class="data"><tr><th>Criterio</th><th>Pregunta de validación</th><th>Decisión</th></tr><tr><td>Pertinencia transversal</td><td>¿La necesidad se presenta en más de una carrera o función?</td><td>Puede tratarse como línea institucional.</td></tr><tr><td>No sustitución</td><td>¿La línea está intentando reemplazar una brecha específica?</td><td>Debe mantenerse separada de la necesidad disciplinar.</td></tr><tr><td>Población objetivo</td><td>¿Se puede identificar qué docentes requieren la formación?</td><td>Permite definir cobertura realista.</td></tr><tr><td>Resultado esperado</td><td>¿Existe una aplicación institucional verificable?</td><td>Facilita seguimiento y efecto multiplicador.</td></tr></table>'+
+    '<div class="sub-title">8.3 Integración con las necesidades específicas</div>'+
+    '<p>La combinación adecuada consiste en atender primero las brechas que afectan directamente al perfil académico de la carrera y utilizar las líneas genéricas como complemento cuando aportan a resultados institucionales comunes.</p>'
+  );
+
   const priorityRows=careers.map(career=>{const p=careerProfile(career);const below=Math.max(0,p.count-p.masters-p.doctors);return '<tr><td>'+esc(career)+'</td><td class="num">'+p.highest+'</td><td class="num">'+fmtPct(pct(below,p.count))+'</td><td class="num">'+fmtPct(pct(p.willing,p.count))+'</td><td>'+esc(p.items.map(x=>x.text).slice(0,2).join(' / ')||'Sin registrar')+'</td></tr>';}).join('');
   add('9. Priorización institucional',
     '<div class="sec-title">9. Priorización institucional</div>'+
     '<p class="section-intro">La priorización institucional combina la intensidad de la necesidad, la brecha académica y la disposición del docente. El objetivo es identificar qué áreas deben pasar primero a la planificación.</p>'+
-    '<div class="chart-grid">'+barChart('Prioridades registradas',priorities,Math.max(1,Object.values(priorities).reduce((a,b)=>a+b,0)),'Número de necesidades Alta, Media y Baja',5)+barChart('Ranking de necesidades',needRanking,Math.max(1,total),'Necesidades con mayor presencia en la base',10)+'</div>'+
+    '<div class="chart-grid">'+barChart('Prioridades registradas',priorities,Math.max(1,Object.values(priorities).reduce((a,b)=>a+b,0)),'Número de necesidades Alta, Media y Baja',5)+barChart('Ranking de necesidades',needRanking,needTotal,'Necesidades con mayor presencia en la base',10)+'</div>'+
     '<table class="data"><tr><th>Carrera</th><th>Prioridad mayor</th><th>Brecha 4.º nivel</th><th>Disposición</th><th>Necesidades principales</th></tr>'+priorityRows+'</table>'
   );
 
@@ -2263,6 +2370,18 @@ function dnfHtml(){
     '<div class="sub-title">9.2 Matriz de decisión sugerida</div>'+
     '<table class="data matrix"><tr><th>Criterio</th><th>Peso orientativo</th><th>Pregunta de decisión</th></tr><tr><td>Prioridad de necesidad</td><td>Alta</td><td>¿La necesidad afecta a una proporción significativa de la carrera?</td></tr><tr><td>Brecha académica</td><td>Alta</td><td>¿Existe una diferencia objetiva entre el nivel actual y el requerido?</td></tr><tr><td>Pertinencia</td><td>Alta</td><td>¿El programa se relaciona directamente con la carrera o función docente?</td></tr><tr><td>Disposición y viabilidad</td><td>Media</td><td>¿El docente puede iniciar o continuar la formación?</td></tr><tr><td>Apoyo institucional</td><td>Media</td><td>¿Existe una alternativa real de acompañamiento o convenio?</td></tr></table>'+
     '<div class="info-box"><strong>Resultado esperado:</strong> la priorización no selecciona automáticamente a un docente; produce una lista técnicamente ordenada que debe convertirse en decisiones concretas dentro del Plan de Formación.</div>'
+  );
+
+  add(null,
+    '<div class="sec-title">9. Priorización institucional</div>'+
+    '<div class="sub-title">9.3 Lectura comparativa de carreras</div>'+
+    '<p>La comparación entre carreras permite distinguir entre intensidad de la brecha y tamaño de la población. Una carrera con pocos docentes puede tener una necesidad de prioridad Alta si la proporción de afectados es elevada; por ello, la prioridad no depende únicamente del número absoluto de casos.</p>'+
+    '<table class="data"><tr><th>Carrera</th><th>Docentes</th><th>Con maestría/doctorado</th><th>Dispuestos</th><th>Necesidades</th><th>Prioridad mayor</th></tr>'+
+      careers.map(career=>{const p=careerProfile(career);return '<tr><td>'+esc(career)+'</td><td class="num">'+p.count+'</td><td class="num">'+(p.masters+p.doctors)+'</td><td class="num">'+p.willing+'</td><td class="num">'+p.items.length+'</td><td class="num">'+esc(p.highest)+'</td></tr>';}).join('')+
+    '</table>'+
+    '<div class="sub-title">9.4 Orden de intervención</div>'+
+    '<p>El orden de intervención debe comenzar por necesidades Altas que coincidan con una brecha académica o disciplinar verificable, continuar con necesidades Medias que tengan viabilidad clara y mantener las necesidades Bajas como parte del seguimiento para próximos períodos.</p>'+
+    '<div class="callout"><strong>Precaución:</strong> una prioridad Alta no autoriza automáticamente apoyo económico; el tipo de apoyo se define en el Plan según disponibilidad y criterios institucionales.</div>'
   );
 
   const planActions=(state.settings.planActions||[]).filter(norm);
@@ -2286,18 +2405,54 @@ function dnfHtml(){
     '<div class="callout"><strong>Principio de continuidad:</strong> los docentes seleccionados en el Plan deben provenir de la misma base utilizada en la DNF. La aplicación no debe volver a crear registros independientes.</div>'
   );
 
+  add(null,
+    '<div class="sec-title">10. Propuesta de lineamientos para el Plan de Formación</div>'+
+    '<div class="sub-title">10.6 Criterios mínimos para incorporar un docente</div>'+
+    '<table class="data"><tr><th>Criterio</th><th>Condición mínima</th><th>Evidencia que debe existir</th></tr><tr><td>Necesidad</td><td>Vinculación con una necesidad específica o línea genérica priorizada.</td><td>Registro en la DNF.</td></tr><tr><td>Pertinencia</td><td>Relación entre programa, carrera y función académica.</td><td>Validación de coordinación.</td></tr><tr><td>Viabilidad</td><td>Disposición y condiciones de acceso compatibles.</td><td>Modalidad, barrera e inicio tentativo.</td></tr><tr><td>Ruta definida</td><td>Programa e institución identificados o proceso formal de gestión.</td><td>Ficha del Plan.</td></tr><tr><td>Seguimiento</td><td>Fechas, hitos y evidencia prevista.</td><td>Registro de seguimiento.</td></tr></table>'+
+    '<div class="sub-title">10.7 Tipos de apoyo a considerar</div>'+
+    '<div class="three-col"><div class="panel"><h3>Académico</h3><p class="small">Acompañamiento, tutoría, orientación o ajuste de carga cuando corresponda.</p></div><div class="panel"><h3>Gestión</h3><p class="small">Convenios, articulación con instituciones y búsqueda de programas pertinentes.</p></div><div class="panel"><h3>Económico</h3><p class="small">Apoyo sujeto a disponibilidad, prioridad y normativa institucional aplicable.</p></div></div>'+
+    '<p>El apoyo debe registrarse explícitamente en el Plan para permitir su posterior evaluación en el Informe de Cumplimiento.</p>'
+  );
+
+  add(null,
+    '<div class="sec-title">10. Propuesta de lineamientos para el Plan de Formación</div>'+
+    '<div class="sub-title">10.8 Indicadores propuestos para el seguimiento del Plan</div>'+
+    '<table class="data"><tr><th>Indicador</th><th>Unidad</th><th>Uso</th></tr><tr><td>Cobertura del Plan</td><td>% de docentes incluidos</td><td>Medir alcance respecto de la base diagnosticada.</td></tr><tr><td>Inicio efectivo</td><td>% de seleccionados que iniciaron</td><td>Verificar conversión de planificación en ejecución.</td></tr><tr><td>Avance promedio</td><td>% de avance</td><td>Identificar retrasos y necesidad de acompañamiento.</td></tr><tr><td>Continuidad</td><td>% sin abandono</td><td>Evaluar sostenibilidad de las rutas.</td></tr><tr><td>Evidencia disponible</td><td>% con respaldo documental</td><td>Asegurar trazabilidad.</td></tr><tr><td>Efecto multiplicador</td><td>N.º de productos/acciones</td><td>Observar transferencia institucional.</td></tr></table>'+
+    '<div class="sub-title">10.9 Ciclo de mejora</div>'+
+    '<div class="flow"><div class="flow-box">DNF</div><div class="flow-arrow">→</div><div class="flow-box">Plan</div><div class="flow-arrow">→</div><div class="flow-box">Ejecución</div><div class="flow-arrow">→</div><div class="flow-box">Informe</div><div class="flow-arrow">→</div><div class="flow-box">Nueva DNF</div></div>'+
+    '<p>El cierre del Informe de Cumplimiento debe convertirse en una fuente de información para la siguiente DNF, especialmente en casos de abandono, retraso, finalización o cambio de necesidad.</p>'
+  );
+
   add('11. Resumen ejecutivo',
     '<div class="sec-title">11. Resumen ejecutivo</div>'+
     '<p class="lead">La Detección de Necesidades de Formación del período '+esc(periodLabel())+' consolida la situación académica de '+total+' docentes distribuidos en '+careerCount+' carreras. El análisis integra nivel académico, trayectoria formativa, disposición, preferencias de modalidad, barreras de acceso y necesidades específicas por carrera, con el propósito de orientar el Plan de Formación Docente.</p>'+
     '<div class="kpi-row"><div class="kpi"><strong>'+total+'</strong><span>Docentes</span></div><div class="kpi"><strong>'+fmtPct(pct(mastersDoctors,total))+'</strong><span>Maestría o doctorado</span></div><div class="kpi"><strong>'+fmtPct(pct(s.studying,total))+'</strong><span>Estudian actualmente</span></div><div class="kpi"><strong>'+fmtPct(pct(s.willing,total))+'</strong><span>Dispuestos a estudiar</span></div></div>'+
-    '<div class="chart-grid">'+barChart('Nivel académico actual',level,total,'Principal línea base del diagnóstico',7)+barChart('Necesidades más frecuentes',needRanking,Math.max(1,total),'Temas con mayor presencia en el diagnóstico',8)+'</div>'+
+    '<div class="chart-grid">'+barChart('Nivel académico actual',level,total,'Principal línea base del diagnóstico',7)+barChart('Necesidades más frecuentes',needRanking,needTotal,'Temas con mayor presencia en el diagnóstico',8)+'</div>'+
     '<p>El nivel actual predominante es <strong>'+esc(dLevel[0])+'</strong>, mientras que la aspiración más frecuente corresponde a <strong>'+esc(dDesired[0])+'</strong>. La modalidad predominante es <strong>'+esc(dModality[0])+'</strong> y la principal barrera identificada es <strong>'+esc(dBarrier[0])+'</strong>. Estos resultados muestran que la planificación debe combinar cierre de brechas académicas, pertinencia disciplinar y condiciones reales de acceso.</p>'+
     '<p>La priorización institucional evidencia '+Number(priorities.Alta||0)+' necesidades de prioridad Alta, '+Number(priorities.Media||0)+' de prioridad Media y '+Number(priorities.Baja||0)+' de prioridad Baja. La siguiente etapa consiste en convertir estas prioridades en una selección concreta de docentes, programas, instituciones, modalidades, apoyos y metas dentro del Plan de Formación.</p>'
+  );
+
+  add(null,
+    '<div class="sec-title">11. Resumen ejecutivo</div>'+
+    '<div class="sub-title">11.1 Hallazgos prioritarios</div>'+
+    '<table class="data"><tr><th>Dimensión</th><th>Hallazgo principal</th><th>Implicación</th></tr><tr><td>Nivel académico</td><td>Predomina '+esc(dLevel[0])+' ('+fmtPct(pct(dLevel[1],total))+').</td><td>La planificación debe concentrarse en brechas verificables de progresión.</td></tr><tr><td>Proyección</td><td>El nivel deseado más frecuente es '+esc(dDesired[0])+' ('+fmtPct(pct(dDesired[1],total))+').</td><td>Existe una dirección clara de desarrollo académico.</td></tr><tr><td>Disposición</td><td>'+fmtPct(pct(s.willing,total))+' manifiesta disposición para estudiar.</td><td>La viabilidad general es favorable, sujeta a pertinencia.</td></tr><tr><td>Modalidad</td><td>Predomina '+esc(dModality[0])+'.</td><td>Debe considerarse en la búsqueda y gestión de programas.</td></tr><tr><td>Prioridad</td><td>'+Number(priorities.Alta||0)+' necesidades Altas, '+Number(priorities.Media||0)+' Medias y '+Number(priorities.Baja||0)+' Bajas.</td><td>Permite ordenar la intervención institucional.</td></tr></table>'+
+    '<div class="sub-title">11.2 Decisión que debe tomar el Plan</div>'+
+    '<p>El Plan de Formación deberá decidir qué docentes se incorporan, a qué programa, en qué institución, bajo qué modalidad, con qué apoyo y con qué metas de seguimiento. La DNF entrega la justificación técnica para esa decisión y define qué necesidades deben atenderse primero.</p>'+
+    '<div class="info-box"><strong>Síntesis:</strong> la planificación debe cerrar brechas académicas y disciplinares con rutas pertinentes, viables y trazables, evitando convertir las preferencias individuales en aprobaciones automáticas.</div>'
   );
 
   add('12. Conclusiones',
     '<div class="sec-title">12. Conclusiones</div>'+
     '<ol class="number-list"><li>La DNF consolida una base de <strong>'+total+' docentes</strong> pertenecientes a <strong>'+careerCount+' carreras</strong>, lo que permite construir una lectura institucional y diferenciada por carrera.</li><li>El <strong>'+fmtPct(pct(mastersDoctors,total))+'</strong> del claustro registra maestría o doctorado. El grupo restante requiere análisis según nivel actual, pertinencia y trayectoria proyectada.</li><li>La disposición para iniciar o continuar estudios alcanza <strong>'+fmtPct(pct(s.willing,total))+'</strong>, mientras que <strong>'+fmtPct(pct(s.studying,total))+'</strong> registra estudios en curso. Existe, por tanto, una población potencial para nuevas rutas formativas.</li><li>El nivel deseado predominante es <strong>'+esc(dDesired[0])+'</strong>, lo que evidencia una orientación del claustro hacia procesos de progresión académica.</li><li>La modalidad predominante es <strong>'+esc(dModality[0])+'</strong>; esta preferencia debe ser considerada en la búsqueda de programas y convenios, sin desplazar el criterio de pertinencia.</li><li>Las necesidades de prioridad Alta requieren análisis preferente dentro del Plan, especialmente cuando coinciden con brechas académicas objetivas y una alta proporción de docentes afectados.</li><li>Las necesidades específicas por carrera y las líneas genéricas institucionales deben mantenerse separadas para conservar la pertinencia disciplinar.</li><li>La DNF establece la base técnica del Plan de Formación y debe mantener trazabilidad con el seguimiento y el Informe de Cumplimiento.</li></ol>'
+  );
+
+  add(null,
+    '<div class="sec-title">12. Conclusiones</div>'+
+    '<div class="sub-title">12.1 Conclusiones por dimensión</div>'+
+    '<div class="two-col"><div class="panel"><h3>Caracterización</h3><p class="small">La base permite reconocer diferencias entre carreras y evitar una lectura homogénea del claustro.</p></div><div class="panel"><h3>Brechas</h3><p class="small">Las necesidades deben interpretarse como combinación de nivel, disciplina y condiciones de acceso.</p></div><div class="panel"><h3>Prioridad</h3><p class="small">La incidencia dentro de cada carrera permite ordenar necesidades sin depender solo de números absolutos.</p></div><div class="panel"><h3>Planificación</h3><p class="small">La DNF debe convertirse en rutas individualizadas con seguimiento y evidencia.</p></div></div>'+
+    '<div class="sub-title">12.2 Implicación institucional</div>'+
+    '<p>El principal valor del diagnóstico es que conecta información de los docentes con decisiones institucionales. Esta conexión debe mantenerse durante todo el ciclo para que el Informe de Cumplimiento pueda evaluar no solo cuántos docentes participaron, sino qué brechas fueron atendidas y qué resultados se obtuvieron.</p>'+
+    '<div class="callout"><strong>Conclusión central:</strong> una política de formación efectiva requiere continuidad entre diagnóstico, priorización, apoyo, seguimiento y evaluación.</div>'
   );
 
   add('13. Recomendaciones',
@@ -2306,11 +2461,27 @@ function dnfHtml(){
     '<div class="info-box"><strong>Recomendación operativa:</strong> la aplicación debe utilizar la DNF como fuente de candidatos y prioridades. El Plan no debe pedir nuevamente información que ya existe en la base institucional.</div>'
   );
 
+  add(null,
+    '<div class="sec-title">13. Recomendaciones</div>'+
+    '<div class="sub-title">13.1 Recomendaciones de implementación</div>'+
+    '<table class="data"><tr><th>Horizonte</th><th>Acción recomendada</th><th>Responsable principal</th></tr><tr><td>Inmediato</td><td>Completar información pendiente y validar necesidades por carrera.</td><td>UGPA y coordinaciones.</td></tr><tr><td>Corto plazo</td><td>Seleccionar candidatos y definir rutas formativas prioritarias.</td><td>UGPA, coordinaciones y autoridades.</td></tr><tr><td>Durante el período</td><td>Registrar inicio, avance, evidencia, dificultades y apoyos.</td><td>Responsables de seguimiento.</td></tr><tr><td>Cierre</td><td>Evaluar cumplimiento, abandono, finalización y efecto multiplicador.</td><td>UGPA.</td></tr><tr><td>Siguiente período</td><td>Actualizar la DNF con resultados y nuevas brechas.</td><td>UGPA y coordinaciones.</td></tr></table>'+
+    '<div class="sub-title">13.2 Recomendaciones para el uso de la app</div>'+
+    '<ul class="body-list"><li>Mantener una sola base de docentes para los tres documentos.</li><li>No sobrescribir silenciosamente información local con datos externos.</li><li>Mostrar campos pendientes antes de permitir el cierre institucional.</li><li>Conservar las prioridades manuales con trazabilidad de la decisión.</li><li>Guardar los PDFs generados para evitar regeneraciones innecesarias.</li></ul>'
+  );
+
   add('14. Referencias',
     '<div class="sec-title">14. Referencias</div>'+
     '<p class="section-intro">Referentes considerados en la estructura del documento institucional utilizado como base para esta DNF.</p>'+
     '<ul class="number-list"><li>Asamblea Nacional del Ecuador. Constitución de la República del Ecuador.</li><li>Ley Orgánica de Educación Superior (LOES).</li><li>Reglamento de Carrera y Escalafón del Personal Académico del Sistema de Educación Superior.</li><li>Consejo de Aseguramiento de la Calidad de la Educación Superior (CACES). Modelo de evaluación externa para instituciones técnicas y tecnológicas.</li><li>Instituto Superior Tecnológico Quito Metropolitano. Plan Estratégico de Desarrollo Institucional.</li><li>Instituto Superior Tecnológico Quito Metropolitano. Reglamento de Formación Docente.</li><li>Instituto Superior Tecnológico Quito Metropolitano. Manual del proceso de Formación Académica.</li><li>Registros institucionales consolidados para el período '+esc(periodLabel())+'.</li></ul>'+
     '<div class="callout"><strong>Nota:</strong> las referencias normativas se incorporan siguiendo el documento institucional proporcionado como ejemplo. La vigencia jurídica debe verificarse cuando corresponda a una actualización normativa formal.</div>'
+  );
+
+  add(null,
+    '<div class="sec-title">14. Referencias</div>'+
+    '<div class="sub-title">14.1 Uso de los referentes en el documento</div>'+
+    '<p>Los referentes normativos e institucionales sustentan la estructura y el propósito del proceso. Los resultados cuantitativos, gráficos, tablas y prioridades provienen de la base consolidada del período y no de las fuentes normativas.</p>'+
+    '<table class="data"><tr><th>Tipo de fuente</th><th>Uso dentro de la DNF</th></tr><tr><td>Normativa nacional</td><td>Fundamentar el contexto y la responsabilidad institucional de formación y calidad.</td></tr><tr><td>Criterios de aseguramiento de la calidad</td><td>Vincular diagnóstico, planificación, evidencia y seguimiento.</td></tr><tr><td>Documentos institucionales</td><td>Alinear el proceso con planificación estratégica y procedimientos internos.</td></tr><tr><td>Registros del período</td><td>Calcular caracterización, brechas, necesidades, prioridades e indicadores.</td></tr></table>'+
+    '<div class="info-box"><strong>Distinción metodológica:</strong> las fuentes normativas explican por qué se realiza el proceso; los registros institucionales explican qué necesidades existen en el período analizado.</div>'
   );
 
   add('15. Anexos',
@@ -2328,6 +2499,29 @@ function dnfHtml(){
     careers.map(career=>{const p=careerProfile(career);return '<tr><td>'+esc(career)+'</td><td>'+esc(programForCareer(career)||'Por definir')+'</td><td class="num">'+p.count+'</td><td class="num">'+esc(p.highest)+'</td><td>'+esc(p.coord?.coordinador||'Por definir')+'</td></tr>';}).join('')+'</table>'+
     '<div class="sub-title">15.4 Necesidades consolidadas</div>'+
     '<table class="data"><tr><th>Necesidad</th><th>Docentes relacionados</th></tr>'+reportEntries(needRanking).map(([need,count])=>'<tr><td>'+esc(need)+'</td><td class="num">'+count+'</td></tr>').join('')+'</table>'
+  );
+
+  add(null,
+    '<div class="sec-title">15. Anexos</div>'+
+    '<div class="sub-title">15.5 Matriz de nivel actual por carrera</div>'+
+    '<p>La matriz permite comparar la composición académica de las carreras utilizando una misma clasificación de niveles.</p>'+
+    '<table class="data"><tr><th>Carrera</th>'+LEVELS.map(l=>'<th>'+esc(l)+'</th>').join('')+'<th>Total</th></tr>'+
+      careers.map(career=>{const p=careerProfile(career);return '<tr><td>'+esc(career)+'</td>'+LEVELS.map(l=>'<td class="num">'+Number(p.level[l]||0)+'</td>').join('')+'<td class="num">'+p.count+'</td></tr>';}).join('')+
+    '</table>'+
+    '<div class="sub-title">15.6 Matriz de nivel deseado por carrera</div>'+
+    '<table class="data"><tr><th>Carrera</th>'+LEVELS.map(l=>'<th>'+esc(l)+'</th>').join('')+'<th>Total</th></tr>'+
+      careers.map(career=>{const p=careerProfile(career);return '<tr><td>'+esc(career)+'</td>'+LEVELS.map(l=>'<td class="num">'+Number(p.wish[l]||0)+'</td>').join('')+'<td class="num">'+p.count+'</td></tr>';}).join('')+
+    '</table>'
+  );
+
+  add(null,
+    '<div class="sec-title">15. Anexos</div>'+
+    '<div class="sub-title">15.7 Matriz de condiciones por carrera</div>'+
+    '<table class="data"><tr><th>Carrera</th><th>Docentes</th><th>Estudian</th><th>Dispuestos</th><th>Con 4.º nivel</th><th>Necesidades</th><th>Prioridad mayor</th></tr>'+
+      careers.map(career=>{const p=careerProfile(career);return '<tr><td>'+esc(career)+'</td><td class="num">'+p.count+'</td><td class="num">'+p.studying+'</td><td class="num">'+p.willing+'</td><td class="num">'+(p.masters+p.doctors)+'</td><td class="num">'+p.items.length+'</td><td class="num">'+esc(p.highest)+'</td></tr>';}).join('')+
+    '</table>'+
+    '<div class="sub-title">15.8 Distribución consolidada de necesidades</div>'+
+    '<div class="chart-grid">'+barChart('Necesidades consolidadas',needRanking,needTotal,'Participación de cada necesidad dentro del conjunto registrado',12)+barChart('Prioridades consolidadas',priorities,Math.max(1,Object.values(priorities).reduce((a,b)=>a+b,0)),'Distribución de necesidades por prioridad',5)+'</div>'
   );
 
   const teacherChunks=chunkArray(state.teachers,14);
