@@ -4,7 +4,6 @@
 
   const STORAGE_KEY = 'docformacion-data-v1';
   const XLSX_CDN = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-  const HTML2PDF_CDN = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
   const FIREBASE_READ_URL = 'https://repaso-fire-d8ceb-default-rtdb.firebaseio.com/.json';
 
   function chooseFile(accept) {
@@ -191,81 +190,60 @@
     }
   }
 
-  function loadHtml2PdfInFrame(frame) {
-    return new Promise((resolve, reject) => {
-      if (typeof frame.contentWindow?.html2pdf === 'function') {
-        resolve(frame.contentWindow.html2pdf);
-        return;
-      }
-
-      const script = frame.contentDocument.createElement('script');
-      script.src = HTML2PDF_CDN;
-      script.onload = () => {
-        if (typeof frame.contentWindow?.html2pdf === 'function') resolve(frame.contentWindow.html2pdf);
-        else reject(new Error('La librería de PDF no quedó disponible.'));
-      };
-      script.onerror = () => reject(new Error('No se pudo cargar el generador de PDF.'));
-      frame.contentDocument.head.appendChild(script);
-    });
-  }
-
   async function generatePDF(payload) {
-    let frame;
+    let frame = null;
+    let timeoutId = null;
     try {
-      if (!payload?.html) return { ok: false, error: 'No se recibió contenido para generar el PDF.' };
+      if (!payload?.html) {
+        return { ok: false, error: 'No se recibió contenido para generar el PDF.' };
+      }
+      if (typeof window.html2pdf !== 'function') {
+        return { ok: false, error: 'El generador PDF no se cargó. Recarga la página e inténtalo nuevamente.' };
+      }
 
       frame = document.createElement('iframe');
       frame.setAttribute('aria-hidden', 'true');
       frame.style.position = 'fixed';
-      frame.style.left = '-10000px';
+      frame.style.left = '-12000px';
       frame.style.top = '0';
-      frame.style.width = '178mm';
+      frame.style.width = '210mm';
       frame.style.height = '297mm';
       frame.style.border = '0';
-      frame.style.pointerEvents = 'none';
       frame.style.background = '#fff';
+      frame.style.visibility = 'hidden';
 
       const loaded = new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('La preparación del PDF tardó demasiado.')), 15000);
+        timeoutId = setTimeout(() => reject(new Error('No se pudo preparar el documento para PDF.')), 10000);
         frame.onload = () => {
-          clearTimeout(timeout);
+          clearTimeout(timeoutId);
+          timeoutId = null;
           resolve();
         };
         frame.onerror = () => {
-          clearTimeout(timeout);
+          clearTimeout(timeoutId);
+          timeoutId = null;
           reject(new Error('No se pudo preparar el documento para PDF.'));
         };
       });
 
-      // Asignar srcdoc antes de insertar el iframe evita capturar el load inicial de about:blank.
       frame.srcdoc = payload.html;
       document.body.appendChild(frame);
       await loaded;
 
-      const pdfStyle = frame.contentDocument.createElement('style');
-      pdfStyle.textContent = 'html,body{width:178mm!important;max-width:178mm!important;background:#fff!important;}';
-      frame.contentDocument.head.appendChild(pdfStyle);
+      const doc = frame.contentDocument;
+      if (!doc?.body) throw new Error('El documento PDF no pudo renderizarse.');
 
-      const html2pdf = await loadHtml2PdfInFrame(frame);
-      if (frame.contentDocument.fonts?.ready) {
-        await Promise.race([
-          frame.contentDocument.fonts.ready,
-          new Promise(resolve => setTimeout(resolve, 1500))
-        ]);
-      }
-      await new Promise(resolve => setTimeout(resolve, 150));
-
-      const source = frame.contentDocument.body;
       const filename = payload.filename || 'documento.pdf';
       const options = {
-        margin: [18, 16, 18, 16],
+        margin: 0,
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: {
           scale: 2,
           useCORS: true,
           logging: false,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          windowWidth: 794
         },
         jsPDF: {
           unit: 'mm',
@@ -280,17 +258,27 @@
         }
       };
 
-      const blob = await html2pdf()
-        .set(options)
-        .from(source)
-        .toPdf()
-        .outputPdf('blob');
+      // html2pdf maneja la descarga directamente; no usamos ventana de impresión.
+      const work = window.html2pdf().set(options).from(doc.body).save();
+      await Promise.race([
+        work,
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error('La generación del PDF tardó demasiado.')),
+            45000
+          );
+        })
+      ]);
 
-      saveBlob(blob, filename);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
       return { ok: true, filePath: filename, downloaded: true };
     } catch (error) {
-      return { ok: false, error: error.message };
+      return { ok: false, error: error?.message || String(error) };
     } finally {
+      if (timeoutId) clearTimeout(timeoutId);
       if (frame?.parentNode) frame.remove();
     }
   }
