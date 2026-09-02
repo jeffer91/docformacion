@@ -3330,7 +3330,7 @@ function dnfHtml(){
     const priorityText=p.high?'Alta':p.medium?'Media':p.low?'Baja':'Sin definir';
     add(null,
       '<div class="career-profile-block">'+
-      '<div class="sec-title">7.'+(index+2)+' '+esc(p.career)+'</div>'+
+      '<div class="sec-title">7.'+(index+1)+' '+esc(p.career)+'</div>'+
       '<div class="kpi-row"><div class="kpi"><strong>'+p.needs.length+'</strong><span>Necesidades</span></div><div class="kpi"><strong>'+p.high+'</strong><span>Alta</span></div><div class="kpi"><strong>'+p.medium+'</strong><span>Media</span></div><div class="kpi"><strong>'+p.low+'</strong><span>Baja</span></div></div>'+
       '<p><strong>Programa:</strong> '+esc(p.program)+'<br><strong>Coordinador/a:</strong> '+esc(p.coordinator)+'</p>'+
       '<table class="data" data-apa-title="Necesidades de formación de '+esc(p.career)+'"><tr><th>N.º</th><th>Necesidad de formación</th><th>Prioridad</th></tr>'+
@@ -3401,7 +3401,15 @@ function dnfHtml(){
 
   add('14. Referencias',
     '<div class="sec-title">14. Referencias</div>'+
-    '<div class="reference-list"><p>Asamblea Constituyente del Ecuador. (2008). <em>Constitución de la República del Ecuador</em>.</p><p>Asamblea Nacional del Ecuador. <em>Ley Orgánica de Educación Superior (LOES)</em>. Se deberá conservar en el expediente institucional la versión vigente utilizada para este período.</p><p>Consejo de Educación Superior. <em>Reglamento de Carrera y Escalafón del Personal Académico del Sistema de Educación Superior</em>. Se deberá conservar la versión vigente utilizada.</p><p>Consejo de Aseguramiento de la Calidad de la Educación Superior (CACES). <em>Modelo de evaluación externa aplicable</em>. Registrar en el expediente la versión y fecha efectivamente utilizadas.</p><p>Instituto Superior Tecnológico Quito Metropolitano. <em>Plan Estratégico de Desarrollo Institucional</em>. Registrar código, versión y fecha institucional vigentes.</p><p>Instituto Superior Tecnológico Quito Metropolitano. <em>Reglamento de Formación Docente</em>. Registrar código, versión y fecha institucional vigentes.</p><p>Instituto Superior Tecnológico Quito Metropolitano. <em>Manual del proceso de Formación Académica</em>. Registrar código, versión y fecha institucional vigentes.</p></div>'
+    '<div class="reference-list">'+
+      '<p>Asamblea Constituyente del Ecuador. (2008). <em>Constitución de la República del Ecuador</em>. Registro Oficial No. 449, 20 de octubre de 2008.</p>'+
+      '<p>Asamblea Nacional del Ecuador. (2010). <em>Ley Orgánica de Educación Superior (LOES)</em>. Suplemento del Registro Oficial No. 298, 12 de octubre de 2010.</p>'+
+      '<p>Consejo de Educación Superior. (2024). <em>Reglamento de Carrera y Escalafón del Personal Académico del Sistema de Educación Superior</em> (codificación al 27 de febrero de 2024; reforma RPC-SE-06-No.012-2024).</p>'+
+      '<p>Consejo de Aseguramiento de la Calidad de la Educación Superior. (2024). <em>Modelo de evaluación externa 2024 con fines de acreditación para los institutos superiores técnicos y tecnológicos</em>.</p>'+
+      '<p>Instituto Superior Tecnológico Quito Metropolitano. (s. f.). <em>Plan Estratégico de Desarrollo Institucional</em> [Documento institucional].</p>'+
+      '<p>Instituto Superior Tecnológico Quito Metropolitano. (s. f.). <em>Reglamento de Formación Docente</em> [Documento institucional].</p>'+
+      '<p>Instituto Superior Tecnológico Quito Metropolitano. (s. f.). <em>Manual del proceso de Formación Académica</em> [Documento institucional].</p>'+
+    '</div>'
   );
 
   add('15. Anexos',
