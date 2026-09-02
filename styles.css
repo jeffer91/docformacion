@@ -157,3 +157,12 @@ button.is-missing-control{color:#b42318!important;border-color:#dc2626!important
 .excel-row-status.error{background:#fff0ef;color:#a23b34}
 .excel-analysis-actions{gap:10px;flex-wrap:wrap}
 #goExcelModule[hidden]{display:none!important}
+
+
+/* Excel teacher comparison states */
+.excel-row-status.complete{background:#e8f6f0;color:#1d6a53}
+.excel-row-status.same{background:#f0f3f6;color:#586677}
+.excel-row-status.optional{background:#f2edff;color:#6547a8}
+.excel-optional-choice{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:11px;font-weight:600;color:#6547a8;cursor:pointer}
+.excel-optional-choice input{width:15px;height:15px;accent-color:#6547a8}
+.excel-optional-summary{background:#f6f2ff;border:1px solid #e1d7fa;color:#604a93}
