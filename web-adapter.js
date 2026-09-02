@@ -292,10 +292,108 @@
       return built;
     };
 
+    const makeTablePart = (block, table, first, continuation) => {
+      const part = doc.createElement('div');
+      part.className = block.className;
+
+      const context = block.querySelector('.apa-table-context');
+      const number = block.querySelector('.apa-table-number');
+      const title = block.querySelector('.apa-table-title');
+
+      if (first && context) part.appendChild(context.cloneNode(true));
+      if (number) {
+        const n = number.cloneNode(true);
+        if (continuation) n.textContent = (number.textContent || 'Tabla') + ' (continuación)';
+        part.appendChild(n);
+      }
+      if (title) part.appendChild(title.cloneNode(true));
+
+      const newTable = doc.createElement('table');
+      [...table.attributes].forEach(attr => newTable.setAttribute(attr.name, attr.value));
+      const tbody = doc.createElement('tbody');
+      newTable.appendChild(tbody);
+      [...table.rows].filter(row => row.querySelector('th')).forEach(row => tbody.appendChild(row.cloneNode(true)));
+      part.appendChild(newTable);
+      return { part, tbody };
+    };
+
+    const appendApaTableAcrossPages = block => {
+      const table = block.querySelector('table.data');
+      if (!table) return false;
+      const dataRows = [...table.rows].filter(row => !row.querySelector('th'));
+      if (!dataRows.length) return false;
+
+      const note = block.querySelector('.apa-table-note');
+      const analysis = block.querySelector('.apa-table-analysis');
+      let partInfo = null;
+      let rowsInPart = 0;
+      let first = true;
+
+      const beginPart = () => {
+        if (!currentBody || currentBody.children.length) startPage();
+        partInfo = makeTablePart(block, table, first, !first);
+        currentBody.appendChild(partInfo.part);
+        rowsInPart = 0;
+        first = false;
+      };
+
+      beginPart();
+
+      dataRows.forEach(row => {
+        const clone = row.cloneNode(true);
+        partInfo.tbody.appendChild(clone);
+        rowsInPart++;
+        if (!bodyOverflows(currentBody)) return;
+
+        partInfo.tbody.removeChild(clone);
+        rowsInPart--;
+
+        if (rowsInPart === 0) {
+          partInfo.tbody.appendChild(clone);
+          clone.style.fontSize = '8.5pt';
+          clone.style.lineHeight = '1.2';
+          return;
+        }
+
+        beginPart();
+        partInfo.tbody.appendChild(clone);
+        rowsInPart = 1;
+      });
+
+      if (note) {
+        const noteClone = note.cloneNode(true);
+        partInfo.part.appendChild(noteClone);
+        if (bodyOverflows(currentBody)) {
+          partInfo.part.removeChild(noteClone);
+          startPage();
+          const label = doc.createElement('div');
+          label.className = 'page-topic';
+          label.textContent = 'Nota de ' + (block.querySelector('.apa-table-number')?.textContent || 'tabla');
+          currentBody.appendChild(label);
+          currentBody.appendChild(noteClone);
+        }
+      }
+
+      if (analysis) {
+        const analysisClone = analysis.cloneNode(true);
+        currentBody.appendChild(analysisClone);
+        if (bodyOverflows(currentBody)) {
+          currentBody.removeChild(analysisClone);
+          startPage();
+          const label = doc.createElement('div');
+          label.className = 'page-topic';
+          label.textContent = 'Análisis de ' + (block.querySelector('.apa-table-number')?.textContent || 'tabla');
+          currentBody.appendChild(label);
+          currentBody.appendChild(analysisClone);
+        }
+      }
+
+      return true;
+    };
+
     const appendBlock = block => {
       if (!currentBody) startPage();
 
-      // A major section begins on a clean page when the existing page already carries substantial content.
       if (block.classList?.contains('sec-title') && currentBody.children.length && currentBody.scrollHeight > currentBody.clientHeight * 0.58) {
         startPage();
       }
@@ -304,10 +402,14 @@
       if (!bodyOverflows(currentBody)) return;
 
       currentBody.removeChild(block);
+
+      if (block.classList?.contains('apa-table-block') && appendApaTableAcrossPages(block)) {
+        return;
+      }
+
       startPage();
       currentBody.appendChild(block);
 
-      // No content may be silently clipped. If one block is itself too tall, flag it visibly.
       if (bodyOverflows(currentBody)) {
         block.classList.add('oversized-pdf-block');
         block.style.fontSize = '9pt';
@@ -347,6 +449,14 @@
       const key = (cells[0].textContent || '').trim().replace(/\s+/g, ' ').toLowerCase();
       if (sectionPages.has(key)) cells[cells.length - 1].textContent = String(sectionPages.get(key));
     });
+
+    const overflowPages = pages
+      .map((page, idx) => ({ idx, body: page.querySelector('.pdf-body') }))
+      .filter(item => item.body && bodyOverflows(item.body));
+    if (overflowPages.length) {
+      const pageList = overflowPages.map(item => item.idx + 1).join(', ');
+      throw new Error('El documento todavía contiene contenido que no cabe en la(s) página(s) ' + pageList + '. No se descargó para evitar información cortada.');
+    }
 
     return pages;
   }
