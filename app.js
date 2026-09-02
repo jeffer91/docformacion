@@ -762,14 +762,27 @@ function teacherMissingEntries(t){
 function teacherMissingEntriesForDNF(t){
   const missing=[];
   const required=[
+    ['cedula','Cédula'],
+    ['nombre','Nombre'],
+    ['dedicacion','Dedicación'],
     ['nivelActual','Nivel académico actual'],
+    ['afinidad','Afinidad del título'],
+    ['estudiaActualmente','¿Estudia actualmente?'],
     ['nivelDeseado','Nivel que desea alcanzar'],
     ['areaInteres','Área o programa de interés'],
-    ['tipoFormacion','Tipo de formación']
+    ['dispuesto','Disposición para estudiar'],
+    ['tipoFormacion','Tipo de formación'],
+    ['modalidadPreferida','Modalidad preferida'],
+    ['barrera','Barrera principal']
   ];
   required.forEach(([key,label])=>{if(!norm(t[key])) missing.push({key,label});});
   if(!norm(t.carrera)) missing.push({key:'carrera',label:'Carrera principal'});
   else if(!validCareerName(t.carrera)) missing.push({key:'carrera',label:'Carrera principal válida'});
+  if(t.estudiaActualmente==='Sí'){
+    if(!norm(t.nivelCurso)) missing.push({key:'nivelCurso',label:'Nivel de formación en curso'});
+    if(!norm(t.programaCurso)) missing.push({key:'programaCurso',label:'Programa en curso'});
+    if(!norm(t.institucionCurso)) missing.push({key:'institucionCurso',label:'Institución de estudio'});
+  }
   return missing;
 }
 
