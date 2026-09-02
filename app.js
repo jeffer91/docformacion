@@ -832,6 +832,14 @@ function documentStatus(type){
   }
 
   if(type==='dnf'){
+    const invalidCareerRows=state.teachers.filter(t=>norm(t.carrera) && !validCareerName(t.carrera));
+    if(invalidCareerRows.length){
+      issues.push({
+        kind:'teacher',
+        text:invalidCareerRows.length+' docente(s) con carrera principal inválida (parece un programa de estudio)',
+        view:'docentes'
+      });
+    }
     const withoutNeeds=careersInUse.filter(name=>!needsFor(name).filter(norm).length);
     if(withoutNeeds.length){
       issues.push({
@@ -1841,17 +1849,17 @@ function basePdfCss(exactPages=false){
       '*{box-sizing:border-box}html,body{margin:0!important;padding:0!important;width:210mm!important;background:#fff!important;font-family:Arial,Helvetica,sans-serif;color:#111}'+
       'body{font-size:11pt;line-height:1.55}'+
       '.pdf-document{width:210mm!important;margin:0!important;padding:0!important;background:#fff;counter-reset:apafigure}'+
-      '.pdf-page{width:210mm!important;height:297mm!important;min-height:297mm!important;max-height:297mm!important;margin:0!important;padding:8mm 10mm 9mm!important;background:#fff!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;break-after:page;page-break-after:always;position:relative}'+
+      '.pdf-page{width:210mm!important;height:297mm!important;min-height:297mm!important;max-height:297mm!important;margin:0!important;padding:15mm!important;background:#fff!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;break-after:page;page-break-after:always;position:relative}'+
       '.pdf-page:last-child{break-after:auto;page-break-after:auto}'+
       '.institution-header{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 6mm 0;font-size:7.5pt;line-height:1.12;flex:0 0 auto}'+
       '.institution-header td{border:.75pt solid #111;padding:1.7mm 2mm;vertical-align:middle;text-align:center}'+
-      '.institution-header .brand-cell{width:27%;font-weight:700}.institution-header .unit-cell{width:53%;font-weight:500;font-size:8.2pt;height:15mm}.institution-header .meta-cell{width:20%;font-size:7.6pt;line-height:1.2}.institution-header .doc-cell{font-weight:700;font-size:8.2pt;height:9mm;line-height:1.12}'+
-      '.institution-header .brand-cell{padding:1.2mm 2mm}.institution-logo{display:block;max-width:100%;height:20mm;object-fit:contain;margin:0 auto}.institution-header .brand-main{font-size:12pt;font-weight:800;letter-spacing:.2px}.institution-header .brand-sub{font-size:5.7pt;font-weight:400;margin-top:.5mm}'+
+      '.institution-header .brand-cell{width:25%;font-weight:700}.institution-header .unit-cell{width:50%;font-weight:500;font-size:9pt;height:8mm}.institution-header .meta-cell{width:25%;font-size:8.5pt;line-height:1.2}.institution-header .doc-cell{font-weight:700;font-size:9pt;height:20mm;line-height:1.15}'+
+      '.institution-header .brand-cell{padding:1.2mm 2mm}.institution-logo{display:block;max-width:38mm;max-height:18mm;width:auto;height:auto;object-fit:contain;margin:0 auto}.institution-header .brand-main{font-size:12pt;font-weight:800;letter-spacing:.2px}.institution-header .brand-sub{font-size:5.7pt;font-weight:400;margin-top:.5mm}'+
       '.institution-header .date-cell,.institution-header .page-cell{font-size:6.8pt}'+
       '.pdf-body{flex:1 1 auto;min-height:0;overflow:hidden}.pdf-body.content-page{padding:0 .5mm}'+
       '.cover-body{height:100%;display:flex;flex-direction:column;justify-content:space-between;padding-top:8mm}'+
-      '.cover-title{text-align:center;margin-top:48mm}.cover-title h1{font-size:18pt;line-height:1.18;margin:0;font-weight:700}.cover-title .period{font-size:13pt;font-weight:700;margin-top:2mm}'+
-      '.signature-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:3mm;font-size:7.2pt}.signature-table td{border:.75pt solid #111;padding:1.7mm 2mm;vertical-align:top}.signature-table .sig-space td{height:24mm;font-size:7pt}.signature-table .sig-name td{height:8.5mm;vertical-align:middle}.signature-table .sig-role-row td{height:10mm;vertical-align:middle;line-height:1.08;text-transform:uppercase;font-size:6.7pt}.signature-table strong{font-size:7.2pt}.signature-table .sig-label{font-size:7pt}.signature-table .label-inline{font-weight:700;margin-right:1mm}'+
+      '.cover-title{text-align:center;margin-top:44mm}.cover-title h1{font-size:18pt;line-height:1.2;margin:0;font-weight:700}.cover-title .period{font-size:16pt;line-height:1.2;font-weight:700;margin-top:3mm}'+
+      '.signature-table{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:0;font-size:8.5pt}.signature-table td{border:.6pt solid #111;padding:1mm 1.2mm;vertical-align:top}.signature-table .sig-space td{height:24mm;font-size:8.5pt}.signature-table .sig-name td{height:7.5mm;vertical-align:middle}.signature-table .sig-role-row td{height:10.5mm;vertical-align:middle;line-height:1.08;text-transform:none;font-size:8.5pt}.signature-table strong{font-size:8.5pt}.signature-table .sig-label{font-size:8.5pt}.signature-table .label-inline{font-weight:700;margin-right:1mm}'+
       '.sec-title{font-size:13pt;font-weight:700;margin:0 0 3mm;color:#1f2d3d}.sub-title{font-size:11pt;font-weight:700;margin:3.2mm 0 1.5mm;color:#26384a}.mini-title{font-size:10pt;font-weight:700;margin:2.2mm 0 1.1mm}.section-rule{border:0;border-top:.7pt solid #aeb7c0;margin:2.5mm 0}.section-intro{font-size:10.5pt;line-height:1.6;margin-bottom:3mm;text-indent:12.7mm}'+
       'p{margin:0 0 2.4mm;text-align:justify;line-height:1.62;text-indent:12.7mm}.lead{font-size:10.5pt;line-height:1.65;text-indent:12.7mm}.small{font-size:8.2pt;line-height:1.35;text-indent:0}.muted{color:#5c6670}.tight{margin-bottom:1.4mm}.body-list{margin:0 0 2.3mm;padding-left:7mm}.body-list li{margin:1mm 0;text-align:justify;line-height:1.48}.number-list{margin:0 0 2.5mm;padding-left:7mm}.number-list li{margin:1.2mm 0;text-align:justify;line-height:1.48}.criteria{display:grid;grid-template-columns:repeat(3,1fr);gap:2mm;margin:2mm 0 3mm}.criteria div{border:.6pt solid #9da8b2;padding:2.2mm;text-align:center;font-size:7.2pt;background:#f5f7f9}.criteria strong{display:block;font-size:8.8pt;margin-bottom:.8mm;color:#24394d}'+
       '.info-box{border:.6pt solid #aeb7c0;border-left:3mm solid #314b63;background:#f6f8fa;padding:2.5mm 3mm;margin:3mm 0;font-size:8.5pt;line-height:1.4}.info-box p,.panel p,.callout p,.quote-box p{ text-indent:0}.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2.5mm;margin:3mm 0}.info-item{border:.6pt solid #aeb7c0;border-top:2mm solid #314b63;padding:2.4mm;text-align:center;background:#fbfcfd}.info-item strong{display:block;font-size:14pt;color:#24394d}.info-item span{font-size:7.2pt}'+
@@ -1861,7 +1869,7 @@ function basePdfCss(exactPages=false){
       '.needs-grid{display:block}.need-card{border:.55pt solid #9da8b2;padding:2.5mm 3mm;break-inside:avoid;min-height:0;margin:0 0 3mm;background:#fbfcfd}.need-card-title{font-size:10pt;font-weight:700;margin-bottom:1mm;color:#24394d}.need-coord{font-size:9pt;color:#444;margin-bottom:1.2mm}.need-line{display:grid;grid-template-columns:1fr auto;gap:2mm;font-size:9.5pt;line-height:1.3;margin:1mm 0}.priority{border:.5pt solid #555;border-radius:2mm;padding:.5mm 1.5mm;font-size:8.5pt;white-space:nowrap;align-self:start}'+
       '.needs-grid.dense .need-card{padding:2.2mm 2.7mm;margin-bottom:2.5mm}.needs-grid.dense .need-card-title{font-size:10pt}.needs-grid.dense .need-coord{font-size:9pt}.needs-grid.dense .need-line{font-size:9pt;line-height:1.25;margin:.8mm 0}'+
       '.bullet-list{margin:1mm 0 2mm;padding-left:6mm}.bullet-list li{margin:0 0 1.5mm;text-align:justify}.compact-list{font-size:9.5pt;line-height:1.4}.compact-list li{margin-bottom:1.2mm}.chart-grid{display:block;margin:3mm 0}.apa-figure-block{display:block;width:100%;min-width:0;break-inside:avoid;margin:0 0 5mm}.apa-figure-block.full{width:100%}.visual-context,.visual-analysis{font-size:11pt;line-height:1.5;text-align:justify;text-indent:12.7mm;margin:2mm 0}.visual-analysis strong{color:#24394d}.figure-note{font-size:10pt;line-height:1.35;margin-top:1.5mm;color:#4f5963}.figure-note em{font-weight:400;font-style:italic}.chart-box{counter-increment:apafigure;border:0;padding:1mm 0 2mm;background:#fff;break-inside:avoid;box-shadow:none;width:100%}.chart-box::before{content:\"Figura \" counter(apafigure);display:block;font-size:11pt;font-weight:700;color:#1f2d3d;margin-bottom:.8mm}.chart-title{font-size:11pt;font-style:italic;font-weight:400;margin-bottom:2.2mm;color:#1f2d3d}.chart-subtitle{font-size:10pt;color:#5e6872;margin-top:-.5mm;margin-bottom:2mm}.chart-row{display:grid;grid-template-columns:48mm 1fr 25mm;gap:2mm;align-items:center;margin:1.8mm 0;font-size:10pt}.chart-label{overflow:hidden;text-overflow:ellipsis;white-space:normal;line-height:1.2}.chart-track{height:5.5mm;background:#eef1f3;border:.35pt solid #d1d6db;position:relative;border-radius:.7mm;overflow:hidden}.chart-fill{height:100%}.chart-c1{background:#29445c}.chart-c2{background:#9b7a45}.chart-c3{background:#4f7775}.chart-c4{background:#76515a}.chart-c5{background:#6b7785}.chart-value{text-align:right;font-size:10pt}.stacked{display:flex;width:100%;height:9mm;border:.4pt solid #9da8b2;margin:2.5mm 0 1.5mm;border-radius:.8mm;overflow:hidden}.stacked>span{display:flex;align-items:center;justify-content:center;font-size:9pt;overflow:hidden;white-space:nowrap}.stacked-a{background:#29445c;color:#fff}.stacked-b{background:#b89557;color:#111}.legend{display:flex;gap:5mm;flex-wrap:wrap;font-size:10pt;margin-top:1.5mm}.legend i{display:inline-block;width:3.5mm;height:3.5mm;margin-right:1.2mm;vertical-align:-.5mm;border:.35pt solid #777}.group-row{display:grid;grid-template-columns:48mm 1fr 1fr;gap:2mm;align-items:center;margin:1.8mm 0;font-size:10pt}.group-bar{height:5.5mm;background:#eef1f3;border:.35pt solid #d1d6db;border-radius:.7mm;overflow:hidden}.group-current{height:100%;background:#29445c}.group-desired{height:100%;background:#b89557}.priority-high{background:#76515a;color:#fff}.priority-medium{background:#b89557}.priority-low{background:#4f7775;color:#fff}.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:2.5mm;margin:3mm 0}.kpi{border:.6pt solid #aeb7c0;border-top:2mm solid #314b63;padding:2.5mm;text-align:center;background:#fbfcfd}.kpi:nth-child(2){border-top-color:#9b7a45}.kpi:nth-child(3){border-top-color:#4f7775}.kpi:nth-child(4){border-top-color:#76515a}.kpi strong{display:block;font-size:14pt;line-height:1.05;color:#24394d}.kpi span{font-size:8.5pt}.flow{display:flex;gap:1.5mm;align-items:stretch;margin:3mm 0}.flow-box{flex:1;border:.6pt solid #aeb7c0;border-top:1.8mm solid #314b63;background:#fbfcfd;padding:2.5mm;text-align:center;font-size:8.5pt}.flow-arrow{display:flex;align-items:center;font-size:12pt;color:#9b7a45}.matrix{width:100%;border-collapse:collapse;margin:2.5mm 0;border-top:1pt solid #26384a;border-bottom:1pt solid #26384a}.matrix th,.matrix td{border:0;padding:1.8mm;font-size:10pt;text-align:center}.matrix th{background:#fff;color:#1f2d3d;border-bottom:1pt solid #52687a}.matrix th:first-child,.matrix td:first-child{text-align:left}.toc{width:100%;border-collapse:collapse;margin-top:3mm}.toc td{padding:1.8mm 0;border-bottom:.35pt dotted #9aa4ad;font-size:10pt}.toc td:last-child{text-align:right;width:14mm;font-weight:700;color:#24394d}.annex-table th,.annex-table td{font-size:8.5pt!important;padding:1.2mm 1.4mm!important}'+
-      '.footer-note{position:absolute;left:10mm;right:10mm;bottom:4mm;text-align:center;font-size:6.2pt;color:#7a848d;letter-spacing:.08px}'+
+      '.footer-note{position:absolute;left:15mm;right:15mm;bottom:5mm;text-align:center;font-size:6.5pt;color:#7a848d;letter-spacing:.08px}'+
       '.institution-header td{border-color:#7c8791;border-width:.5pt}.institution-header .unit-cell{color:#233b4d;font-weight:600;letter-spacing:.15px}.institution-header .doc-cell{background:#f7f9fa;color:#233b4d}.institution-header .meta-cell{color:#384957}.signature-table td{border-color:#8b959d;border-width:.5pt}'+
       '.cover-title h1{font-size:22pt;color:#17384d;letter-spacing:-.2px;line-height:1.15}.cover-title .period{font-size:11.5pt;color:#65727c;font-weight:600;margin-top:3mm}'+
       '.sec-title{font-size:16pt;line-height:1.15;color:#17384d;margin:0 0 4mm;padding-bottom:2.2mm;border-bottom:.8pt solid #caa45b}.sub-title{font-size:12pt;line-height:1.25;color:#29485e;margin:4mm 0 2mm}.mini-title{font-size:10.5pt;color:#38556a}.page-topic{font-size:12.5pt;font-weight:700;color:#29485e;border-left:1.6mm solid #caa45b;padding:1.3mm 0 1.3mm 3mm;margin:0 0 4mm;line-height:1.2}'+
@@ -1904,7 +1912,7 @@ function dnfHeader(title,code,page,totalPages){
     '<tr><td class="brand-cell" rowspan="2"><img class="institution-logo" src="'+INSTITUTION_LOGO_DATA+'" alt="ITSQMET"></td>'+
     '<td class="unit-cell">UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS</td>'+
     '<td class="meta-cell" rowspan="2">Código:<br><strong>'+esc(code)+'</strong></td></tr>'+
-    '<tr><td class="doc-cell">'+esc(title)+'</td></tr>'+
+    '<tr><td class="doc-cell">'+esc(title)+'<br><span style="font-size:8.5pt;font-weight:600">'+esc(periodLabel())+'</span></td></tr>'+
     '</table>';
 }
 function dnfPage(title,code,page,totalPages,body,extraClass=''){
@@ -2071,7 +2079,8 @@ function enhanceApaTables(html){
     const num=document.createElement('div');num.className='apa-table-number';num.textContent='Tabla '+number;block.appendChild(num);
     const ttl=document.createElement('div');ttl.className='apa-table-title';ttl.textContent=title;block.appendChild(ttl);
     block.appendChild(table);
-    const note=document.createElement('div');note.className='apa-table-note';note.innerHTML='<em>Nota.</em> Elaboración propia a partir de los registros consolidados en DocFormación. Los porcentajes se calculan sobre la base correspondiente a cada sección; las diferencias por redondeo pueden afectar el total.';block.appendChild(note);
+    const note=document.createElement('div');note.className='apa-table-note';const hasPercent=headers.some(x=>x.includes('%'))||rows.some(row=>[...row.querySelectorAll('td')].some(td=>/%/.test(td.textContent||'')));
+    note.innerHTML=hasPercent?'<em>Nota.</em> Elaboración propia a partir de los registros consolidados en DocFormación. Los porcentajes se calculan sobre la base correspondiente a cada sección; las diferencias por redondeo pueden afectar el total.':'<em>Nota.</em> Elaboración propia a partir de los registros consolidados en DocFormación.';block.appendChild(note);
     const analysis=document.createElement('p');analysis.className='apa-table-analysis';
     analysis.innerHTML=best?('<strong>Análisis.</strong> La mayor proporción observada corresponde a <strong>'+esc(best.label)+'</strong>, con '+esc(best.text)+'. Este resultado debe relacionarse con las demás variables de la sección antes de establecer una prioridad o decisión dentro del Plan de Formación.'):('<strong>Análisis.</strong> La tabla permite organizar y comparar la información utilizada en esta sección. Su lectura debe complementarse con los resultados gráficos y el análisis narrativo para orientar la decisión institucional.');
     block.appendChild(analysis);
@@ -2087,7 +2096,9 @@ function dnfHtml(){
   careers.forEach(name=>ensureNeedItems(name));
   const careerCount=careers.length;
   const level=dist('nivelActual'),dedication=dist('dedicacion'),desired=dist('nivelDeseado'),type=dist('tipoFormacion'),modality=dist('modalidadPreferida'),barrier=dist('barrera'),study=dist('estudiaActualmente'),affinity=dist('afinidad'),courseLevel=dist('nivelCurso'),programCourse=dist('programaCurso'),institutionCourse=dist('institucionCurso'),interest=dist('areaInteres'),tentative=dist('inicioTentativo');
+  const invalidCareerTeachers=state.teachers.filter(t=>!validCareerName(t.carrera));
   const careerMap=careerCountMap(careers);
+  if(invalidCareerTeachers.length) careerMap['Sin carrera válida']=invalidCareerTeachers.length;
   const priorities=priorityDistribution(careers);
   const needRanking=overallNeedRanking(careers);
   const needTotal=Math.max(1,Object.values(needRanking).reduce((a,b)=>a+Number(b||0),0));
@@ -2102,16 +2113,23 @@ function dnfHtml(){
     return rows[0]||['Sin información',0];
   };
   const dLevel=dominant(level),dDesired=dominant(desired),dType=dominant(type),dModality=dominant(modality),dBarrier=dominant(barrier);
+  const missingLevelCount=Number(level['Sin información']||0);
+  const knownLevelCount=Math.max(0,total-missingLevelCount);
+  const levelNarrative=missingLevelCount
+    ? ('El '+fmtPct(pct(missingLevelCount,total))+' del claustro no registra nivel académico actual. Entre los '+knownLevelCount+' registros con información disponible, el nivel más frecuente es '+dLevel[0]+' ('+fmtPct(pct(dLevel[1],Math.max(1,knownLevelCount)))+' de los registros informados).')
+    : ('El nivel académico actual más frecuente es '+dLevel[0]+' ('+fmtPct(pct(dLevel[1],total))+').');
 
   const pages=[];
   const add=(tocLabel,body,extraClass='')=>pages.push({tocLabel,body,extraClass});
+
+  const dnfResponsible={preparedBy:'Mgs. Jefferson Villarreal',preparedRole:'Gestor de Procesos Académicos',reviewedBy:'Ing. Martha Tomalá',reviewedRole:'Coordinadora General de Carreras',approvedBy:'Dr. Alex León',approvedRole:'Vicerrector'};
 
   const coverBody='<div class="cover-body">'+
     '<div class="cover-title"><h1>'+esc(title)+'</h1><div class="period">'+esc(periodLabel())+'</div></div>'+
     '<table class="signature-table">'+
       '<tr class="sig-space"><td><span class="sig-label">ELABORADO POR:</span></td><td><span class="sig-label">REVISADO POR:</span></td><td><span class="sig-label">APROBADO POR:</span></td></tr>'+
-      '<tr class="sig-name"><td><span class="label-inline">NOMBRE:</span>'+esc(state.period.preparedBy)+'</td><td><span class="label-inline">NOMBRE:</span>'+esc(state.period.reviewedBy)+'</td><td><span class="label-inline">NOMBRE:</span>'+esc(state.period.approvedBy)+'</td></tr>'+
-      '<tr class="sig-role-row"><td><span class="label-inline">CARGO:</span>'+esc(state.period.preparedRole)+'</td><td><span class="label-inline">CARGO:</span>'+esc(state.period.reviewedRole)+'</td><td><span class="label-inline">CARGO:</span>'+esc(state.period.approvedRole)+'</td></tr>'+
+      '<tr class="sig-name"><td><span class="label-inline">NOMBRE:</span>'+esc(dnfResponsible.preparedBy)+'</td><td><span class="label-inline">NOMBRE:</span>'+esc(dnfResponsible.reviewedBy)+'</td><td><span class="label-inline">NOMBRE:</span>'+esc(dnfResponsible.approvedBy)+'</td></tr>'+
+      '<tr class="sig-role-row"><td><span class="label-inline">CARGO:</span>'+esc(dnfResponsible.preparedRole)+'</td><td><span class="label-inline">CARGO:</span>'+esc(dnfResponsible.reviewedRole)+'</td><td><span class="label-inline">CARGO:</span>'+esc(dnfResponsible.approvedRole)+'</td></tr>'+
     '</table></div>';
   add(null,coverBody,'cover-page');
 
@@ -2260,7 +2278,7 @@ function dnfHtml(){
     '<div class="sub-title">5.2 Nivel académico actual</div>'+
     '<div class="chart-grid">'+barChart('Nivel académico actual',level,total,'Línea base de cualificación del claustro',8)+barChart('Nivel académico que desean alcanzar',desired,total,'Proyección declarada por los docentes',8)+'</div>'+
     '<table class="data"><tr><th>Nivel</th><th>Actual</th><th>% actual</th><th>Deseado</th><th>% deseado</th></tr>'+LEVELS.map(l=>'<tr><td>'+esc(l)+'</td><td class="num">'+Number(level[l]||0)+'</td><td class="num">'+fmtPct(pct(level[l]||0,total))+'</td><td class="num">'+Number(desired[l]||0)+'</td><td class="num">'+fmtPct(pct(desired[l]||0,total))+'</td></tr>').join('')+'</table>'+
-    '<p>El nivel predominante actual es <strong>'+esc(dLevel[0])+'</strong> ('+fmtPct(pct(dLevel[1],total))+'), mientras que la mayor aspiración formativa corresponde a <strong>'+esc(dDesired[0])+'</strong> ('+fmtPct(pct(dDesired[1],total))+'). Esta diferencia constituye una primera aproximación a la brecha de progresión académica.</p>'
+    '<p>'+esc(levelNarrative)+' La mayor aspiración formativa corresponde a <strong>'+esc(dDesired[0])+'</strong> ('+fmtPct(pct(dDesired[1],total))+'). Esta comparación constituye una primera aproximación a la brecha de progresión académica.</p>'
   );
 
   add(null,
@@ -2465,14 +2483,14 @@ function dnfHtml(){
     '<p class="lead">La Detección de Necesidades de Formación del período '+esc(periodLabel())+' consolida la situación académica de '+total+' docentes distribuidos en '+careerCount+' carreras. El análisis integra nivel académico, trayectoria formativa, disposición, preferencias de modalidad, barreras de acceso y necesidades específicas por carrera, con el propósito de orientar el Plan de Formación Docente.</p>'+
     '<div class="kpi-row"><div class="kpi"><strong>'+total+'</strong><span>Docentes</span></div><div class="kpi"><strong>'+fmtPct(pct(mastersDoctors,total))+'</strong><span>Maestría o doctorado</span></div><div class="kpi"><strong>'+fmtPct(pct(s.studying,total))+'</strong><span>Estudian actualmente</span></div><div class="kpi"><strong>'+fmtPct(pct(s.willing,total))+'</strong><span>Dispuestos a estudiar</span></div></div>'+
     '<div class="chart-grid">'+barChart('Nivel académico actual',level,total,'Principal línea base del diagnóstico',7)+barChart('Necesidades más frecuentes',needRanking,needTotal,'Temas con mayor presencia en el diagnóstico',8)+'</div>'+
-    '<p>El nivel actual predominante es <strong>'+esc(dLevel[0])+'</strong>, mientras que la aspiración más frecuente corresponde a <strong>'+esc(dDesired[0])+'</strong>. La modalidad predominante es <strong>'+esc(dModality[0])+'</strong> y la principal barrera identificada es <strong>'+esc(dBarrier[0])+'</strong>. Estos resultados muestran que la planificación debe combinar cierre de brechas académicas, pertinencia disciplinar y condiciones reales de acceso.</p>'+
+    '<p>'+esc(levelNarrative)+' La aspiración más frecuente corresponde a <strong>'+esc(dDesired[0])+'</strong>. La modalidad predominante es <strong>'+esc(dModality[0])+'</strong> y la principal barrera identificada es <strong>'+esc(dBarrier[0])+'</strong>. Estos resultados muestran que la planificación debe combinar calidad de los datos, cierre de brechas académicas, pertinencia disciplinar y condiciones reales de acceso.</p>'+
     '<p>La priorización institucional evidencia '+Number(priorities.Alta||0)+' necesidades de prioridad Alta, '+Number(priorities.Media||0)+' de prioridad Media y '+Number(priorities.Baja||0)+' de prioridad Baja. La siguiente etapa consiste en convertir estas prioridades en una selección concreta de docentes, programas, instituciones, modalidades, apoyos y metas dentro del Plan de Formación.</p>'
   );
 
   add(null,
     '<div class="sec-title">11. Resumen ejecutivo</div>'+
     '<div class="sub-title">11.1 Hallazgos prioritarios</div>'+
-    '<table class="data"><tr><th>Dimensión</th><th>Hallazgo principal</th><th>Implicación</th></tr><tr><td>Nivel académico</td><td>Predomina '+esc(dLevel[0])+' ('+fmtPct(pct(dLevel[1],total))+').</td><td>La planificación debe concentrarse en brechas verificables de progresión.</td></tr><tr><td>Proyección</td><td>El nivel deseado más frecuente es '+esc(dDesired[0])+' ('+fmtPct(pct(dDesired[1],total))+').</td><td>Existe una dirección clara de desarrollo académico.</td></tr><tr><td>Disposición</td><td>'+fmtPct(pct(s.willing,total))+' manifiesta disposición para estudiar.</td><td>La viabilidad general es favorable, sujeta a pertinencia.</td></tr><tr><td>Modalidad</td><td>Predomina '+esc(dModality[0])+'.</td><td>Debe considerarse en la búsqueda y gestión de programas.</td></tr><tr><td>Prioridad</td><td>'+Number(priorities.Alta||0)+' necesidades Altas, '+Number(priorities.Media||0)+' Medias y '+Number(priorities.Baja||0)+' Bajas.</td><td>Permite ordenar la intervención institucional.</td></tr></table>'+
+    '<table class="data"><tr><th>Dimensión</th><th>Hallazgo principal</th><th>Implicación</th></tr><tr><td>Nivel académico</td><td>'+esc(levelNarrative)+'</td><td>La planificación debe concentrarse en brechas verificables de progresión.</td></tr><tr><td>Proyección</td><td>El nivel deseado más frecuente es '+esc(dDesired[0])+' ('+fmtPct(pct(dDesired[1],total))+').</td><td>Existe una dirección clara de desarrollo académico.</td></tr><tr><td>Disposición</td><td>'+fmtPct(pct(s.willing,total))+' manifiesta disposición para estudiar.</td><td>La viabilidad general es favorable, sujeta a pertinencia.</td></tr><tr><td>Modalidad</td><td>Predomina '+esc(dModality[0])+'.</td><td>Debe considerarse en la búsqueda y gestión de programas.</td></tr><tr><td>Prioridad</td><td>'+Number(priorities.Alta||0)+' necesidades Altas, '+Number(priorities.Media||0)+' Medias y '+Number(priorities.Baja||0)+' Bajas.</td><td>Permite ordenar la intervención institucional.</td></tr></table>'+
     '<div class="sub-title">11.2 Decisión que debe tomar el Plan</div>'+
     '<p>El Plan de Formación deberá decidir qué docentes se incorporan, a qué programa, en qué institución, bajo qué modalidad, con qué apoyo y con qué metas de seguimiento. La DNF entrega la justificación técnica para esa decisión y define qué necesidades deben atenderse primero.</p>'+
     '<div class="info-box"><strong>Síntesis:</strong> la planificación debe cerrar brechas académicas y disciplinares con rutas pertinentes, viables y trazables, evitando convertir las preferencias individuales en aprobaciones automáticas.</div>'
@@ -2561,7 +2579,7 @@ function dnfHtml(){
     '<div class="chart-grid">'+barChart('Necesidades consolidadas',needRanking,needTotal,'Participación de cada necesidad dentro del conjunto registrado',12)+barChart('Prioridades consolidadas',priorities,Math.max(1,Object.values(priorities).reduce((a,b)=>a+b,0)),'Distribución de necesidades por prioridad',5)+'</div>'
   );
 
-  const teacherChunks=chunkArray(state.teachers,14);
+  const teacherChunks=chunkArray(state.teachers,8);
   teacherChunks.forEach((chunk,idx)=>{
     add(null,
       '<div class="sec-title">15. Anexos</div>'+
@@ -2574,18 +2592,23 @@ function dnfHtml(){
   });
 
   // Editorial cleanup: a major section title is printed only on its opening page.
+  const seenSectionTitles=new Set();
   pages.forEach(page=>{
-    if(page.tocLabel!==null) return;
-    const match=page.body.match(/^<div class="sec-title">([^<]+)<\/div>/);
+    const match=page.body.match(/^\s*<div class="sec-title">([^<]+)<\/div>/);
     if(!match) return;
-    const full=match[1];
-    let replacement='';
-    const dashIndex=full.indexOf(' - ');
-    if(dashIndex>=0){
-      const topic=full.slice(dashIndex+3).trim();
-      if(topic) replacement='<div class="page-topic">'+topic.charAt(0).toUpperCase()+topic.slice(1)+'</div>';
+    const full=norm(match[1]);
+    const careerContinuation=full.match(/^(7\.\d+)\s+(?:Carrera:\s*)?(.+?)\s+-\s+(.+)$/i);
+    if(careerContinuation){
+      const topic=careerContinuation[3].trim();
+      page.body='<div class="page-topic">'+esc(topic.charAt(0).toUpperCase()+topic.slice(1))+'</div>'+page.body.slice(match[0].length);
+      return;
     }
-    page.body=replacement+page.body.slice(match[0].length);
+    const key=full.toLowerCase();
+    if(page.tocLabel===null || seenSectionTitles.has(key)){
+      page.body=page.body.slice(match[0].length);
+      return;
+    }
+    seenSectionTitles.add(key);
   });
 
   // Build a concise institutional index. Career subsections and graphic listings are intentionally omitted.
@@ -2656,6 +2679,10 @@ function htmlDoc(title,body,exactPages=false){
 async function generateDocument(type){
   syncPeriodCodes(state.period);
   if(type==='dnf' && !state.teachers.length){toast('Carga docentes antes de generar la DNF');return;}
+  if(type==='dnf'){
+    const invalidCareerRows=state.teachers.filter(t=>!validCareerName(t.carrera));
+    if(invalidCareerRows.length){toast('Corrige '+invalidCareerRows.length+' carrera(s) principal(es) inválida(s) antes de generar la DNF');return;}
+  }
   if(type==='plan' && !state.plan.some(p=>p.selected)){toast('Selecciona docentes en el Plan');return;}
   if(type==='informe' && !state.plan.some(p=>p.selected)){toast('No hay docentes planificados');return;}
 
