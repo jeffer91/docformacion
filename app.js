@@ -2203,7 +2203,7 @@ function dnfHtml(){
   add('1. Introducción',
     '<div class="sec-title">1. Introducción</div>'+
     '<p class="lead">La formación académica del personal docente constituye un componente estratégico para sostener la calidad de la educación superior, fortalecer la pertinencia de la oferta académica y responder a los procesos institucionales de mejora continua. En este contexto, la Detección de Necesidades de Formación (DNF) permite reconocer de manera sistemática las brechas existentes entre la formación actual del claustro, las aspiraciones académicas de los docentes y las necesidades de las carreras en las que desarrollan su actividad.</p>'+
-    '<p>El presente documento consolida la información disponible para el período <strong>'+esc(periodLabel())+'</strong>. La base analizada comprende <strong>'+total+' docentes</strong> pertenecientes a <strong>'+careerCount+' carreras</strong>. A partir de estos registros se estudian variables de nivel académico, dedicación, estudios en curso, disposición para continuar estudios, nivel que se desea alcanzar, tipo de formación, modalidad preferida y barreras de acceso.</p>'+
+    '<p>El presente documento consolida la información disponible para el período <strong>'+esc(periodLabel())+'</strong>. La base analizada comprende <strong>'+total+' docentes</strong> pertenecientes a <strong>'+careerCount+' carreras</strong>. Cuando estos datos agregados están disponibles, se utilizan como contexto para interpretar nivel académico, dedicación, estudios en curso, disposición, modalidad y barreras de acceso; su ausencia no impide registrar las necesidades institucionales por carrera.</p>'+
     '<p>La DNF no constituye un listado aislado de preferencias. Su función es transformar información individual en criterios institucionales de decisión. Por ello, los resultados se organizan en tres niveles: caracterización general del claustro, análisis de brechas y determinación de necesidades específicas por carrera.</p>'+
     '<div class="sub-title">1.1 Finalidad del documento</div>'+
     '<p>Establecer una línea base técnica y documentada que permita elaborar el Plan de Formación Docente, definir prioridades, seleccionar rutas formativas y posteriormente verificar su ejecución mediante el Informe de Cumplimiento.</p>'+
@@ -2261,7 +2261,7 @@ function dnfHtml(){
     '<p>El marco institucional utilizado como referencia implica que la formación docente debe planificarse, documentarse y evaluarse. Por ello, la DNF requiere responsabilidades diferenciadas entre la unidad responsable del proceso, las coordinaciones de carrera y los docentes.</p>'+
     '<table class="data"><tr><th>Actor</th><th>Responsabilidad dentro de la DNF</th><th>Resultado esperado</th></tr><tr><td>UGPA / unidad responsable</td><td>Consolidar la base, aplicar criterios, generar análisis y mantener trazabilidad.</td><td>Diagnóstico institucional verificable.</td></tr><tr><td>Coordinaciones de carrera</td><td>Validar la pertinencia disciplinar, responsables y prioridades específicas.</td><td>Necesidades por carrera técnicamente justificadas.</td></tr><tr><td>Docentes</td><td>Proporcionar información completa sobre trayectoria, proyección y condiciones de acceso.</td><td>Registros confiables para la toma de decisiones.</td></tr><tr><td>Autoridades</td><td>Revisar y aprobar los lineamientos y decisiones institucionales posteriores.</td><td>Plan de Formación alineado con prioridades y capacidades institucionales.</td></tr></table>'+
     '<div class="sub-title">2.8 Evidencia y trazabilidad documental</div>'+
-    '<p>El proceso debe conservar una secuencia verificable entre diagnóstico, planificación, seguimiento e informe. La app mantiene esta relación utilizando una misma base de docentes y evitando que cada documento se construya como un registro independiente.</p>'+
+    '<p>El proceso debe conservar una secuencia verificable entre diagnóstico, planificación, seguimiento e informe. La app mantiene esta relación utilizando una misma fuente institucional de información y evitando que cada documento se construya como un registro independiente.</p>'+
     '<div class="flow"><div class="flow-box">Registro de datos</div><div class="flow-arrow">→</div><div class="flow-box">DNF</div><div class="flow-arrow">→</div><div class="flow-box">Plan</div><div class="flow-arrow">→</div><div class="flow-box">Seguimiento</div><div class="flow-arrow">→</div><div class="flow-box">Informe</div></div>'
   );
 
@@ -2290,7 +2290,7 @@ function dnfHtml(){
   add('4. Metodología y enfoque',
     '<div class="sec-title">4. Metodología y enfoque</div>'+
     '<div class="sub-title">4.1 Enfoque</div><p>El diagnóstico utiliza un enfoque descriptivo y analítico. La fase descriptiva caracteriza la situación actual del claustro; la fase analítica contrasta variables y determina brechas, necesidades y prioridades para la toma de decisiones.</p>'+
-    '<div class="sub-title">4.2 Población y unidad de análisis</div><p>La población corresponde a los docentes registrados para el período. La unidad de análisis es cada docente, identificado por cédula y vinculado a una carrera principal. En la base actualmente consolidada se registran <strong>'+total+' docentes</strong>.</p>'+
+    '<div class="sub-title">4.2 Población y unidad de análisis</div><p>La DNF se estructura a nivel institucional y por carrera. Cuando existen datos del claustro disponibles en la aplicación, se utilizan únicamente de forma agregada para contextualizar los resultados; el documento no incorpora nombres, cédulas ni fichas individuales de docentes. En la base contextual actualmente disponible se registran <strong>'+total+' docentes</strong>.</p>'+
     '<div class="sub-title">4.3 Fuentes de información</div>'+
     '<ul class="body-list"><li>Registro manual desde la aplicación.</li><li>Importación mediante la plantilla Excel global.</li><li>Actualización desde Firebase en modo de solo lectura.</li><li>Información de coordinaciones para necesidades y prioridades específicas.</li></ul>'+
     '<div class="sub-title">4.4 Variables analizadas</div>'+
@@ -2315,7 +2315,7 @@ function dnfHtml(){
     '<p>Antes de interpretar resultados se evalúa la completitud de los registros. En la base actual se identifican <strong>'+missingTeacherFields+'</strong> campos obligatorios pendientes dentro de la estructura utilizada para el diagnóstico. El indicador aproximado de completitud alcanza <strong>'+fmtPct(dataCompleteness)+'</strong>.</p>'+
     '<div class="kpi-row"><div class="kpi"><strong>'+total+'</strong><span>Registros docentes</span></div><div class="kpi"><strong>'+missingTeacherFields+'</strong><span>Campos pendientes</span></div><div class="kpi"><strong>'+fmtPct(dataCompleteness)+'</strong><span>Completitud estimada</span></div><div class="kpi"><strong>'+careerCount+'</strong><span>Carreras con datos</span></div></div>'+
     '<div class="sub-title">4.9 Reglas de consistencia</div>'+
-    '<table class="data"><tr><th>Regla</th><th>Aplicación</th><th>Riesgo controlado</th></tr><tr><td>Identificación única</td><td>La cédula funciona como identificador principal del docente.</td><td>Duplicación de registros.</td></tr><tr><td>Carrera principal válida</td><td>Los programas de estudio no se incorporan como si fueran carreras institucionales.</td><td>Distorsión de resultados por carrera.</td></tr><tr><td>Separación formación/capacitación</td><td>Los registros de capacitación se excluyen de la DNF de formación académica.</td><td>Mezcla de procesos con objetivos diferentes.</td></tr><tr><td>Prioridad por necesidad</td><td>Cada necesidad conserva su propia prioridad.</td><td>Generalización excesiva a nivel de carrera.</td></tr></table>'
+    '<table class="data"><tr><th>Regla</th><th>Aplicación</th><th>Riesgo controlado</th></tr><tr><td>Consistencia de la fuente</td><td>Los datos agregados utilizados como contexto deben provenir de una fuente institucional identificable.</td><td>Duplicación o distorsión de resultados.</td></tr><tr><td>Carrera principal válida</td><td>Los programas de estudio no se incorporan como si fueran carreras institucionales.</td><td>Distorsión de resultados por carrera.</td></tr><tr><td>Separación formación/capacitación</td><td>Los registros de capacitación se excluyen de la DNF de formación académica.</td><td>Mezcla de procesos con objetivos diferentes.</td></tr><tr><td>Prioridad por necesidad</td><td>Cada necesidad conserva su propia prioridad.</td><td>Generalización excesiva a nivel de carrera.</td></tr></table>'
   );
 
   add(null,
@@ -2645,17 +2645,7 @@ function dnfHtml(){
     '<div class="chart-grid">'+barChart('Necesidades consolidadas',needRanking,needTotal,'Participación de cada necesidad dentro del conjunto registrado',12)+barChart('Prioridades consolidadas',priorities,Math.max(1,Object.values(priorities).reduce((a,b)=>a+b,0)),'Distribución de necesidades por prioridad',5)+'</div>'
   );
 
-  const teacherChunks=chunkArray(state.teachers,8);
-  teacherChunks.forEach((chunk,idx)=>{
-    add(null,
-      '<div class="sec-title">15. Anexos</div>'+
-      '<div class="sub-title">15.5 Base consolidada de docentes'+(teacherChunks.length>1?' - parte '+(idx+1)+' de '+teacherChunks.length:'')+'</div>'+
-      '<table class="data annex-table"><tr><th>Cédula</th><th>Docente</th><th>Carrera</th><th>Nivel actual</th><th>Estudia</th><th>Nivel deseado</th><th>Tipo</th><th>Modalidad</th><th>Barrera</th></tr>'+
-      chunk.map(t=>'<tr><td>'+esc(t.cedula)+'</td><td>'+esc(t.nombre)+'</td><td>'+esc(t.carrera)+'</td><td>'+esc(t.nivelActual)+'</td><td class="num">'+esc(t.estudiaActualmente)+'</td><td>'+esc(t.nivelDeseado)+'</td><td>'+esc(t.tipoFormacion)+'</td><td>'+esc(t.modalidadPreferida)+'</td><td>'+esc(t.barrera)+'</td></tr>').join('')+
-      '</table>'+
-      '<p class="small muted">La base consolidada se incluye como anexo de trazabilidad. Los campos vacíos corresponden a información pendiente en la aplicación.</p>'
-    );
-  });
+
 
   // Editorial cleanup: a major section title is printed only on its opening page.
   const seenSectionTitles=new Set();
