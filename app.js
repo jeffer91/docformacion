@@ -1189,6 +1189,10 @@ function renderPeriod() {
   const p=state.period;
   syncPeriodCodes(p);
   $('#content').innerHTML = `
+    <div class="section-title">
+      <div><h2>Datos generales del período</h2><p>Completa manualmente o usa la plantilla Excel de esta sección.</p></div>
+      ${excelActions('periodo')}
+    </div>
     <div class="card">
       <div class="notice">Los códigos documentales se generan automáticamente con la fecha de elaboración. No necesitas escribirlos manualmente.</div>
       <div class="form-grid" style="margin-top:18px">
@@ -1221,7 +1225,8 @@ function renderPeriod() {
       const input=$('#content').querySelector('[name="'+name+'"]');
       if(input) input.value=value;
     });
-    refreshPeriodMissingStyles();
+    bindExcelActions('periodo',$('#content'));
+  refreshPeriodMissingStyles();
   };
 
   refreshPeriodMissingStyles();
@@ -1252,7 +1257,7 @@ function renderCareers() {
     <div class="alert-strip success"><div><strong>Catálogo precargado</strong>Estas son las carreras que aparecerán inmediatamente en la app. Puedes editar el tipo de programa o agregar nuevas carreras.</div></div>
     <div class="section-title">
       <div><h2>Carreras y programas</h2><p>${(state.careers||[]).length} carreras configuradas.</p></div>
-      <button class="primary" id="addCareer">+ Agregar carrera</button>
+      <div class="toolbar">${excelActions('carreras')}<button class="primary" id="addCareer">+ Agregar carrera</button></div>
     </div>
     <div class="card" id="careerCatalog">
       ${(state.careers||[]).map((cr,i)=>`<div class="catalog-row" data-career-row="${i}">
@@ -1263,6 +1268,7 @@ function renderCareers() {
     </div>
     <div class="dialog-actions"><button class="primary" id="saveCareers">Guardar carreras</button></div>`;
 
+  bindExcelActions('carreras',$('#content'));
   refreshCareerMissingStyles();
   $('[data-career-name],[data-career-program]').forEach(el=>{
     el.addEventListener('input',refreshCareerMissingStyles);
@@ -1310,13 +1316,13 @@ function renderTeachers() {
   $('#content').innerHTML = `
     <div class="section-title">
       <div><h2>Base global de docentes</h2><p>${state.teachers.length} registros. Solo se usa carrera principal y función Docencia.</p></div>
-      <div class="toolbar"><button class="secondary" id="importHere">Importar Excel</button><button class="primary" id="addTeacher">+ Nuevo docente</button></div>
+      <div class="toolbar">${excelActions('docentes')}<button class="primary" id="addTeacher">+ Nuevo docente</button></div>
     </div>
     <div class="table-wrap">
       ${state.teachers.length?teacherTable():'<div class="empty">Todavía no hay docentes. Puedes agregarlos por formulario o importar el Excel global.</div>'}
     </div>`;
   $('#addTeacher').onclick=()=>openTeacher();
-  $('#importHere').onclick=importExcel;
+  bindExcelActions('docentes',$('#content'));
   $$('.edit-teacher').forEach(b=>b.onclick=()=>openTeacher(b.dataset.id));
   $$('.delete-teacher').forEach(b=>b.onclick=async()=>{
     const t=teacherById(b.dataset.id);
@@ -1497,6 +1503,10 @@ function renderDNF() {
   const genericCount=(state.settings.genericLines||[]).filter(norm).length;
   $('#content').innerHTML = `
     ${completionAlert('dnf')}
+    <div class="section-title">
+      <div><h2>Carga Excel de la DNF</h2><p>Descarga las hojas de coordinaciones, necesidades y líneas genéricas, complétalas y vuelve a importarlas.</p></div>
+      ${excelActions('dnf')}
+    </div>
     <div class="grid cards">
       ${metric('Carreras configuradas',careers.length)}
       ${metric('Necesidades específicas',allNeeds.length)}
@@ -1535,6 +1545,7 @@ function renderDNF() {
       ${state.settings.genericLines.map((g,i)=>`<div class="generic-line"><input data-generic="${i}" value="${esc(g)}"><button class="danger delete-generic" data-i="${i}">Eliminar</button></div>`).join('')}
     </div>`;
 
+  bindExcelActions('dnf',$('#content'));
   refreshDNFMissingStyles();
   $('.coord-input,.need-item-input,.need-priority-input').forEach(el=>{
     el.addEventListener('input',refreshDNFMissingStyles);
@@ -1619,6 +1630,10 @@ function renderPlan() {
   const candidates=state.teachers.filter(t=>t.dispuesto==='Sí' || t.estudiaActualmente==='Sí');
   $('#content').innerHTML = `
     ${completionAlert('plan')}
+    <div class="section-title">
+      <div><h2>Carga Excel del Plan</h2><p>La plantilla usa las cédulas de la base interna para completar la planificación masivamente.</p></div>
+      ${excelActions('plan')}
+    </div>
     <div class="notice">Los candidatos y datos vienen de la DNF. Selecciona quién entra al Plan y cambia únicamente lo que sea necesario.</div>
     <div class="section-title"><div><h2>Meta institucional</h2><p>Valor precargado y editable desde Período.</p></div><span class="pill">${esc(state.period.targetPercent)}%</span></div>
     <div class="table-wrap">${candidates.length?`<table class="table"><thead><tr><th>Incluir</th><th>Docente</th><th>Nivel</th><th>Programa</th><th>Institución</th><th>Modalidad</th><th>Inicio</th><th>Fin</th><th>Apoyo</th><th>Monto</th></tr></thead><tbody>
@@ -1635,6 +1650,7 @@ function renderPlan() {
       <td><input type="number" data-p="supportAmount" value="${esc(p.supportAmount)}" min="0" step="0.01"></td>
     </tr>`}).join('')}</tbody></table>`:'<div class="empty">No hay docentes dispuestos o en formación actualmente.</div>'}</div>
     <div class="dialog-actions"><button class="primary" id="savePlan">Guardar Plan</button></div>`;
+  bindExcelActions('plan',$('#content'));
   refreshPlanMissingStyles();
   $('[data-p]').forEach(el=>{
     el.addEventListener('input',refreshPlanMissingStyles);
@@ -1667,6 +1683,10 @@ function renderFollowup() {
   const rows=state.plan.filter(p=>p.selected);
   $('#content').innerHTML = `
     ${completionAlert('informe')}
+    <div class="section-title">
+      <div><h2>Carga Excel de seguimiento</h2><p>Descarga la plantilla con los docentes seleccionados en el Plan y completa estado, avance y evidencia.</p></div>
+      ${excelActions('seguimiento')}
+    </div>
     <div class="notice">Seguimiento mínimo: estado + porcentaje de avance. El porcentaje restante se calcula automáticamente. Solo se registra abandono cuando ocurra.</div>
     <div class="table-wrap" style="margin-top:16px">${rows.length?`<table class="table"><thead><tr><th>Docente</th><th>Estado</th><th>Inicio real</th><th>Fin previsto</th><th>Avance</th><th>Restante</th><th>Título evidencia</th><th>Evidencia</th><th>Abandono</th></tr></thead><tbody>
     ${rows.map(p=>{const t=teacherById(p.teacherId),f=followByTeacher(p.teacherId);return`<tr data-follow-row="${t.id}">
@@ -1681,6 +1701,7 @@ function renderFollowup() {
       <td><input type="checkbox" data-f="abandoned" ${f.abandoned?'checked':''}></td>
     </tr>`}).join('')}</tbody></table>`:'<div class="empty">Selecciona docentes en el Plan para habilitar su seguimiento.</div>'}</div>
     <div class="dialog-actions"><button class="primary" id="saveFollow">Guardar seguimiento</button></div>`;
+  bindExcelActions('seguimiento',$('#content'));
   refreshFollowupMissingStyles();
   $('[data-f]').forEach(el=>{
     el.addEventListener('input',refreshFollowupMissingStyles);
@@ -1938,6 +1959,12 @@ function applyExcel(sheets){
       coord.needsOverride='';
       coord.priorityOverride='';
     });
+  }
+
+  if(sheets.LINEAS_GENERICAS?.length){
+    state.settings.genericLines=sheets.LINEAS_GENERICAS
+      .map(r=>norm(r.LINEA_GENERICA))
+      .filter(Boolean);
   }
 
   ensurePlanRows();
@@ -2704,8 +2731,8 @@ async function generateDocument(type){
 }
 
 $$('.nav-item').forEach(b=>b.onclick=()=>setView(b.dataset.view));
-$('#btnTemplate').onclick=exportTemplate;
-$('#btnImport').onclick=importExcel;
+$('#btnTemplate').onclick=()=>exportTemplate('global',false);
+$('#btnImport').onclick=()=>importExcel('global');
 $('#btnFirebase').onclick=updateFromFirebase;
 $('#closeFirebase').onclick=$('#closeFirebaseBottom').onclick=()=>$('#firebaseDialog').close();
 
