@@ -103,3 +103,15 @@ button.is-missing-control{color:#b42318!important;border-color:#dc2626!important
 .excel-toolbar .secondary,.excel-toolbar .primary{white-space:nowrap}
 .section-title>.excel-toolbar{justify-content:flex-end}
 @media (max-width:900px){.section-title{align-items:flex-start;flex-direction:column}.excel-toolbar{width:100%}.excel-toolbar button{flex:1}}
+
+
+/* Pending issue templates */
+.issue-group-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.issue-group .issue-template-btn{padding:7px 10px;font-size:11px}
+.issue-line-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+@media(max-width:760px){
+  .issue-group summary{align-items:flex-start}
+  .issue-group-actions{align-items:flex-end;flex-direction:column;gap:5px}
+  .issue-line{grid-template-columns:1fr}
+  .issue-line-actions{justify-content:flex-start}
+}
