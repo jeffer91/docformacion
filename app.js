@@ -1722,18 +1722,133 @@ function renderDocumentView(type){
   if($('#generateCurrent')) $('#generateCurrent').onclick=()=>generateDocument(type);
 }
 
-async function exportTemplate(){
-  const r=await window.docformacion.exportExcelTemplate();
-  if(r?.ok) toast('Plantilla Excel creada');
+
+function excelSheetSpec(name,headers,descriptions,rows,widths){
+  return {name,headers,descriptions,rows:rows||[],widths:widths||[]};
+}
+
+function excelTemplatePayload(scope,includeData){
+  scope=scope||'global';
+  includeData=!!includeData;
+  const p=state.period;
+  const blank=(headers)=>headers.map(()=>'');
+  const periodHeaders=['PERIODO_INICIO','PERIODO_FIN','FECHA_ELABORACION','VERSION','ELABORADO_POR','CARGO_ELABORADO','REVISADO_POR','CARGO_REVISADO','APROBADO_POR','CARGO_APROBADO','META_FORMACION_PORCENTAJE'];
+  const periodDesc=['Fecha inicio del período (AAAA-MM-DD).','Fecha fin del período (AAAA-MM-DD).','Fecha de elaboración (AAAA-MM-DD).','Versión, por ejemplo 1.0.','Nombre de quien elabora.','Cargo de quien elabora.','Nombre de quien revisa.','Cargo de quien revisa.','Nombre de quien aprueba.','Cargo de quien aprueba.','Meta institucional en porcentaje, solo número.'];
+  const periodRows=includeData?[[p.start,p.end,p.elaborationDate,p.version,p.preparedBy,p.preparedRole,p.reviewedBy,p.reviewedRole,p.approvedBy,p.approvedRole,p.targetPercent]]:[blank(periodHeaders)];
+
+  const careerHeaders=['CARRERA','PROGRAMA'];
+  const careerDesc=['Nombre oficial de la carrera institucional.','Técnico Superior, Tecnología Superior, Tecnología Universitaria u Otro.'];
+  const careerRows=(state.careers||[]).map(cr=>[cr.name,cr.program]);
+  if(!careerRows.length) careerRows.push(blank(careerHeaders));
+
+  const coordHeaders=['CARRERA','COORDINADOR'];
+  const coordDesc=['Carrera oficial. Debe coincidir con CARRERAS.','Nombre completo del coordinador responsable.'];
+  const coordRows=dnfCareerNames().map(name=>[name,includeData?(ensureCoordination(name)?.coordinador||''):'']);
+  if(!coordRows.length) coordRows.push(blank(coordHeaders));
+
+  const needHeaders=['CARRERA','NECESIDAD','PRIORIDAD_MANUAL'];
+  const needDesc=['Carrera a la que corresponde la necesidad.','Necesidad de formación concreta. Máximo 3 por carrera.','Prioridad obligatoria: Alta, Media o Baja.'];
+  let needRows=[];
+  if(includeData){
+    needRows=dnfCareerNames().flatMap(name=>ensureNeedItems(name).map(item=>[name,item.text,item.priorityOverride]));
+  }else{
+    needRows=dnfCareerNames().map(name=>[name,'','']);
+  }
+  if(!needRows.length) needRows.push(blank(needHeaders));
+
+  const genericHeaders=['LINEA_GENERICA'];
+  const genericDesc=['Línea transversal institucional. Una línea por fila.'];
+  const genericRows=includeData?(state.settings.genericLines||[]).filter(norm).map(x=>[x]):[['']];
+
+  const teacherHeaders=['CEDULA','NOMBRE_COMPLETO','CARRERA_PRINCIPAL','DEDICACION','NIVEL_ACADEMICO_ACTUAL','TITULO_ACADEMICO_ACTUAL','AFIN_TITULO_CARRERA','ESTUDIA_ACTUALMENTE','NIVEL_FORMACION_EN_CURSO','PROGRAMA_EN_CURSO','INSTITUCION_ESTUDIO','NIVEL_QUE_DESEA_ALCANZAR','AREA_O_PROGRAMA_INTERES','DISPUESTO_A_ESTUDIAR','TIPO_FORMACION','MODALIDAD_PREFERIDA','INICIO_TENTATIVO_MES_ANIO','BARRERA_PRINCIPAL','ACTUALIZACION_RECIENTE'];
+  const teacherDesc=['Cédula sin espacios ni guiones.','Nombres y apellidos completos.','Carrera principal donde labora.','Tiempo Completo, Medio Tiempo o Tiempo Parcial.','Nivel académico actual.','Título académico actual.','Sí o No.','Sí o No.','Solo si estudia actualmente.','Programa que cursa actualmente.','Institución donde cursa estudios.','Nivel que desea alcanzar.','Área o programa de interés.','Sí o No.','Específica o Genérica.','Presencial, Virtual o Híbrida.','Mes/año, por ejemplo 2026-10.','Ninguna, Económica, Tiempo, Carga laboral, Falta de oferta, Personal u Otra.','Sí o No.'];
+  const teacherRows=includeData?state.teachers.map(t=>[t.cedula,t.nombre,t.carrera,t.dedicacion,t.nivelActual,t.tituloActual,t.afinidad,t.estudiaActualmente,t.nivelCurso,t.programaCurso,t.institucionCurso,t.nivelDeseado,t.areaInteres,t.dispuesto,t.tipoFormacion,t.modalidadPreferida,t.inicioTentativo,t.barrera,t.actualizacionReciente]):[blank(teacherHeaders)];
+
+  ensurePlanRows();
+  const planHeaders=['CEDULA','INCLUIR_EN_PLAN','NIVEL_PLANIFICADO','PROGRAMA_PLANIFICADO','INSTITUCION','MODALIDAD','FECHA_INICIO_PLANIFICADA','FECHA_FIN_PLANIFICADA','TIPO_APOYO','MONTO_APOYO','CONVENIO','EFECTO_MULTIPLICADOR_PREVISTO'];
+  const planDesc=['Cédula de un docente existente en DOCENTES.','Sí o No.','Nivel proyectado.','Programa proyectado.','Institución prevista.','Presencial, Virtual o Híbrida.','Fecha inicio AAAA-MM-DD.','Fecha fin AAAA-MM-DD.','Sin apoyo, Económico, Tiempo o Ambos.','Monto numérico si aplica.','Convenio, si aplica.','Resultado o transferencia institucional prevista.'];
+  let planRows;
+  if(includeData){
+    planRows=state.plan.map(pr=>{const t=teacherById(pr.teacherId);return [t?.cedula||'',pr.selected?'Sí':'No',pr.level,pr.program,pr.institution,pr.modality,pr.plannedStart,pr.plannedEnd,pr.supportType,pr.supportAmount,pr.convenio,pr.multiplier];});
+  }else{
+    planRows=state.teachers.length?state.teachers.map(t=>[t.cedula,'','','','','','','','','','','']):[blank(planHeaders)];
+  }
+
+  ensureFollowRows();
+  const followHeaders=['CEDULA','ESTADO','FECHA_REAL_INICIO','FECHA_PREVISTA_FINALIZACION','PORCENTAJE_AVANCE','TITULO_EVIDENCIA','RUTA_EVIDENCIA','ABANDONO'];
+  const followDesc=['Cédula del docente incluido en el Plan.','No iniciado, En proceso, Finalizado o Suspendido.','Fecha real de inicio AAAA-MM-DD.','Fecha prevista de finalización AAAA-MM-DD.','Porcentaje de 0 a 100.','Nombre descriptivo de la evidencia.','Nombre o ruta del archivo.','Sí o No.'];
+  const selected=state.plan.filter(pr=>pr.selected);
+  let followRows;
+  if(includeData){
+    followRows=selected.map(pr=>{const t=teacherById(pr.teacherId),f=followByTeacher(pr.teacherId)||{};return [t?.cedula||'',f.status||'',f.realStart||'',f.plannedEnd||pr.plannedEnd||'',f.progress||0,f.evidenceTitle||'',f.evidencePath||'',f.abandoned?'Sí':'No'];});
+  }else{
+    followRows=selected.length?selected.map(pr=>{const t=teacherById(pr.teacherId);return [t?.cedula||'','','',pr.plannedEnd||'','','','',''];}):[blank(followHeaders)];
+  }
+
+  const specs={
+    periodo:excelSheetSpec('PERIODO',periodHeaders,periodDesc,periodRows,[16,16,18,10,24,24,24,28,24,22,24]),
+    carreras:excelSheetSpec('CARRERAS',careerHeaders,careerDesc,careerRows,[42,28]),
+    docentes:excelSheetSpec('DOCENTES',teacherHeaders,teacherDesc,teacherRows,[16,30,42,18,26,34,20,22,28,34,30,30,36,24,20,22,24,24,24]),
+    coordinaciones:excelSheetSpec('COORDINACIONES',coordHeaders,coordDesc,coordRows,[42,32]),
+    necesidades:excelSheetSpec('NECESIDADES',needHeaders,needDesc,needRows,[42,54,22]),
+    genericas:excelSheetSpec('LINEAS_GENERICAS',genericHeaders,genericDesc,genericRows,[60]),
+    plan:excelSheetSpec('PLAN',planHeaders,planDesc,planRows,[16,20,28,40,34,20,24,24,22,18,30,42]),
+    seguimiento:excelSheetSpec('SEGUIMIENTO',followHeaders,followDesc,followRows,[16,20,24,30,24,34,42,16])
+  };
+
+  const ayuda=excelSheetSpec('INSTRUCCIONES',['PASO','INDICACION'],['Número de paso.','Indicaciones generales.'],[
+    ['1','No cambies nombres de hojas ni encabezados de la fila 1.'],
+    ['2','La fila 2 contiene explicaciones y la app la ignora automáticamente.'],
+    ['3','Completa o agrega datos desde la fila 3.'],
+    ['4','Para DNF usa COORDINACIONES, NECESIDADES y LINEAS_GENERICAS; no se requieren nombres de docentes.'],
+    ['5','Importa el archivo desde la misma sección o con Importar Excel global.']
+  ],[12,90]);
+
+  const map={
+    periodo:[specs.periodo],
+    carreras:[specs.carreras],
+    docentes:[specs.docentes],
+    dnf:[specs.coordinaciones,specs.necesidades,specs.genericas],
+    plan:[specs.plan],
+    seguimiento:[specs.seguimiento],
+    global:[ayuda,specs.periodo,specs.carreras,specs.coordinaciones,specs.necesidades,specs.genericas,specs.docentes,specs.plan,specs.seguimiento]
+  };
+  const filenames={periodo:'Plantilla_Periodo.xlsx',carreras:'Plantilla_Carreras.xlsx',docentes:'Plantilla_Docentes.xlsx',dnf:'Plantilla_DNF.xlsx',plan:'Plantilla_Plan_Formacion.xlsx',seguimiento:'Plantilla_Seguimiento.xlsx',global:'FORMACION_DOCENTE_GLOBAL.xlsx'};
+  return {filename:(includeData?'Datos_Actuales_':'')+filenames[scope],sheets:map[scope]||map.global};
+}
+
+function excelActions(scope){
+  return '<div class="toolbar excel-toolbar">'+
+    '<button class="secondary" data-excel-template="'+scope+'">Descargar plantilla</button>'+
+    '<button class="secondary" data-excel-current="'+scope+'">Exportar datos actuales</button>'+
+    '<button class="primary" data-excel-import="'+scope+'">Importar Excel</button>'+
+  '</div>';
+}
+
+function bindExcelActions(scope,root){
+  root=root||document;
+  root.querySelectorAll('[data-excel-template="'+scope+'"]').forEach(btn=>btn.onclick=()=>exportTemplate(scope,false));
+  root.querySelectorAll('[data-excel-current="'+scope+'"]').forEach(btn=>btn.onclick=()=>exportTemplate(scope,true));
+  root.querySelectorAll('[data-excel-import="'+scope+'"]').forEach(btn=>btn.onclick=()=>importExcel(scope));
+}
+
+async function exportTemplate(scope,includeData){
+  scope=scope||'global';
+  const r=await window.docformacion.exportExcelTemplate(excelTemplatePayload(scope,!!includeData));
+  if(r?.ok) toast(includeData?'Datos actuales exportados':'Plantilla Excel creada');
   else if(r?.error) toast('Error: '+r.error);
 }
-async function importExcel(){
+async function importExcel(scope){
+  scope=scope||'global';
   const r=await window.docformacion.importExcel();
   if(!r) return;
   if(!r.ok){toast('Error al importar: '+r.error);return;}
   applyExcel(r.sheets||{});
-  await save(); render(); toast('Excel global importado');
+  await save();
+  render();
+  toast(scope==='global'?'Excel global importado':'Excel importado correctamente');
 }
+
 function applyExcel(sheets){
   if(sheets.CARRERAS?.length){
     sheets.CARRERAS.forEach(r=>{
