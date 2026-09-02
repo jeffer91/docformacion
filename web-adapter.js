@@ -299,15 +299,16 @@
       let rowsInPart = 0;
       let first = true;
 
-      const beginPart = () => {
-        if (!currentBody || currentBody.children.length) startPage();
+      const beginPart = (forceNewPage=false) => {
+        if (!currentBody) startPage();
+        else if (forceNewPage) startPage();
         partInfo = makeTablePart(block, table, first, !first);
         currentBody.appendChild(partInfo.part);
         rowsInPart = 0;
         first = false;
       };
 
-      beginPart();
+      beginPart(false);
 
       dataRows.forEach(row => {
         const clone = row.cloneNode(true);
@@ -319,13 +320,26 @@
         rowsInPart--;
 
         if (rowsInPart === 0) {
+          const hasContentBeforeTable = currentBody.firstElementChild && currentBody.firstElementChild !== partInfo.part;
+          if (hasContentBeforeTable) {
+            currentBody.removeChild(partInfo.part);
+            beginPart(true);
+            const retry = row.cloneNode(true);
+            partInfo.tbody.appendChild(retry);
+            rowsInPart = 1;
+            if (bodyOverflows(currentBody)) {
+              retry.style.fontSize = '8.5pt';
+              retry.style.lineHeight = '1.2';
+            }
+            return;
+          }
           partInfo.tbody.appendChild(clone);
           clone.style.fontSize = '8.5pt';
           clone.style.lineHeight = '1.2';
           return;
         }
 
-        beginPart();
+        beginPart(true);
         partInfo.tbody.appendChild(clone);
         rowsInPart = 1;
       });
@@ -364,18 +378,7 @@
     const appendBlock = block => {
       if (!currentBody) startPage();
 
-      const remainingSpace = () => Math.max(0, currentBody.clientHeight - currentBody.scrollHeight);
-
-      // Un título principal o un subtítulo no debe quedar aislado al final de la hoja.
-      if (block.classList?.contains('sec-title') && currentBody.children.length && currentBody.scrollHeight > currentBody.clientHeight * 0.58) {
-        startPage();
-      }
-      if (block.classList?.contains('sub-title') && currentBody.children.length && remainingSpace() < 190) {
-        startPage();
-      }
-
-      // El encabezado de una carrera (título + KPIs + programa/coordinador + tabla)
-      // se trata como una unidad editorial. Si no cabe, comienza en una hoja nueva.
+      // El bloque completo de una carrera se mantiene unido cuando cabe en una hoja.
       if (block.classList?.contains('career-profile-block') && currentBody.children.length) {
         currentBody.appendChild(block);
         if (bodyOverflows(currentBody)) {
@@ -406,7 +409,31 @@
       }
     };
 
-    sourceNodes.forEach(appendBlock);
+    const isHeadingBlock = block =>
+      block?.classList?.contains('sec-title') ||
+      block?.classList?.contains('sub-title') ||
+      block?.classList?.contains('mini-title');
+
+    const headingFitsWithNext = (heading, next) => {
+      if (!currentBody || !currentBody.children.length || !next) return true;
+      const headingProbe = heading.cloneNode(true);
+      const nextProbe = next.cloneNode(true);
+      currentBody.appendChild(headingProbe);
+      currentBody.appendChild(nextProbe);
+      const fits = !bodyOverflows(currentBody);
+      nextProbe.remove();
+      headingProbe.remove();
+      return fits;
+    };
+
+    for (let i = 0; i < sourceNodes.length; i++) {
+      const block = sourceNodes[i];
+      const next = sourceNodes[i + 1];
+      if (isHeadingBlock(block) && currentBody?.children.length && !headingFitsWithNext(block, next)) {
+        startPage();
+      }
+      appendBlock(block);
+    }
 
     const pages = [...root.querySelectorAll(':scope > .pdf-page')];
     const total = pages.length;
@@ -516,6 +543,83 @@
     return pages;
   }
 
+  function pdfTextCandidates(page) {
+    const selector = [
+      '.institution-header td',
+      '.cover-title h1',
+      '.cover-title .period',
+      '.signature-table td',
+      '.sec-title',
+      '.sub-title',
+      '.mini-title',
+      '.page-topic',
+      'p',
+      'li',
+      'table.data th',
+      'table.data td',
+      '.apa-table-number',
+      '.apa-table-title',
+      '.apa-table-note',
+      '.chart-title',
+      '.chart-subtitle',
+      '.chart-label',
+      '.chart-value',
+      '.figure-note',
+      '.footer-note'
+    ].join(',');
+    return [...page.querySelectorAll(selector)].filter(el => {
+      const text = (el.textContent || '').trim().replace(/\s+/g, ' ');
+      if (!text) return false;
+      // Avoid duplicating nested candidates such as a paragraph inside a table cell.
+      return !el.parentElement?.closest(selector) || el.parentElement.closest(selector) === el;
+    });
+  }
+
+  function addSearchableTextLayer(pdf, page) {
+    const pageRect = page.getBoundingClientRect();
+    if (!pageRect.width || !pageRect.height) return;
+
+    const mmX = 210 / pageRect.width;
+    const mmY = 297 / pageRect.height;
+    const candidates = pdfTextCandidates(page);
+
+    candidates.forEach(el => {
+      const text = (el.textContent || '').trim().replace(/\s+/g, ' ');
+      if (!text) return;
+
+      const rect = el.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      const style = page.ownerDocument.defaultView.getComputedStyle(el);
+      const fontPx = parseFloat(style.fontSize) || 11;
+      const fontPt = Math.max(5.5, Math.min(18, fontPx * 0.75));
+      const x = Math.max(0, (rect.left - pageRect.left) * mmX);
+      const y = Math.max(0, (rect.top - pageRect.top) * mmY);
+      const width = Math.max(5, rect.width * mmX);
+
+      pdf.setFontSize(fontPt);
+      const lines = pdf.splitTextToSize(text, width);
+      try {
+        pdf.text(lines, x, y, {
+          baseline: 'top',
+          renderingMode: 'invisible',
+          maxWidth: width
+        });
+      } catch (_error) {
+        // Older jsPDF builds may ignore renderingMode. A zero-opacity graphics
+        // state keeps the text searchable without altering the visual page.
+        try {
+          const GState = pdf.GState || window.jspdf?.GState;
+          if (GState && pdf.setGState) {
+            pdf.setGState(new GState({ opacity: 0 }));
+            pdf.text(lines, x, y, { baseline: 'top', maxWidth: width });
+            pdf.setGState(new GState({ opacity: 1 }));
+          }
+        } catch (_ignored) {}
+      }
+    });
+  }
+
   async function generateExactPages(payload, frame) {
     if (typeof window.html2canvas !== 'function' || !window.jspdf?.jsPDF) {
       return { ok: false, error: 'No se cargaron las librerías necesarias para crear el PDF.' };
@@ -574,6 +678,10 @@
           'dnf-page-' + i,
           'FAST'
         );
+
+        // Mantiene el diseño visual capturado, pero incorpora texto PDF real
+        // invisible para búsqueda, selección y extracción.
+        addSearchableTextLayer(pdf, pages[i]);
 
         emitPdfProgress(i + 1, pages.length, 'render');
       } catch (error) {
