@@ -70,3 +70,29 @@ button:disabled{opacity:.45;cursor:not-allowed}
 button.is-missing-control{color:#b42318!important;border-color:#dc2626!important;background:#fff5f5!important}
 .missing-note{display:block;margin-top:2px;font-size:11px;font-weight:700;color:#b42318}
 .field.is-missing.needs-attention{background:#fff1f1!important;outline:2px solid #dc2626!important}
+
+
+/* DNF: observaciones no bloqueantes */
+.warning-card{
+  margin:14px 0 0;
+  padding:14px 16px;
+  border:1px solid #ead7a3;
+  border-left:4px solid #b88a2d;
+  border-radius:12px;
+  background:#fffaf0;
+}
+.warning-title{
+  font-weight:700;
+  color:#6f531c;
+  margin-bottom:4px;
+}
+.warning-text{
+  color:#776846;
+  font-size:13px;
+  line-height:1.45;
+  margin-bottom:10px;
+}
+.warning-card .issue-group{
+  background:#fff;
+  border-color:#eadfbe;
+}
