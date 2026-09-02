@@ -22,7 +22,7 @@ const DEFAULT_CAREERS = [
   { name: 'Contabilidad y Tributación', program: 'Tecnología Universitaria' },
   { name: 'Gestión del Talento Humano', program: 'Tecnología Superior' },
   { name: 'Seguridad y Prevención de Riesgos Laborales', program: 'Tecnología Superior' },
-  { name: 'Seguridad Ciudadana y Orden Publico', program: 'Tecnología Superior' }
+  { name: 'Seguridad Ciudadana y Orden Público', program: 'Tecnología Superior' }
 ];
 
 const GENERIC_LINES = [
@@ -121,6 +121,12 @@ function yes(v) { return ['SI','SÍ','YES','TRUE','1','X'].includes(String(v).tr
 function norm(v='') { return String(v).trim(); }
 function pct(part,total) { return total ? (part*100/total) : 0; }
 function fmtPct(v) { return Number(v || 0).toLocaleString('es-EC',{maximumFractionDigits:1}) + '%'; }
+function pluralEs(count,singular,plural){
+  return Number(count)===1?singular:plural;
+}
+function countPhrase(count,singular,plural){
+  return Number(count)+' '+pluralEs(count,singular,plural);
+}
 function todayLabel() { return new Date().toLocaleDateString('es-EC',{year:'numeric',month:'long',day:'numeric'}); }
 
 async function save() {
@@ -246,6 +252,14 @@ function programForCareer(name){ return (state.careers||[]).find(c=>c.name===nam
 function careerKey(name){
   return norm(name).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
 }
+function canonicalCareerDisplayName(name){
+  const clean=norm(name);
+  const key=careerKey(clean);
+  const aliases={
+    'seguridad ciudadana y orden publico':'Seguridad Ciudadana y Orden Público'
+  };
+  return aliases[key]||clean;
+}
 function coordinationFor(name){
   const key=careerKey(name);
   return state.coordinations.find(c=>careerKey(c.carrera)===key);
@@ -265,7 +279,9 @@ function dedupeCareerState(){
   const canonical=new Map();
   const uniqueCareers=[];
   (state.careers||[]).forEach(cr=>{
-    const name=norm(cr.name);
+    const originalName=norm(cr.name);
+    const name=canonicalCareerDisplayName(originalName);
+    if(name!==originalName) changed=true;
     if(!name) return;
     const key=careerKey(name);
     if(!canonical.has(key)){
@@ -287,7 +303,7 @@ function dedupeCareerState(){
     if(!name) return;
     const key=careerKey(name);
     if(!coordMap.has(key)){
-      const item={carrera:canonical.get(key)?.name||name,coordinador:'',priorityOverride:'',needsOverride:'',needItems:[],...raw};
+      const item={coordinador:'',priorityOverride:'',needsOverride:'',needItems:[],...raw,carrera:canonical.get(key)?.name||canonicalCareerDisplayName(name)};
       if(!Array.isArray(item.needItems)) item.needItems=[];
       coordMap.set(key,item);
       uniqueCoords.push(item);
@@ -335,13 +351,13 @@ function dnfCareerNames(){
     const key=careerKey(name);
     if(seen.has(key)) return;
     seen.add(key);
-    out.push((state.careers||[]).find(cr=>careerKey(cr.name)===key)?.name||name);
+    out.push(canonicalCareerDisplayName((state.careers||[]).find(cr=>careerKey(cr.name)===key)?.name||name));
   });
   return out;
 }
 
 function ensureCareer(name, program=''){
-  const clean=norm(name);
+  const clean=canonicalCareerDisplayName(name);
   if(!clean || !validCareerName(clean)) return;
   const key=careerKey(clean);
   let existing=state.careers.find(c=>careerKey(c.name)===key);
@@ -899,7 +915,7 @@ function documentStatus(type){
       issues.push({
         kind:'need-priority',
         count:needsWithoutPriority.length,
-        text:needsWithoutPriority.length+' necesidad(es) sin prioridad definida',
+        text:countPhrase(needsWithoutPriority.length,'necesidad','necesidades')+' sin prioridad definida',
         view:'necesidades'
       });
     }
@@ -3027,6 +3043,8 @@ function chunkArray(items,size){
 
 function tableSpecificContext(title,headers){
   const t=norm(title).toLowerCase();
+  if(t==='relación entre la dnf y la planificación institucional') return 'La tabla presenta la relación entre la DNF y la planificación institucional.';
+  if(t==='variables utilizadas en la dnf') return 'La tabla presenta las variables utilizadas en la DNF.';
   if(t.includes('prioridad')) return 'La tabla organiza las prioridades registradas para comparar su distribución y orientar el orden de intervención.';
   if(t.includes('frecuencia')||t.includes('recurrencia')) return 'La tabla permite verificar cuántas carreras comparten una misma necesidad y distinguir recurrencias reales de necesidades exclusivas.';
   if(t.includes('carreras, programas')||t.includes('responsables')) return 'La tabla consolida la estructura académica responsable del diagnóstico y permite comprobar la cobertura por carrera.';
@@ -3078,7 +3096,7 @@ function tableSpecificAnalysis(table,title){
       const p=cells[cells.length-1];
       if(priorities[p]!==undefined) priorities[p]++;
     });
-    return 'La carrera registra '+rows.length+' necesidad(es): '+priorities.Alta+' de prioridad Alta, '+priorities.Media+' Media y '+priorities.Baja+' Baja.';
+    return 'La carrera registra '+countPhrase(rows.length,'necesidad','necesidades')+': '+priorities.Alta+' de prioridad Alta, '+priorities.Media+' Media y '+priorities.Baja+' Baja.';
   }
   if(t.includes('responsables')) return 'La matriz permite comprobar que cada carrera cuente con programa y coordinación responsable antes del cierre del diagnóstico.';
   if(t.includes('referentes')) return 'Los referentes incluidos delimitan la relación entre diagnóstico, planificación, formación y seguimiento institucional.';
@@ -3337,7 +3355,7 @@ function dnfHtml(){
         p.needs.map((item,i)=>'<tr><td class="num">'+(i+1)+'</td><td>'+esc(item.text)+'</td><td class="num">'+esc(item.priorityOverride||'Sin definir')+'</td></tr>').join('')+
       '</table>'+
       '<div class="sub-title">Interpretación</div>'+
-      '<p>La carrera registra '+p.needs.length+' necesidad(es) específica(s). La prioridad institucional más alta presente en este bloque es <strong>'+esc(priorityText)+'</strong>. Estas necesidades deben trasladarse al Plan respetando su pertinencia y el orden de intervención definido para el período.</p>'+
+      '<p>La carrera registra '+countPhrase(p.needs.length,'necesidad específica','necesidades específicas')+'. La prioridad institucional más alta presente en este bloque es <strong>'+esc(priorityText)+'</strong>. '+(p.needs.length===1?'Esta necesidad debe trasladarse':'Estas necesidades deben trasladarse')+' al Plan respetando su pertinencia y el orden de intervención definido para el período.</p>'+
       '</div>'
     );
   });
@@ -3545,6 +3563,11 @@ function informeHtml(){
     <div class="h1">7. Recomendaciones</div><p>Mantener el seguimiento periódico, exigir evidencia de avance en los hitos definidos y utilizar los resultados para retroalimentar la Detección de Necesidades del siguiente período.</p>
   `);
 }
+function documentPdfFilename(code,title){
+  const safeCode=norm(code).replace(/[\\/:*?"<>|]+/g,'-');
+  const safeTitle=norm(title).replace(/[\\/:*?"<>|]+/g,'-');
+  return (safeCode?safeCode+' - ':'')+safeTitle+'.pdf';
+}
 function htmlDoc(title,body,exactPages=false){
   const footer=exactPages?'':'<div class="footer">ITSQMET · Unidad de Gestión de Procesos Académicos</div>';
   return '<!doctype html><html><head><meta charset="UTF-8"><title>'+esc(title)+'</title>'+basePdfCss(exactPages)+'</head><body>'+body+footer+'</body></html>';
@@ -3577,10 +3600,10 @@ async function generateDocument(type){
   if(type==='informe' && !state.plan.some(p=>p.selected)){toast('No hay docentes planificados');return;}
 
   const payload = type==='dnf'
-    ? {filename:'Deteccion_Necesidades_Formacion.pdf',html:dnfHtml(),exactPages:true}
+    ? {filename:documentPdfFilename(state.period.dnfCode,'Detección de Necesidades de Formación'),html:dnfHtml(),exactPages:true}
     : type==='plan'
-    ? {filename:'Plan_Formacion_Docente.pdf',html:planHtml()}
-    : {filename:'Informe_Cumplimiento_Plan_Formacion.pdf',html:informeHtml()};
+    ? {filename:documentPdfFilename(state.period.planCode,'Plan de Formación Docente'),html:planHtml()}
+    : {filename:documentPdfFilename(state.period.reportCode,'Informe de Cumplimiento del Plan de Formación'),html:informeHtml()};
 
   const button = $('#generateCurrent') || document.querySelector('[data-generate="'+type+'"]');
   const previousText = button?.textContent || 'Generar PDF';
