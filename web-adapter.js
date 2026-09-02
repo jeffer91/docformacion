@@ -420,12 +420,78 @@
       if (sectionPages.has(key)) cells[cells.length - 1].textContent = String(sectionPages.get(key));
     });
 
-    const overflowPages = pages
-      .map((page, idx) => ({ idx, body: page.querySelector('.pdf-body') }))
-      .filter(item => item.body && bodyOverflows(item.body));
-    if (overflowPages.length) {
-      const pageList = overflowPages.map(item => item.idx + 1).join(', ');
-      throw new Error('El documento todavía contiene contenido que no cabe en la(s) página(s) ' + pageList + '. No se descargó para evitar información cortada.');
+    // Última capa de seguridad: si una página todavía desborda después de
+    // repaginar y dividir tablas, ajustamos únicamente ESA página para
+    // conservar todo el contenido sin bloquear la descarga.
+    const fitOverflowingBody = body => {
+      if (!body || !bodyOverflows(body)) return { ok: true, scale: 1 };
+
+      let wrapper = body.querySelector(':scope > .pdf-fit-wrapper');
+      if (!wrapper) {
+        wrapper = doc.createElement('div');
+        wrapper.className = 'pdf-fit-wrapper';
+        while (body.firstChild) wrapper.appendChild(body.firstChild);
+        body.appendChild(wrapper);
+      }
+
+      wrapper.style.transform = 'none';
+      wrapper.style.transformOrigin = 'top left';
+      wrapper.style.width = '100%';
+      wrapper.style.maxWidth = 'none';
+
+      const available = Math.max(1, body.clientHeight - 3);
+      let natural = Math.max(wrapper.scrollHeight, wrapper.getBoundingClientRect().height, 1);
+      let scale = Math.min(1, available / natural);
+
+      // Al ampliar el ancho lógico antes de escalar se conserva el ancho
+      // final de la hoja y se reduce también el alto producido por saltos de línea.
+      for (let i = 0; i < 4; i++) {
+        scale = Math.max(0.68, Math.min(1, scale * 0.992));
+        wrapper.style.width = (100 / scale) + '%';
+        wrapper.style.transform = 'scale(' + scale + ')';
+
+        const visualHeight = wrapper.getBoundingClientRect().height;
+        if (visualHeight <= available + 1) {
+          body.dataset.pdfFitScale = scale.toFixed(3);
+          return { ok: true, scale };
+        }
+
+        const correction = available / Math.max(visualHeight, 1);
+        scale *= correction;
+      }
+
+      // Fallback muy conservador para bloques excepcionalmente altos.
+      scale = 0.64;
+      wrapper.style.width = (100 / scale) + '%';
+      wrapper.style.transform = 'scale(' + scale + ')';
+      body.dataset.pdfFitScale = scale.toFixed(3);
+
+      const visualHeight = wrapper.getBoundingClientRect().height;
+      return { ok: visualHeight <= available + 2, scale };
+    };
+
+    const adjustedPages = [];
+    const unresolvedPages = [];
+    pages.forEach((page, idx) => {
+      const body = page.querySelector('.pdf-body');
+      if (!body || !bodyOverflows(body)) return;
+      const result = fitOverflowingBody(body);
+      if (result.ok) adjustedPages.push({ page: idx + 1, scale: result.scale });
+      else unresolvedPages.push(idx + 1);
+    });
+
+    if (unresolvedPages.length) {
+      throw new Error(
+        'No se pudo ajustar automáticamente la(s) página(s) ' +
+        unresolvedPages.join(', ') +
+        '. Revisa el contenido extremadamente largo de esas páginas.'
+      );
+    }
+
+    if (adjustedPages.length) {
+      window.dispatchEvent(new CustomEvent('docformacion-pdf-fit', {
+        detail: { pages: adjustedPages }
+      }));
     }
 
     return pages;
