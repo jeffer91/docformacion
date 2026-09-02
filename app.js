@@ -879,6 +879,18 @@ function documentStatus(type){
         view:'necesidades'
       });
     }
+    const needsWithoutPriority=careersInUse.flatMap(name=>
+      ensureNeedItems(name)
+        .filter(item=>norm(item.text)&&!norm(item.priorityOverride))
+        .map(item=>({career:name,item}))
+    );
+    if(needsWithoutPriority.length){
+      issues.push({
+        kind:'need-priority',
+        text:needsWithoutPriority.length+' necesidad(es) sin prioridad definida',
+        view:'necesidades'
+      });
+    }
   }
 
   const noCoordinator=careersInUse.filter(name=>!norm(state.coordinations.find(c=>c.carrera===name)?.coordinador));
@@ -1472,16 +1484,18 @@ function priorityFor(career){
 }
 
 function renderDNF() {
-  const s=stats();
   const careers=dnfCareerNames();
   careers.forEach(name=>ensureNeedItems(name));
+  const allNeeds=careers.flatMap(name=>ensureNeedItems(name).filter(item=>norm(item.text)));
+  const highPriority=allNeeds.filter(item=>item.priorityOverride==='Alta').length;
+  const genericCount=(state.settings.genericLines||[]).filter(norm).length;
   $('#content').innerHTML = `
     ${completionAlert('dnf')}
     <div class="grid cards">
-      ${metric('Total docentes',s.total)}
-      ${metric('Con maestría',s.masters)}
-      ${metric('Con doctorado',s.doctors)}
-      ${metric('Dispuestos',s.willing)}
+      ${metric('Carreras configuradas',careers.length)}
+      ${metric('Necesidades específicas',allNeeds.length)}
+      ${metric('Prioridad alta',highPriority)}
+      ${metric('Líneas genéricas',genericCount)}
     </div>
 
     <div class="section-title"><div><h2>Coordinadores por carrera</h2><p>Este dato identifica al responsable de cada carrera. No define la necesidad de formación.</p></div></div>
@@ -1493,23 +1507,21 @@ function renderDNF() {
       </tr>`}).join('')}</tbody></table>`:'<div class="empty">Configura las carreras institucionales para registrar coordinadores y necesidades.</div>'}
     </div>
 
-    <div class="section-title"><div><h2>Necesidades específicas por carrera</h2><p>Las necesidades se obtienen de la información de los docentes. Cada necesidad tiene su propia prioridad.</p></div></div>
+    <div class="section-title"><div><h2>Necesidades específicas por carrera</h2><p>Las necesidades se registran directamente por carrera. No se requieren nombres ni fichas individuales de docentes para completar este documento.</p></div></div>
     <div class="table-wrap">
-      ${careers.length?`<table class="table needs-table"><thead><tr><th>Carrera</th><th>Necesidad de formación</th><th>Prioridad sugerida</th><th>Prioridad final</th><th></th></tr></thead><tbody>
+      ${careers.length?`<table class="table needs-table"><thead><tr><th>Carrera</th><th>Necesidad de formación</th><th>Prioridad</th><th></th></tr></thead><tbody>
       ${careers.map(name=>{
         const items=ensureNeedItems(name);
         const rows=(items.length?items:[{id:needId(name,0),text:'',priorityOverride:''}]).map((item,i)=>{
-          const suggested=item.text?autoPriorityForNeed(name,item.text):'Baja';
           return `<tr>
             <td><strong>${esc(name)}</strong>${i===items.length-1&&items.length<3?`<div class="inline-note"><button class="ghost add-need" data-career="${esc(name)}">+ Agregar necesidad</button></div>`:''}</td>
             <td><input class="need-item-input" data-career="${esc(name)}" data-need-id="${esc(item.id)}" value="${esc(item.text)}" placeholder="Necesidad requerida por la carrera"></td>
-            <td><span class="pill ${suggested.toLowerCase()}">${suggested}</span></td>
-            <td><select class="need-priority-input" data-career="${esc(name)}" data-need-id="${esc(item.id)}"><option value="">Automática</option>${['Alta','Media','Baja'].map(x=>'<option '+(item.priorityOverride===x?'selected':'')+'>'+x+'</option>').join('')}</select></td>
+            <td><select class="need-priority-input" data-career="${esc(name)}" data-need-id="${esc(item.id)}"><option value="">Seleccionar prioridad</option>${['Alta','Media','Baja'].map(x=>'<option '+(item.priorityOverride===x?'selected':'')+'>'+x+'</option>').join('')}</select></td>
             <td>${items.length>1?`<button class="danger remove-need" data-career="${esc(name)}" data-need-id="${esc(item.id)}">Eliminar</button>`:''}</td>
           </tr>`;
         }).join('');
         return rows;
-      }).join('')}</tbody></table>`:'<div class="empty">Carga docentes para generar las necesidades por carrera.</div>'}
+      }).join('')}</tbody></table>`:'<div class="empty">Configura las carreras institucionales para registrar sus necesidades de formación.</div>'}
     </div>
 
     <div class="section-title"><div><h2>Líneas genéricas institucionales</h2><p>Son líneas transversales y se gestionan de forma independiente a las necesidades específicas.</p></div><button class="secondary" id="addGeneric">+ Línea</button></div>
@@ -1518,7 +1530,7 @@ function renderDNF() {
     </div>`;
 
   refreshDNFMissingStyles();
-  $('.coord-input,.need-item-input').forEach(el=>{
+  $('.coord-input,.need-item-input,.need-priority-input').forEach(el=>{
     el.addEventListener('input',refreshDNFMissingStyles);
     el.addEventListener('change',refreshDNFMissingStyles);
   });
@@ -1687,7 +1699,7 @@ function renderFollowup() {
 
 function renderDocumentView(type){
   const s=documentStatus(type);
-  const hasWarnings=!!s.warnings?.length;
+  const hasWarnings=type==='dnf'?false:!!s.warnings?.length;
   $('#content').innerHTML = `
     <div class="status-card simple-doc-card single-document">
       <div class="status-head">
