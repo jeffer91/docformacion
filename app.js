@@ -3549,7 +3549,29 @@ function htmlDoc(title,body,exactPages=false){
   const footer=exactPages?'':'<div class="footer">ITSQMET · Unidad de Gestión de Procesos Académicos</div>';
   return '<!doctype html><html><head><meta charset="UTF-8"><title>'+esc(title)+'</title>'+basePdfCss(exactPages)+'</head><body>'+body+footer+'</body></html>';
 }
+async function ensureCurrentBuildBeforeGenerate(){
+  if(!(location.protocol==='http:'||location.protocol==='https:')) return true;
+  const active=String(window.DOCFORMACION_BUILD||'');
+  if(!active) return true;
+  try{
+    const response=await fetch('version.json?t='+Date.now(),{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
+    if(!response.ok) return true;
+    const remote=String((await response.json())?.build||'');
+    if(remote && remote!==active){
+      toast('Hay una nueva versión de DocFormación. Actualizando antes de generar el PDF…');
+      setTimeout(()=>{
+        const url=new URL(location.href);
+        url.searchParams.set('build',remote);
+        location.replace(url.toString());
+      },700);
+      return false;
+    }
+  }catch(_error){}
+  return true;
+}
+
 async function generateDocument(type){
+  if(!(await ensureCurrentBuildBeforeGenerate())) return;
   syncPeriodCodes(state.period);
   if(type==='plan' && !state.plan.some(p=>p.selected)){toast('Selecciona docentes en el Plan');return;}
   if(type==='informe' && !state.plan.some(p=>p.selected)){toast('No hay docentes planificados');return;}
