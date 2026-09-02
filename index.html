@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DocFormación ITSQMET</title>
   <link rel="icon" href="data:," />
-  <link rel="stylesheet" href="styles.css?v=20260902-1405" />
+  <link rel="stylesheet" href="styles.css?v=20260902-1435" />
 </head>
 <body>
   <div class="app-shell">
@@ -82,11 +82,29 @@
     </form>
   </dialog>
 
+  <dialog id="excelAnalysisDialog" class="excel-analysis-dialog">
+    <div class="excel-analysis-shell">
+      <div class="dialog-header">
+        <div>
+          <h2 id="excelAnalysisTitle">Analizar plantilla</h2>
+          <p id="excelAnalysisSubtitle">Revisa la información antes de aplicarla.</p>
+        </div>
+        <button type="button" class="icon-btn" id="closeExcelAnalysis">×</button>
+      </div>
+      <div id="excelAnalysisSummary"></div>
+      <div id="excelAnalysisPreview"></div>
+      <div class="dialog-actions">
+        <button type="button" class="secondary" id="cancelExcelAnalysis">Cancelar</button>
+        <button type="button" class="primary" id="applyExcelAnalysis" disabled>Aplicar datos</button>
+      </div>
+    </div>
+  </dialog>
+
   <div id="toast" class="toast"></div>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-  <script src="web-adapter.js?v=20260902-1405"></script>
-  <script src="app.js?v=20260902-1405"></script>
+  <script src="web-adapter.js?v=20260902-1435"></script>
+  <script src="app.js?v=20260902-1435"></script>
 </body>
 </html>
