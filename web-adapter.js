@@ -206,12 +206,157 @@
     });
   }
 
+
+  function unwrapForPagination(body) {
+    const selectors = ['.chart-grid', '.two-col', '.three-col'];
+    selectors.forEach(selector => {
+      [...body.querySelectorAll(selector)].forEach(container => {
+        const parent = container.parentNode;
+        if (!parent) return;
+        [...container.children].forEach(child => parent.insertBefore(child, container));
+        container.remove();
+      });
+    });
+  }
+
+  function normalizeRepeatedHeadings(doc) {
+    const seen = new Set();
+    [...doc.querySelectorAll('.pdf-body .sec-title')].forEach(title => {
+      const raw = (title.textContent || '').trim().replace(/\s+/g, ' ');
+      const careerContinuation = raw.match(/^(7\.\d+)\s+(?:Carrera:\s*)?(.+?)\s+-\s+(.+)$/i);
+      if (careerContinuation) {
+        const topic = doc.createElement('div');
+        topic.className = 'page-topic';
+        const t = careerContinuation[3].trim();
+        topic.textContent = t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+        title.replaceWith(topic);
+        return;
+      }
+      const key = raw.toLowerCase();
+      if (seen.has(key)) title.remove();
+      else seen.add(key);
+    });
+  }
+
+  function pageSkeleton(doc, template) {
+    const page = doc.createElement('section');
+    page.className = template.className.replace(/\bcover-page\b/g, '').trim() || 'pdf-page';
+    page.classList.add('pdf-page');
+    const header = template.querySelector('.institution-header')?.cloneNode(true);
+    const body = doc.createElement('div');
+    body.className = 'pdf-body content-page';
+    const footer = template.querySelector('.footer-note')?.cloneNode(true) || doc.createElement('div');
+    footer.className = 'footer-note';
+    if (header) page.appendChild(header);
+    page.appendChild(body);
+    page.appendChild(footer);
+    return { page, body, footer };
+  }
+
+  function bodyOverflows(body) {
+    return body.scrollHeight > body.clientHeight + 2;
+  }
+
+  function repaginateExactDocument(doc) {
+    const root = doc.querySelector('.pdf-document');
+    if (!root) return [...doc.querySelectorAll('.pdf-page')];
+    const originals = [...root.querySelectorAll(':scope > .pdf-page')];
+    if (originals.length < 3) return originals;
+
+    normalizeRepeatedHeadings(doc);
+
+    const cover = originals[0].cloneNode(true);
+    const index = originals[1].cloneNode(true);
+    const template = originals.find((p, i) => i > 1 && !p.classList.contains('cover-page')) || originals[2];
+
+    const sourceNodes = [];
+    originals.slice(2).forEach(page => {
+      const body = page.querySelector('.pdf-body');
+      if (!body) return;
+      unwrapForPagination(body);
+      [...body.children].forEach(child => sourceNodes.push(child.cloneNode(true)));
+    });
+
+    root.innerHTML = '';
+    root.appendChild(cover);
+    root.appendChild(index);
+
+    let currentPage = null;
+    let currentBody = null;
+
+    const startPage = () => {
+      const built = pageSkeleton(doc, template);
+      root.appendChild(built.page);
+      currentPage = built.page;
+      currentBody = built.body;
+      return built;
+    };
+
+    const appendBlock = block => {
+      if (!currentBody) startPage();
+
+      // A major section begins on a clean page when the existing page already carries substantial content.
+      if (block.classList?.contains('sec-title') && currentBody.children.length && currentBody.scrollHeight > currentBody.clientHeight * 0.58) {
+        startPage();
+      }
+
+      currentBody.appendChild(block);
+      if (!bodyOverflows(currentBody)) return;
+
+      currentBody.removeChild(block);
+      startPage();
+      currentBody.appendChild(block);
+
+      // No content may be silently clipped. If one block is itself too tall, flag it visibly.
+      if (bodyOverflows(currentBody)) {
+        block.classList.add('oversized-pdf-block');
+        block.style.fontSize = '9pt';
+        block.style.lineHeight = '1.25';
+      }
+    };
+
+    sourceNodes.forEach(appendBlock);
+
+    const pages = [...root.querySelectorAll(':scope > .pdf-page')];
+    const total = pages.length;
+    const period = (index.querySelector('.footer-note')?.textContent || '').split('·').slice(2, -1).join('·').trim();
+
+    pages.forEach((page, idx) => {
+      page.dataset.pdfPage = String(idx + 1);
+      const footer = page.querySelector('.footer-note');
+      if (!footer) return;
+      if (idx === 0) {
+        footer.textContent = '';
+      } else {
+        footer.textContent = 'ITSQMET · Unidad de Gestión de Procesos Académicos' + (period ? ' · ' + period : '') + ' · Página ' + (idx + 1) + ' de ' + total;
+      }
+    });
+
+    // Recalculate the visible index after real pagination.
+    const sectionPages = new Map();
+    pages.forEach((page, idx) => {
+      const title = page.querySelector('.sec-title');
+      if (!title) return;
+      const key = (title.textContent || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      if (!sectionPages.has(key)) sectionPages.set(key, idx + 1);
+    });
+    const tocRows = [...index.querySelectorAll('.toc tr')];
+    tocRows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length < 2) return;
+      const key = (cells[0].textContent || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      if (sectionPages.has(key)) cells[cells.length - 1].textContent = String(sectionPages.get(key));
+    });
+
+    return pages;
+  }
+
   async function generateExactPages(payload, frame) {
     if (typeof window.html2canvas !== 'function' || !window.jspdf?.jsPDF) {
       return { ok: false, error: 'No se cargaron las librerías necesarias para crear el PDF.' };
     }
 
-    const pages = [...frame.contentDocument.querySelectorAll('.pdf-page')];
+    const pages = repaginateExactDocument(frame.contentDocument);
     if (!pages.length) return { ok: false, error: 'No se encontraron páginas para generar el PDF.' };
 
     const { jsPDF } = window.jspdf;
