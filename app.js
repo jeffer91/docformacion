@@ -327,6 +327,18 @@ function specificCareerNames(){
   });
   return out;
 }
+function dnfCareerNames(){
+  const seen=new Set();
+  const out=[];
+  [...(state.careers||[]).map(x=>x.name),...(state.coordinations||[]).map(x=>x.carrera)].forEach(name=>{
+    if(!validCareerName(name)) return;
+    const key=careerKey(name);
+    if(seen.has(key)) return;
+    seen.add(key);
+    out.push((state.careers||[]).find(cr=>careerKey(cr.name)===key)?.name||name);
+  });
+  return out;
+}
 
 function ensureCareer(name, program=''){
   const clean=norm(name);
@@ -818,42 +830,31 @@ function periodMissing(type){
 
 function documentStatus(type){
   const issues=periodMissing(type).map(text=>({kind:'period',text,view:'periodo'}));
-  const careersInUse=[...new Set(state.teachers.map(t=>t.carrera).filter(validCareerName))];
+  const careersInUse=type==='dnf'
+    ? dnfCareerNames()
+    : [...new Set(state.teachers.map(t=>t.carrera).filter(validCareerName))];
 
-  if(!state.teachers.length){
+  if(type!=='dnf' && !state.teachers.length){
     issues.push({kind:'teachers-empty',text:'Cargar al menos un docente',view:'docentes'});
   }
 
-  state.teachers.forEach(t=>{
-    const entries=teacherMissingEntriesForDocument(type,t);
-    if(entries.length){
-      issues.push({
-        kind:'teacher',
-        teacherId:t.id,
-        name:t.nombre||t.cedula||'Docente',
-        fields:entries,
-        text:(t.nombre||t.cedula||'Docente')+': falta '+entries.map(x=>x.label).join(', '),
-        view:'docentes'
-      });
-    }
-  });
-
-  const warnings=[];
-  if(type==='dnf'){
+  if(type!=='dnf'){
     state.teachers.forEach(t=>{
-      const entries=teacherWarningEntriesForDNF(t);
+      const entries=teacherMissingEntriesForDocument(type,t);
       if(entries.length){
-        warnings.push({
-          kind:'teacher-warning',
+        issues.push({
+          kind:'teacher',
           teacherId:t.id,
           name:t.nombre||t.cedula||'Docente',
           fields:entries,
-          text:(t.nombre||t.cedula||'Docente')+': información diagnóstica pendiente',
+          text:(t.nombre||t.cedula||'Docente')+': falta '+entries.map(x=>x.label).join(', '),
           view:'docentes'
         });
       }
     });
   }
+
+  const warnings=[];
 
   const withoutProgram=careersInUse.filter(name=>{
     const p=programForCareer(name);
@@ -1127,7 +1128,7 @@ function bindCorrectionActions(type,root=document){
 
 function statusCard(type,title){
   const s=documentStatus(type);
-  const hasWarnings=!!s.warnings?.length;
+  const hasWarnings=type==='dnf'?false:!!s.warnings?.length;
   return `<div class="status-card simple-doc-card" data-status-type="${type}">
     <div class="status-head">
       <h3>${esc(title)}</h3>
@@ -1472,7 +1473,7 @@ function priorityFor(career){
 
 function renderDNF() {
   const s=stats();
-  const careers=specificCareerNames();
+  const careers=dnfCareerNames();
   careers.forEach(name=>ensureNeedItems(name));
   $('#content').innerHTML = `
     ${completionAlert('dnf')}
@@ -1489,7 +1490,7 @@ function renderDNF() {
       ${careers.map(name=>{const coord=ensureCoordination(name);return `<tr>
         <td><strong>${esc(name)}</strong></td>
         <td><input class="coord-input" data-career="${esc(name)}" value="${esc(coord?.coordinador||'')}" placeholder="Nombre del coordinador"></td>
-      </tr>`}).join('')}</tbody></table>`:'<div class="empty">Carga docentes para identificar las carreras utilizadas.</div>'}
+      </tr>`}).join('')}</tbody></table>`:'<div class="empty">Configura las carreras institucionales para registrar coordinadores y necesidades.</div>'}
     </div>
 
     <div class="section-title"><div><h2>Necesidades específicas por carrera</h2><p>Las necesidades se obtienen de la información de los docentes. Cada necesidad tiene su propia prioridad.</p></div></div>
@@ -2143,7 +2144,7 @@ function dnfHtml(){
   const code=state.period.dnfCode;
   const total=state.teachers.length;
   const s=stats();
-  const careers=specificCareerNames();
+  const careers=dnfCareerNames();
   careers.forEach(name=>ensureNeedItems(name));
   const careerCount=careers.length;
   const level=dist('nivelActual'),dedication=dist('dedicacion'),desired=dist('nivelDeseado'),type=dist('tipoFormacion'),modality=dist('modalidadPreferida'),barrier=dist('barrera'),study=dist('estudiaActualmente'),affinity=dist('afinidad'),courseLevel=dist('nivelCurso'),programCourse=dist('programaCurso'),institutionCourse=dist('institucionCurso'),interest=dist('areaInteres'),tentative=dist('inicioTentativo');
@@ -2763,11 +2764,6 @@ function htmlDoc(title,body,exactPages=false){
 }
 async function generateDocument(type){
   syncPeriodCodes(state.period);
-  if(type==='dnf' && !state.teachers.length){toast('Carga docentes antes de generar la DNF');return;}
-  if(type==='dnf'){
-    const invalidCareerRows=state.teachers.filter(t=>!validCareerName(t.carrera));
-    if(invalidCareerRows.length){toast('Corrige '+invalidCareerRows.length+' carrera(s) principal(es) inválida(s) antes de generar la DNF');return;}
-  }
   if(type==='plan' && !state.plan.some(p=>p.selected)){toast('Selecciona docentes en el Plan');return;}
   if(type==='informe' && !state.plan.some(p=>p.selected)){toast('No hay docentes planificados');return;}
 
