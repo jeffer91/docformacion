@@ -364,8 +364,27 @@
     const appendBlock = block => {
       if (!currentBody) startPage();
 
+      const remainingSpace = () => Math.max(0, currentBody.clientHeight - currentBody.scrollHeight);
+
+      // Un título principal o un subtítulo no debe quedar aislado al final de la hoja.
       if (block.classList?.contains('sec-title') && currentBody.children.length && currentBody.scrollHeight > currentBody.clientHeight * 0.58) {
         startPage();
+      }
+      if (block.classList?.contains('sub-title') && currentBody.children.length && remainingSpace() < 190) {
+        startPage();
+      }
+
+      // El encabezado de una carrera (título + KPIs + programa/coordinador + tabla)
+      // se trata como una unidad editorial. Si no cabe, comienza en una hoja nueva.
+      if (block.classList?.contains('career-profile-block') && currentBody.children.length) {
+        currentBody.appendChild(block);
+        if (bodyOverflows(currentBody)) {
+          currentBody.removeChild(block);
+          startPage();
+          currentBody.appendChild(block);
+        }
+        if (!bodyOverflows(currentBody)) return;
+        currentBody.removeChild(block);
       }
 
       currentBody.appendChild(block);
