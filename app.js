@@ -893,6 +893,7 @@ function documentStatus(type){
     if(needsWithoutPriority.length){
       issues.push({
         kind:'need-priority',
+        count:needsWithoutPriority.length,
         text:needsWithoutPriority.length+' necesidad(es) sin prioridad definida',
         view:'necesidades'
       });
@@ -991,17 +992,22 @@ function issueButton(issue,label='Corregir'){
   return `<button class="secondary compact" data-correct-view="${esc(issue.view)}"${teacher}${focus}${career}>${esc(label)}</button>`;
 }
 
-function issueGroup(title,items){
+function issueGroup(title,items,type='',templateKind=''){
+  const template=templateKind?issueTemplateButton(type,templateKind):'';
   return `<details class="issue-group">
-    <summary><span>${esc(title)}</span><span class="issue-group-hint">Ver y corregir</span></summary>
+    <summary>
+      <span>${esc(title)}</span>
+      <span class="issue-group-actions">${template}<span class="issue-group-hint">Ver y corregir</span></span>
+    </summary>
     <div class="issue-group-body">${items.join('')}</div>
   </details>`;
 }
 
-function issueLine(issue,description,buttonLabel='Corregir'){
+function issueLine(issue,description,buttonLabel='Corregir',type='',templateKind=''){
+  const template=templateKind?issueTemplateButton(type,templateKind):'';
   return `<div class="issue-line">
     <div class="issue-line-text">${description}</div>
-    ${issueButton(issue,buttonLabel)}
+    <div class="issue-line-actions">${template}${issueButton(issue,buttonLabel)}</div>
   </div>`;
 }
 
@@ -1013,7 +1019,13 @@ function renderIssues(type,issues){
   const groupedKinds=new Set(['teacher','plan-teacher','follow-teacher','career-program','career-needs','coordinator']);
 
   issues.filter(x=>!groupedKinds.has(x.kind)).forEach(issue=>{
-    out.push(issueLine(issue,esc(issue.text),`Corregir en ${correctionLabel(issue.view)}`));
+    out.push(issueLine(
+      issue,
+      esc(issue.text),
+      'Corregir en '+correctionLabel(issue.view),
+      type,
+      issue.kind
+    ));
   });
 
   if(teachers.length){
@@ -1021,8 +1033,10 @@ function renderIssues(type,issues){
       teachers.length+' docente(s) con información incompleta',
       teachers.map(issue=>issueLine(
         issue,
-        `<strong>${esc(issue.name)}</strong><span>${esc(issue.fields.map(x=>x.label).join(' · '))}</span>`
-      ))
+        '<strong>'+esc(issue.name)+'</strong><span>'+esc(issue.fields.map(x=>x.label).join(' · '))+'</span>'
+      )),
+      type,
+      'teacher'
     ));
   }
 
@@ -1032,8 +1046,10 @@ function renderIssues(type,issues){
       careerProgram.names.length+' carrera(s) sin programa',
       careerProgram.names.map(name=>issueLine(
         {view:'carreras',careerName:name},
-        `<strong>${esc(name)}</strong><span>Programa sin definir</span>`
-      ))
+        '<strong>'+esc(name)+'</strong><span>Programa sin definir</span>'
+      )),
+      type,
+      'career-program'
     ));
   }
 
@@ -1044,7 +1060,9 @@ function renderIssues(type,issues){
       careerNeeds.names.map(name=>issueLine(
         {view:'necesidades',careerName:name},
         '<strong>'+esc(name)+'</strong><span>Definir al menos una necesidad de formación</span>'
-      ))
+      )),
+      type,
+      'career-needs'
     ));
   }
 
@@ -1054,8 +1072,10 @@ function renderIssues(type,issues){
       coordinators.names.length+' carrera(s) sin coordinador',
       coordinators.names.map(name=>issueLine(
         {view:'necesidades',careerName:name},
-        `<strong>${esc(name)}</strong><span>Coordinador sin definir</span>`
-      ))
+        '<strong>'+esc(name)+'</strong><span>Coordinador sin definir</span>'
+      )),
+      type,
+      'coordinator'
     ));
   }
 
@@ -1064,8 +1084,10 @@ function renderIssues(type,issues){
       planTeachers.length+' docente(s) con planificación incompleta',
       planTeachers.map(issue=>issueLine(
         issue,
-        `<strong>${esc(issue.name)}</strong><span>${esc(issue.fields.join(' · '))}</span>`
-      ))
+        '<strong>'+esc(issue.name)+'</strong><span>'+esc(issue.fields.join(' · '))+'</span>'
+      )),
+      type,
+      'plan-teacher'
     ));
   }
 
@@ -1074,14 +1096,15 @@ function renderIssues(type,issues){
       followTeachers.length+' docente(s) con seguimiento incompleto',
       followTeachers.map(issue=>issueLine(
         issue,
-        `<strong>${esc(issue.name)}</strong><span>${esc(issue.fields.join(' · '))}</span>`
-      ))
+        '<strong>'+esc(issue.name)+'</strong><span>'+esc(issue.fields.join(' · '))+'</span>'
+      )),
+      type,
+      'follow-teacher'
     ));
   }
 
-  return `<div class="issue-list">${out.join('')}</div>`;
+  return '<div class="issue-list">'+out.join('')+'</div>';
 }
-
 function renderWarnings(warnings){
   if(!warnings?.length) return '';
   const teachers=warnings.filter(x=>x.kind==='teacher-warning');
@@ -1102,7 +1125,8 @@ function renderWarnings(warnings){
 
 function issueTotal(issues){
   return issues.reduce((total,issue)=>{
-    if((issue.kind==='career-program'||issue.kind==='coordinator')&&Array.isArray(issue.names)) return total+issue.names.length;
+    if(Number.isFinite(Number(issue.count)) && Number(issue.count)>0) return total+Number(issue.count);
+    if(Array.isArray(issue.names) && issue.names.length) return total+issue.names.length;
     return total+1;
   },0);
 }
@@ -1128,6 +1152,14 @@ function focusCorrectionTarget(view,teacherId='',careerName=''){
 
 function bindCorrectionActions(type,root=document){
   const back=docViewForType(type);
+
+  const templateButtons=root.querySelectorAll ? [...root.querySelectorAll('[data-issue-template]')] : [];
+  templateButtons.forEach(btn=>btn.onclick=(event)=>{
+    event.preventDefault();
+    event.stopPropagation();
+    exportIssueTemplate(btn.dataset.issueType||type,btn.dataset.issueTemplate);
+  });
+
   const buttons=root.querySelectorAll ? [...root.querySelectorAll('[data-correct-view]')] : [];
   buttons.forEach(btn=>btn.onclick=()=>{
     const view=btn.dataset.correctView;
@@ -1836,6 +1868,115 @@ function excelTemplatePayload(scope,includeData){
   };
   const filenames={periodo:'Plantilla_Periodo.xlsx',carreras:'Plantilla_Carreras.xlsx',docentes:'Plantilla_Docentes.xlsx',dnf:'Plantilla_DNF.xlsx',plan:'Plantilla_Plan_Formacion.xlsx',seguimiento:'Plantilla_Seguimiento.xlsx',global:'FORMACION_DOCENTE_GLOBAL.xlsx'};
   return {filename:(includeData?'Datos_Actuales_':'')+filenames[scope],sheets:map[scope]||map.global};
+}
+
+
+function cloneExcelSheetSpec(spec){
+  return {
+    name:spec.name,
+    headers:[...(spec.headers||[])],
+    descriptions:[...(spec.descriptions||[])],
+    rows:(spec.rows||[]).map(row=>[...row]),
+    widths:[...(spec.widths||[])]
+  };
+}
+
+function issueExcelTemplatePayload(type,kind){
+  const status=documentStatus(type);
+  const issue=status.issues.find(x=>x.kind===kind);
+  const getSheet=(payload,name)=>cloneExcelSheetSpec(payload.sheets.find(s=>s.name===name));
+
+  if(kind==='career-needs'){
+    const names=issue?.names||[];
+    const sheet=getSheet(excelTemplatePayload('dnf',false),'NECESIDADES');
+    sheet.rows=names.map(name=>[name,'','']);
+    return {filename:'Pendientes_DNF_Necesidades.xlsx',sheets:[sheet]};
+  }
+
+  if(kind==='coordinator'){
+    const names=issue?.names||[];
+    const sheet=getSheet(excelTemplatePayload('dnf',false),'COORDINACIONES');
+    sheet.rows=names.map(name=>[name,'']);
+    return {filename:'Pendientes_DNF_Coordinadores.xlsx',sheets:[sheet]};
+  }
+
+  if(kind==='need-priority'){
+    const sheet=getSheet(excelTemplatePayload('dnf',true),'NECESIDADES');
+    sheet.rows=dnfCareerNames().flatMap(name=>
+      ensureNeedItems(name)
+        .filter(item=>norm(item.text)&&!norm(item.priorityOverride))
+        .map(item=>[name,item.text,''])
+    );
+    return {filename:'Pendientes_DNF_Prioridades.xlsx',sheets:[sheet]};
+  }
+
+  if(kind==='generic'){
+    const sheet=getSheet(excelTemplatePayload('dnf',false),'LINEAS_GENERICAS');
+    sheet.rows=[['']];
+    return {filename:'Pendiente_DNF_Lineas_Genericas.xlsx',sheets:[sheet]};
+  }
+
+  if(kind==='career-empty'){
+    return {...excelTemplatePayload('carreras',false),filename:'Pendiente_Carreras.xlsx'};
+  }
+
+  if(kind==='career-program'){
+    const names=new Set(issue?.names||[]);
+    const sheet=getSheet(excelTemplatePayload('carreras',true),'CARRERAS');
+    sheet.rows=(state.careers||[])
+      .filter(cr=>names.has(cr.name))
+      .map(cr=>[cr.name,'']);
+    return {filename:'Pendientes_Programas_Carreras.xlsx',sheets:[sheet]};
+  }
+
+  if(kind==='period'){
+    return {...excelTemplatePayload('periodo',true),filename:'Pendientes_Datos_Generales.xlsx'};
+  }
+
+  if(kind==='teachers-empty'){
+    return {...excelTemplatePayload('docentes',false),filename:'Pendiente_Base_Docentes.xlsx'};
+  }
+
+  if(kind==='teacher'){
+    const ids=new Set(status.issues.filter(x=>x.kind==='teacher').map(x=>x.teacherId));
+    const cedulas=new Set(state.teachers.filter(t=>ids.has(t.id)).map(t=>String(t.cedula)));
+    const sheet=getSheet(excelTemplatePayload('docentes',true),'DOCENTES');
+    sheet.rows=sheet.rows.filter(row=>cedulas.has(String(row[0]||'')));
+    return {filename:'Pendientes_Docentes.xlsx',sheets:[sheet]};
+  }
+
+  if(kind==='plan-empty'){
+    return {...excelTemplatePayload('plan',false),filename:'Pendiente_Plan_Formacion.xlsx'};
+  }
+
+  if(kind==='plan-teacher'){
+    const ids=new Set(status.issues.filter(x=>x.kind==='plan-teacher').map(x=>x.teacherId));
+    const cedulas=new Set(state.teachers.filter(t=>ids.has(t.id)).map(t=>String(t.cedula)));
+    const sheet=getSheet(excelTemplatePayload('plan',true),'PLAN');
+    sheet.rows=sheet.rows.filter(row=>cedulas.has(String(row[0]||'')));
+    return {filename:'Pendientes_Plan_Formacion.xlsx',sheets:[sheet]};
+  }
+
+  if(kind==='follow-teacher'){
+    const ids=new Set(status.issues.filter(x=>x.kind==='follow-teacher').map(x=>x.teacherId));
+    const cedulas=new Set(state.teachers.filter(t=>ids.has(t.id)).map(t=>String(t.cedula)));
+    const sheet=getSheet(excelTemplatePayload('seguimiento',true),'SEGUIMIENTO');
+    sheet.rows=sheet.rows.filter(row=>cedulas.has(String(row[0]||'')));
+    return {filename:'Pendientes_Seguimiento.xlsx',sheets:[sheet]};
+  }
+
+  return excelTemplatePayload(type==='dnf'?'dnf':type==='plan'?'plan':'seguimiento',false);
+}
+
+function issueTemplateButton(type,kind,label='Descargar plantilla'){
+  return '<button type="button" class="secondary compact issue-template-btn" data-issue-template="'+esc(kind)+'" data-issue-type="'+esc(type)+'">'+esc(label)+'</button>';
+}
+
+async function exportIssueTemplate(type,kind){
+  const payload=issueExcelTemplatePayload(type,kind);
+  const r=await window.docformacion.exportExcelTemplate(payload);
+  if(r?.ok) toast('Plantilla de pendientes descargada');
+  else if(r?.error) toast('Error: '+r.error);
 }
 
 function excelActions(scope){
