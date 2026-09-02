@@ -150,3 +150,10 @@ button.is-missing-control{color:#b42318!important;border-color:#dc2626!important
   .excel-analysis-shell{padding:16px}
   .issue-group-actions{flex-wrap:wrap;justify-content:flex-end}
 }
+
+
+/* Excel import result states */
+.excel-row-status.update{background:#edf2ff;color:#3657a6}
+.excel-row-status.error{background:#fff0ef;color:#a23b34}
+.excel-analysis-actions{gap:10px;flex-wrap:wrap}
+#goExcelModule[hidden]{display:none!important}
