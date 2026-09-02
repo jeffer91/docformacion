@@ -549,10 +549,12 @@
     // Recalculate the visible index after real pagination.
     const sectionPages = new Map();
     pages.forEach((page, idx) => {
-      const title = page.querySelector('.sec-title');
-      if (!title) return;
-      const key = (title.textContent || '').trim().replace(/\s+/g, ' ').toLowerCase();
-      if (!sectionPages.has(key)) sectionPages.set(key, idx + 1);
+      // Una misma página puede contener el cierre de una sección y el inicio de otra.
+      // Por eso se registran TODOS los títulos de sección presentes, no solo el primero.
+      [...page.querySelectorAll('.sec-title')].forEach(title => {
+        const key = (title.textContent || '').trim().replace(/\s+/g, ' ').toLowerCase();
+        if (key && !sectionPages.has(key)) sectionPages.set(key, idx + 1);
+      });
     });
     const tocRows = [...index.querySelectorAll('.toc tr')];
     tocRows.forEach(row => {
