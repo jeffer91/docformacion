@@ -323,6 +323,7 @@
           const hasContentBeforeTable = currentBody.firstElementChild && currentBody.firstElementChild !== partInfo.part;
           if (hasContentBeforeTable) {
             currentBody.removeChild(partInfo.part);
+            first = true;
             beginPart(true);
             const retry = row.cloneNode(true);
             partInfo.tbody.appendChild(retry);
@@ -414,22 +415,37 @@
       block?.classList?.contains('sub-title') ||
       block?.classList?.contains('mini-title');
 
-    const headingFitsWithNext = (heading, next) => {
-      if (!currentBody || !currentBody.children.length || !next) return true;
-      const headingProbe = heading.cloneNode(true);
-      const nextProbe = next.cloneNode(true);
-      currentBody.appendChild(headingProbe);
-      currentBody.appendChild(nextProbe);
+    const headingFitsWithFollowingContent = index => {
+      if (!currentBody || !currentBody.children.length) return true;
+      const heading = sourceNodes[index];
+      if (!isHeadingBlock(heading)) return true;
+
+      const probes = [];
+      const appendProbe = node => {
+        const clone = node.cloneNode(true);
+        currentBody.appendChild(clone);
+        probes.push(clone);
+      };
+
+      appendProbe(heading);
+      let meaningful = 0;
+      const targetMeaningful = heading.classList.contains('sec-title') ? 1 : 1;
+
+      for (let j = index + 1; j < sourceNodes.length && j <= index + 3; j++) {
+        const candidate = sourceNodes[j];
+        appendProbe(candidate);
+        if (!isHeadingBlock(candidate)) meaningful++;
+        if (meaningful >= targetMeaningful) break;
+      }
+
       const fits = !bodyOverflows(currentBody);
-      nextProbe.remove();
-      headingProbe.remove();
+      probes.reverse().forEach(node => node.remove());
       return fits;
     };
 
     for (let i = 0; i < sourceNodes.length; i++) {
       const block = sourceNodes[i];
-      const next = sourceNodes[i + 1];
-      if (isHeadingBlock(block) && currentBody?.children.length && !headingFitsWithNext(block, next)) {
+      if (isHeadingBlock(block) && currentBody?.children.length && !headingFitsWithFollowingContent(i)) {
         startPage();
       }
       appendBlock(block);
@@ -600,22 +616,21 @@
       pdf.setFontSize(fontPt);
       const lines = pdf.splitTextToSize(text, width);
       try {
-        pdf.text(lines, x, y, {
-          baseline: 'top',
-          renderingMode: 'invisible',
-          maxWidth: width
-        });
-      } catch (_error) {
-        // Older jsPDF builds may ignore renderingMode. A zero-opacity graphics
-        // state keeps the text searchable without altering the visual page.
-        try {
-          const GState = pdf.GState || window.jspdf?.GState;
-          if (GState && pdf.setGState) {
-            pdf.setGState(new GState({ opacity: 0 }));
-            pdf.text(lines, x, y, { baseline: 'top', maxWidth: width });
-            pdf.setGState(new GState({ opacity: 1 }));
-          }
-        } catch (_ignored) {}
+        const GState = pdf.GState || window.jspdf?.GState;
+        if (GState && pdf.setGState) {
+          pdf.setGState(new GState({ opacity: 0 }));
+          pdf.text(lines, x, y, { baseline: 'top', maxWidth: width });
+          pdf.setGState(new GState({ opacity: 1 }));
+        } else {
+          pdf.text(lines, x, y, {
+            baseline: 'top',
+            renderingMode: 'invisible',
+            maxWidth: width
+          });
+        }
+      } catch (_ignored) {
+        // The visual PDF remains valid even if a browser/jsPDF build cannot
+        // add one text fragment to the searchable layer.
       }
     });
   }
