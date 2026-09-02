@@ -118,6 +118,23 @@ ipcMain.handle('evidence:pick', async () => {
   return { path: filePath, name: path.basename(filePath) };
 });
 
+function excelSheetToObjects(sheet){
+  const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false});
+  if(!rows.length) return [];
+  const headers=(rows[0]||[]).map(x=>String(x||'').trim());
+  let start=1;
+  if(rows[1]?.some((value,index)=>index===0 && String(value||'').trim().startsWith('[INSTRUCCIONES]'))){
+    start=2;
+  }
+  return rows.slice(start)
+    .filter(row=>row.some(value=>String(value??'').trim()!==''))
+    .map(row=>{
+      const out={};
+      headers.forEach((header,index)=>{if(header) out[header]=row[index]??'';});
+      return out;
+    });
+}
+
 ipcMain.handle('excel:import', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
@@ -130,10 +147,7 @@ ipcMain.handle('excel:import', async () => {
     const workbook = XLSX.readFile(filePath, { cellDates: false });
     const sheets = {};
     workbook.SheetNames.forEach((name) => {
-      sheets[name.toUpperCase()] = XLSX.utils.sheet_to_json(workbook.Sheets[name], {
-        defval: '',
-        raw: false
-      });
+      sheets[name.toUpperCase()] = excelSheetToObjects(workbook.Sheets[name]);
     });
     return { ok: true, filePath, sheets };
   } catch (error) {
@@ -141,90 +155,45 @@ ipcMain.handle('excel:import', async () => {
   }
 });
 
-ipcMain.handle('excel:template', async () => {
+function buildExcelSheet(spec){
+  const headers=Array.isArray(spec.headers)?spec.headers:[];
+  const descriptions=Array.isArray(spec.descriptions)?spec.descriptions:[];
+  const rows=Array.isArray(spec.rows)?spec.rows:[];
+  const instructionRow=headers.map((_,i)=>i===0
+    ? '[INSTRUCCIONES] '+String(descriptions[i]||'Completa este campo.')
+    : String(descriptions[i]||'Completa este campo.'));
+  const data=[headers,instructionRow,...rows];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  const widths=(spec.widths||headers.map(()=>22)).map(w=>({wch:Number(w)||22}));
+  ws['!cols']=widths;
+  if(headers.length) ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:0,c:headers.length-1}})};
+  ws['!rows']=[{hpt:22},{hpt:42}];
+  return ws;
+}
+
+ipcMain.handle('excel:template', async (_event, payload={}) => {
+  const filename=payload.filename||'FORMACION_DOCENTE_GLOBAL.xlsx';
   const result = await dialog.showSaveDialog(mainWindow, {
-    defaultPath: 'FORMACION_DOCENTE_GLOBAL.xlsx',
+    defaultPath: filename,
     filters: [{ name: 'Excel', extensions: ['xlsx'] }]
   });
   if (result.canceled || !result.filePath) return null;
 
   try {
     const wb = XLSX.utils.book_new();
-
-    const periodHeaders = [[
-      'PERIODO_INICIO', 'PERIODO_FIN', 'FECHA_ELABORACION', 'VERSION',
-      'ELABORADO_POR', 'CARGO_ELABORADO', 'REVISADO_POR', 'CARGO_REVISADO',
-      'APROBADO_POR', 'CARGO_APROBADO', 'META_FORMACION_PORCENTAJE'
-    ]];
-
-    const careerRows = [
-      ['CARRERA','PROGRAMA'],
-      ['Enfermería','Técnico Superior'],
-      ['Mecánica Automotriz','Tecnología Superior'],
-      ['Diseño Multimedia','Tecnología Superior'],
-      ['Marketing Digital y Comercio Electrónico','Tecnología Superior'],
-      ['Ventas','Tecnología Superior'],
-      ['Desarrollo de Software','Tecnología Superior'],
-      ['Desarrollo de Software y Ciberseguridad','Tecnología Universitaria'],
-      ['Redes y Telecomunicaciones','Tecnología Superior'],
-      ['Estética Integral','Tecnología Superior'],
-      ['Educación Básica','Tecnología Superior'],
-      ['Educación Inicial','Tecnología Superior'],
-      ['Pedagogía','Tecnología Universitaria'],
-      ['Procesamiento de Alimentos','Tecnología Superior'],
-      ['Administración','Tecnología Superior'],
-      ['Administración de Empresas e inteligencia de negocios','Tecnología Universitaria'],
-      ['Administración del Talento Humano','Tecnología Universitaria'],
-      ['Contabilidad','Tecnología Superior'],
-      ['Contabilidad y Tributación','Tecnología Universitaria'],
-      ['Gestión del Talento Humano','Tecnología Superior'],
-      ['Seguridad y Prevención de Riesgos Laborales','Tecnología Superior'],
-      ['Seguridad Ciudadana y Orden Publico','Tecnología Superior']
-    ];
-
-    const teacherHeaders = [[
-      'CEDULA', 'NOMBRE_COMPLETO', 'CARRERA_PRINCIPAL', 'DEDICACION',
-      'NIVEL_ACADEMICO_ACTUAL', 'TITULO_ACADEMICO_ACTUAL', 'AFIN_TITULO_CARRERA',
-      'ESTUDIA_ACTUALMENTE', 'NIVEL_FORMACION_EN_CURSO', 'PROGRAMA_EN_CURSO',
-      'INSTITUCION_ESTUDIO', 'NIVEL_QUE_DESEA_ALCANZAR', 'AREA_O_PROGRAMA_INTERES',
-      'DISPUESTO_A_ESTUDIAR', 'TIPO_FORMACION', 'MODALIDAD_PREFERIDA',
-      'INICIO_TENTATIVO_MES_ANIO', 'BARRERA_PRINCIPAL', 'ACTUALIZACION_RECIENTE'
-    ]];
-
-    const coordHeaders = [[
-      'CARRERA', 'COORDINADOR'
-    ]];
-
-    const needHeaders = [[
-      'CARRERA', 'NECESIDAD', 'PRIORIDAD_MANUAL'
-    ]];
-
-    const planHeaders = [[
-      'CEDULA', 'INCLUIR_EN_PLAN', 'NIVEL_PLANIFICADO', 'PROGRAMA_PLANIFICADO',
-      'INSTITUCION', 'MODALIDAD', 'FECHA_INICIO_PLANIFICADA',
-      'FECHA_FIN_PLANIFICADA', 'TIPO_APOYO', 'MONTO_APOYO',
-      'CONVENIO', 'EFECTO_MULTIPLICADOR_PREVISTO'
-    ]];
-
-    const followHeaders = [[
-      'CEDULA', 'ESTADO', 'FECHA_REAL_INICIO', 'FECHA_PREVISTA_FINALIZACION',
-      'PORCENTAJE_AVANCE', 'TITULO_EVIDENCIA', 'RUTA_EVIDENCIA', 'ABANDONO'
-    ]];
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(careerRows), 'CARRERAS');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(periodHeaders), 'PERIODO');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(teacherHeaders), 'DOCENTES');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(coordHeaders), 'COORDINACIONES');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(needHeaders), 'NECESIDADES');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(planHeaders), 'PLAN');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(followHeaders), 'SEGUIMIENTO');
-
+    const sheets=Array.isArray(payload.sheets)?payload.sheets:[];
+    if(!sheets.length) throw new Error('No se definieron hojas para la plantilla.');
+    sheets.forEach(spec=>{
+      const ws=buildExcelSheet(spec);
+      XLSX.utils.book_append_sheet(wb,ws,String(spec.name||'HOJA').slice(0,31));
+    });
     XLSX.writeFile(wb, result.filePath);
     return { ok: true, filePath: result.filePath };
   } catch (error) {
     return { ok: false, error: error.message };
   }
 });
+
 
 ipcMain.handle('pdf:generate', async (_event, payload) => {
   const result = await dialog.showSaveDialog(mainWindow, {
