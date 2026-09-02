@@ -343,10 +343,15 @@ function dnfCareerNames(){
 function ensureCareer(name, program=''){
   const clean=norm(name);
   if(!clean || !validCareerName(clean)) return;
-  if(!state.careers.some(c=>c.name===clean)){
-    state.careers.push({name:clean,program:norm(program)||'Por definir'});
+  const key=careerKey(clean);
+  let existing=state.careers.find(c=>careerKey(c.name)===key);
+  if(!existing){
+    existing={name:clean,program:norm(program)||'Por definir'};
+    state.careers.push(existing);
+  }else if(norm(program)){
+    existing.program=norm(program);
   }
-  ensureCoordination(clean);
+  ensureCoordination(existing.name);
 }
 
 const FIREBASE_FIELD_ALIASES = {
@@ -2223,17 +2228,65 @@ function closeExcelAnalysisDialog(){
   if($('#excelAnalysisDialog')?.open) $('#excelAnalysisDialog').close();
 }
 
+function applySpecificExcelImport(kind,sheets){
+  if(kind==='need-priority' && sheets.NECESIDADES?.length){
+    sheets.NECESIDADES.forEach(row=>{
+      const carrera=norm(row.CARRERA);
+      const necesidad=norm(row.NECESIDAD);
+      const prioridad=norm(row.PRIORIDAD_MANUAL);
+      if(!carrera||!necesidad||!['Alta','Media','Baja'].includes(prioridad)) return;
+      const item=ensureNeedItems(carrera).find(x=>norm(x.text)===necesidad);
+      if(item) item.priorityOverride=prioridad;
+    });
+    return;
+  }
+
+  if(kind==='career-needs' && sheets.NECESIDADES?.length){
+    const grouped=new Map();
+    sheets.NECESIDADES.forEach(row=>{
+      const carrera=norm(row.CARRERA);
+      const necesidad=norm(row.NECESIDAD);
+      const prioridad=norm(row.PRIORIDAD_MANUAL);
+      if(!carrera||!necesidad||!['Alta','Media','Baja'].includes(prioridad)) return;
+      const key=careerKey(carrera);
+      if(!grouped.has(key)) grouped.set(key,{carrera,items:[]});
+      grouped.get(key).items.push({
+        id:needId(carrera,grouped.get(key).items.length),
+        text:necesidad,
+        priorityOverride:prioridad
+      });
+    });
+    grouped.forEach(({carrera,items})=>{
+      const coord=ensureCoordination(carrera);
+      const existing=ensureNeedItems(carrera);
+      const merged=[...existing];
+      items.forEach(item=>{
+        const current=merged.find(x=>norm(x.text)===norm(item.text));
+        if(current) Object.assign(current,item);
+        else if(merged.length<3) merged.push(item);
+      });
+      coord.needItems=merged.slice(0,3);
+      coord.needsOverride='';
+      coord.priorityOverride='';
+    });
+    return;
+  }
+
+  applyExcel(sheets||{});
+}
+
 async function confirmExcelAnalysis(){
   if(!pendingExcelImport) return;
-  const {type,scope,sheets}=pendingExcelImport;
+  const {type,scope,kind,sheets}=pendingExcelImport;
   const before=type?issueTotal(documentStatus(type).issues):null;
-  applyExcel(sheets||{});
+  applySpecificExcelImport(kind,sheets||{});
   await save();
   const after=type?issueTotal(documentStatus(type).issues):null;
   closeExcelAnalysisDialog();
   render();
   if(before!==null && after!==null){
-    toast('Importación aplicada · pendientes '+before+' → '+after);
+    const resolved=Math.max(0,before-after);
+    toast('Importación aplicada · '+resolved+' pendiente(s) resuelto(s) · '+after+' restante(s)');
   }else{
     toast(scope==='global'?'Excel global aplicado correctamente':'Excel aplicado correctamente');
   }
