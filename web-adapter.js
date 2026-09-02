@@ -227,7 +227,47 @@
     return body.scrollHeight > body.clientHeight + 2;
   }
 
+  function normalizeDnfCareerNumbering(doc) {
+    const careerTitles = [...doc.querySelectorAll('.sec-title')]
+      .filter(el => /^7\.\d+\s+/.test((el.textContent || '').trim()));
+
+    careerTitles.forEach((title, index) => {
+      const raw = (title.textContent || '').trim().replace(/\s+/g, ' ');
+      const name = raw.replace(/^7\.\d+\s+/, '');
+      title.textContent = '7.' + (index + 1) + ' ' + name;
+    });
+  }
+
+  function sanitizeReferenceInstructions(doc) {
+    const referencesTitle = [...doc.querySelectorAll('.sec-title')]
+      .find(el => /^14\.\s*Referencias/i.test((el.textContent || '').trim()));
+    if (!referencesTitle) return;
+
+    let node = referencesTitle.nextElementSibling;
+    while (node && !node.classList?.contains('sec-title')) {
+      const targets = node.matches?.('.reference-list p') ? [node] : [...(node.querySelectorAll?.('.reference-list p') || [])];
+      targets.forEach(p => {
+        let html = p.innerHTML || '';
+        html = html
+          .replace(/\s*Se deberá conservar en el expediente institucional[^.<]*(?:\.[^<]*)?/gi, '')
+          .replace(/\s*Registrar código, versión y fecha institucional vigentes\.?/gi, '')
+          .replace(/\s*Registrar en el expediente la versión y fecha efectivamente utilizadas\.?/gi, '')
+          .replace(/\s*Se deberá conservar la versión vigente utilizada\.?/gi, '')
+          .replace(/\s*Se deberá conservar en el expediente institucional la versión vigente utilizada para este período\.?/gi, '')
+          .trim();
+        p.innerHTML = html;
+      });
+      node = node.nextElementSibling;
+    }
+  }
+
+  function prepareFinalDocument(doc) {
+    normalizeDnfCareerNumbering(doc);
+    sanitizeReferenceInstructions(doc);
+  }
+
   function repaginateExactDocument(doc) {
+    prepareFinalDocument(doc);
     const root = doc.querySelector('.pdf-document');
     if (!root) return [...doc.querySelectorAll('.pdf-page')];
     const originals = [...root.querySelectorAll(':scope > .pdf-page')];
@@ -449,6 +489,46 @@
         startPage();
       }
       appendBlock(block);
+    }
+
+    // Compacta páginas que quedaron con solo títulos/subtítulos.
+    // Si el contenido de la página siguiente cabe junto al título, se mueve hacia atrás
+    // y se elimina la hoja vacía, sin obligar a cada apartado a comenzar en página nueva.
+    let compacted = true;
+    while (compacted) {
+      compacted = false;
+      const livePages = [...root.querySelectorAll(':scope > .pdf-page')];
+      for (let i = 2; i < livePages.length - 1; i++) {
+        const page = livePages[i];
+        const nextPage = livePages[i + 1];
+        const body = page.querySelector('.pdf-body');
+        const nextBody = nextPage.querySelector('.pdf-body');
+        if (!body || !nextBody) continue;
+
+        const children = [...body.children];
+        const headingOnly = children.length > 0 && children.every(el =>
+          el.classList?.contains('sec-title') ||
+          el.classList?.contains('sub-title') ||
+          el.classList?.contains('mini-title') ||
+          el.classList?.contains('page-topic')
+        );
+        if (!headingOnly || !nextBody.children.length) continue;
+
+        const originalNext = [...nextBody.children];
+        const moved = [...children];
+        const firstNext = nextBody.firstChild;
+        moved.forEach(node => nextBody.insertBefore(node, firstNext));
+
+        if (!bodyOverflows(nextBody)) {
+          page.remove();
+          compacted = true;
+          break;
+        }
+
+        // Revertir si la combinación no cabe.
+        moved.forEach(node => body.appendChild(node));
+        originalNext.forEach(node => nextBody.appendChild(node));
+      }
     }
 
     const pages = [...root.querySelectorAll(':scope > .pdf-page')];
