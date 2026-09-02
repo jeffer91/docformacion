@@ -759,11 +759,18 @@ function teacherMissingEntries(t){
   return missing;
 }
 
-function teacherMissingEntriesForDNF(t){
+function teacherCriticalEntriesForDNF(t){
+  const missing=[];
+  if(!norm(t.cedula)) missing.push({key:'cedula',label:'Cédula'});
+  if(!norm(t.nombre)) missing.push({key:'nombre',label:'Nombre'});
+  if(!norm(t.carrera)) missing.push({key:'carrera',label:'Carrera principal'});
+  else if(!validCareerName(t.carrera)) missing.push({key:'carrera',label:'Carrera principal válida'});
+  return missing;
+}
+
+function teacherWarningEntriesForDNF(t){
   const missing=[];
   const required=[
-    ['cedula','Cédula'],
-    ['nombre','Nombre'],
     ['dedicacion','Dedicación'],
     ['nivelActual','Nivel académico actual'],
     ['afinidad','Afinidad del título'],
@@ -776,14 +783,16 @@ function teacherMissingEntriesForDNF(t){
     ['barrera','Barrera principal']
   ];
   required.forEach(([key,label])=>{if(!norm(t[key])) missing.push({key,label});});
-  if(!norm(t.carrera)) missing.push({key:'carrera',label:'Carrera principal'});
-  else if(!validCareerName(t.carrera)) missing.push({key:'carrera',label:'Carrera principal válida'});
   if(t.estudiaActualmente==='Sí'){
     if(!norm(t.nivelCurso)) missing.push({key:'nivelCurso',label:'Nivel de formación en curso'});
     if(!norm(t.programaCurso)) missing.push({key:'programaCurso',label:'Programa en curso'});
     if(!norm(t.institucionCurso)) missing.push({key:'institucionCurso',label:'Institución de estudio'});
   }
   return missing;
+}
+
+function teacherMissingEntriesForDNF(t){
+  return teacherCriticalEntriesForDNF(t);
 }
 
 function teacherMissingEntriesForDocument(type,t){
@@ -828,6 +837,23 @@ function documentStatus(type){
       });
     }
   });
+
+  const warnings=[];
+  if(type==='dnf'){
+    state.teachers.forEach(t=>{
+      const entries=teacherWarningEntriesForDNF(t);
+      if(entries.length){
+        warnings.push({
+          kind:'teacher-warning',
+          teacherId:t.id,
+          name:t.nombre||t.cedula||'Docente',
+          fields:entries,
+          text:(t.nombre||t.cedula||'Docente')+': información diagnóstica pendiente',
+          view:'docentes'
+        });
+      }
+    });
+  }
 
   const withoutProgram=careersInUse.filter(name=>{
     const p=programForCareer(name);
@@ -925,7 +951,7 @@ function documentStatus(type){
     });
   }
 
-  return {ready:issues.length===0,missing:issues.map(x=>x.text),issues};
+  return {ready:issues.length===0,missing:issues.map(x=>x.text),issues,warnings};
 }
 
 function correctionLabel(view){
@@ -1037,6 +1063,24 @@ function renderIssues(type,issues){
   return `<div class="issue-list">${out.join('')}</div>`;
 }
 
+function renderWarnings(warnings){
+  if(!warnings?.length) return '';
+  const teachers=warnings.filter(x=>x.kind==='teacher-warning');
+  if(!teachers.length) return '';
+  return `<div class="warning-card">
+    <div class="warning-title">Observaciones de calidad de datos</div>
+    <div class="warning-text">${teachers.length} docente(s) tienen campos diagnósticos sin completar. Puedes generar la DNF; esos valores aparecerán como “Sin información”.</div>
+    ${issueGroup(
+      teachers.length+' docente(s) con información diagnóstica pendiente',
+      teachers.map(issue=>issueLine(
+        issue,
+        `<strong>${esc(issue.name)}</strong><span>${esc(issue.fields.map(x=>x.label).join(' · '))}</span>`,
+        'Completar'
+      ))
+    )}
+  </div>`;
+}
+
 function issueTotal(issues){
   return issues.reduce((total,issue)=>{
     if((issue.kind==='career-program'||issue.kind==='coordinator')&&Array.isArray(issue.names)) return total+issue.names.length;
@@ -1083,13 +1127,15 @@ function bindCorrectionActions(type,root=document){
 
 function statusCard(type,title){
   const s=documentStatus(type);
+  const hasWarnings=!!s.warnings?.length;
   return `<div class="status-card simple-doc-card" data-status-type="${type}">
     <div class="status-head">
       <h3>${esc(title)}</h3>
-      <span class="status-badge ${s.ready?'ready':'blocked'}">${s.ready?'Listo':'Pendiente'}</span>
+      <span class="status-badge ${s.ready?'ready':'blocked'}">${s.ready?(hasWarnings?'Listo con observaciones':'Listo'):'Pendiente'}</span>
     </div>
     ${s.ready
-      ? `<div class="ready-message">Toda la información necesaria está completa.</div>
+      ? `<div class="ready-message">${hasWarnings?'La información crítica está completa; existen observaciones de calidad de datos.':'Toda la información necesaria está completa.'}</div>
+         ${renderWarnings(s.warnings)}
          <div class="doc-actions"><button class="primary" data-generate="${type}">Generar PDF</button></div>`
       : `<div class="missing-heading">${issueTotal(s.issues)} pendiente(s) por completar</div>${renderIssues(type,s.issues)}`}
   </div>`;
@@ -1640,14 +1686,16 @@ function renderFollowup() {
 
 function renderDocumentView(type){
   const s=documentStatus(type);
+  const hasWarnings=!!s.warnings?.length;
   $('#content').innerHTML = `
     <div class="status-card simple-doc-card single-document">
       <div class="status-head">
-        <div class="missing-heading">${s.ready?'Documento completo':'Falta completar'}</div>
-        <span class="status-badge ${s.ready?'ready':'blocked'}">${s.ready?'Listo':'Pendiente'}</span>
+        <div class="missing-heading">${s.ready?(hasWarnings?'Documento listo con observaciones':'Documento completo'):'Falta completar'}</div>
+        <span class="status-badge ${s.ready?'ready':'blocked'}">${s.ready?(hasWarnings?'Listo con observaciones':'Listo'):'Pendiente'}</span>
       </div>
       ${s.ready
-        ? `<div class="ready-message">Toda la información requerida está completa.</div>
+        ? `<div class="ready-message">${hasWarnings?'La información crítica está completa. Las observaciones no bloquean la generación del documento.':'Toda la información requerida está completa.'}</div>
+           ${renderWarnings(s.warnings)}
            <div class="doc-actions"><button class="primary" id="generateCurrent">Generar PDF</button></div>`
         : `<div class="issue-count">${issueTotal(s.issues)} pendiente(s) detectado(s)</div>${renderIssues(type,s.issues)}`}
     </div>`;
