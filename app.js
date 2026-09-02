@@ -2886,17 +2886,60 @@ function figureImplicationFor(title){
   if(t.includes('dedicación')) return 'La distribución debe considerarse junto con disponibilidad, modalidad y condiciones de acceso.';
   return 'El resultado aporta evidencia para la interpretación de la sección y debe contrastarse con las demás variables del diagnóstico.';
 }
+function distributionProfile(map){
+  const rows=reportEntries(map).map(([label,value])=>[label,Number(value)||0]);
+  if(!rows.length) return {type:'empty',rows:[],max:0,min:0,leaders:[],uniform:false};
+  const values=rows.map(([,value])=>value);
+  const max=Math.max(...values);
+  const min=Math.min(...values);
+  const leaders=rows.filter(([,value])=>value===max);
+  const uniform=rows.length>1 && max===min;
+  return {
+    type:uniform?'uniform':leaders.length>1?'tie':'unique',
+    rows,max,min,leaders,uniform
+  };
+}
+
+function distributionAnalysisText(title,map,total){
+  const profile=distributionProfile(map);
+  if(profile.type==='empty') return 'No existen registros suficientes para interpretar esta variable.';
+  const unitPct=fmtPct(pct(profile.max,Math.max(1,total)));
+  if(profile.type==='uniform'){
+    return 'La distribución es uniforme: las '+profile.rows.length+' categorías registran '+profile.max+' '+(profile.max===1?'registro':'registros')+' cada una ('+unitPct+' del total por categoría).';
+  }
+  if(profile.type==='tie'){
+    const names=profile.leaders.map(([label])=>label);
+    const visible=names.slice(0,5).join(', ');
+    const extra=names.length>5?' y '+(names.length-5)+' más':'';
+    return 'El valor máximo es compartido por '+visible+extra+', con '+profile.max+' '+(profile.max===1?'registro':'registros')+' cada una ('+unitPct+').';
+  }
+  const leader=profile.leaders[0];
+  return 'La mayor concentración corresponde a '+leader[0]+', con '+profile.max+' '+(profile.max===1?'registro':'registros')+' ('+unitPct+').';
+}
+
 function barChart(title,map,total,subtitle='',limit=10){
-  const rows=reportEntries(map).slice(0,limit);
-  const max=Math.max(1,...rows.map(([,v])=>Number(v)||0));
+  const allRows=reportEntries(map);
   const context=figureContextFor(title);
-  if(!rows.length) return '<div class="apa-figure-block"><p class="visual-context">'+esc(context)+'</p><div class="chart-box"><div class="chart-title">'+esc(title)+'</div><div class="small muted">Sin información disponible.</div></div><div class="figure-note"><em>Nota.</em> Elaboración propia a partir de los registros consolidados en DocFormación.</div><p class="visual-analysis"><strong>Análisis.</strong> No existen registros suficientes para interpretar esta variable; la información deberá completarse antes del cierre formal del diagnóstico.</p></div>';
-  const top=rows[0], topPct=pct(top[1],total);
-  return '<div class="apa-figure-block"><p class="visual-context">'+esc(context)+'</p>'+
-    '<div class="chart-box"><div class="chart-title">'+esc(title)+'</div>'+(subtitle?'<div class="chart-subtitle">'+esc(subtitle)+'</div>':'')+
-    rows.map(([label,value],idx)=>'<div class="chart-row"><div class="chart-label" title="'+esc(label)+'">'+esc(label)+'</div><div class="chart-track"><div class="chart-fill chart-c'+((idx%5)+1)+'" style="width:'+Math.max(2,100*value/max)+'%"></div></div><div class="chart-value">'+value+' · '+fmtPct(pct(value,total))+'</div></div>').join('')+
-    '</div><div class="figure-note"><em>Nota.</em> N = '+total+'. Elaboración propia a partir de los registros consolidados en DocFormación.</div>'+
-    '<p class="visual-analysis"><strong>Análisis.</strong> La mayor concentración corresponde a <strong>'+esc(top[0])+'</strong>, con '+top[1]+' registros ('+fmtPct(topPct)+'). '+esc(figureImplicationFor(title))+'</p></div>';
+  if(!allRows.length){
+    return '<div class="apa-figure-block"><p class="visual-context">'+esc(context)+'</p><div class="chart-box"><div class="chart-title">'+esc(title)+'</div><div class="small muted">Sin información disponible.</div></div><div class="figure-note"><em>Nota.</em> Elaboración propia a partir de los registros consolidados en DocFormación.</div><p class="visual-analysis"><strong>Análisis.</strong> No existen registros suficientes para interpretar esta variable.</p></div>';
+  }
+
+  const chunkSize=Math.max(1,Number(limit)||10);
+  const chunks=chunkArray(allRows,chunkSize);
+  const overallAnalysis=distributionAnalysisText(title,map,total)+' '+figureImplicationFor(title);
+
+  return chunks.map((rows,chunkIndex)=>{
+    const max=Math.max(1,...rows.map(([,v])=>Number(v)||0));
+    const part=chunks.length>1?' · Parte '+(chunkIndex+1)+' de '+chunks.length:'';
+    const note=chunks.length>1
+      ? '<em>Nota.</em> Se muestran '+allRows.length+' categorías en '+chunks.length+' partes para conservar la legibilidad. N = '+total+'. Elaboración propia a partir de los registros consolidados en DocFormación.'
+      : '<em>Nota.</em> N = '+total+'. Elaboración propia a partir de los registros consolidados en DocFormación.';
+    return '<div class="apa-figure-block chart-part"><p class="visual-context">'+esc(chunkIndex===0?context:'Continuación de la figura anterior para mostrar todas las categorías sin omitir registros.')+'</p>'+
+      '<div class="chart-box"><div class="chart-title">'+esc(title+part)+'</div>'+(subtitle?'<div class="chart-subtitle">'+esc(subtitle)+'</div>':'')+
+      rows.map(([label,value],idx)=>'<div class="chart-row"><div class="chart-label" title="'+esc(label)+'">'+esc(label)+'</div><div class="chart-track"><div class="chart-fill chart-c'+((idx%5)+1)+'" style="width:'+Math.max(2,100*value/max)+'%"></div></div><div class="chart-value">'+value+' · '+fmtPct(pct(value,total))+'</div></div>').join('')+
+      '</div><div class="figure-note">'+note+'</div>'+
+      '<p class="visual-analysis"><strong>Análisis.</strong> '+esc(chunkIndex===0?overallAnalysis:'Esta parte completa la visualización de la distribución; su interpretación corresponde al análisis general de la primera parte.')+'</p></div>';
+  }).join('');
 }
 function stackedChart(title,yesCount,total,yesLabel='Sí',noLabel='No'){
   const yesPct=pct(yesCount,total),noCount=Math.max(0,total-yesCount),noPct=pct(noCount,total);
@@ -2970,6 +3013,66 @@ function chunkArray(items,size){
   const out=[];for(let i=0;i<items.length;i+=size) out.push(items.slice(i,i+size));return out.length?out:[[]];
 }
 
+function tableSpecificContext(title,headers){
+  const t=norm(title).toLowerCase();
+  if(t.includes('prioridad')) return 'La tabla organiza las prioridades registradas para comparar su distribución y orientar el orden de intervención.';
+  if(t.includes('frecuencia')||t.includes('recurrencia')) return 'La tabla permite verificar cuántas carreras comparten una misma necesidad y distinguir recurrencias reales de necesidades exclusivas.';
+  if(t.includes('carreras, programas')||t.includes('responsables')) return 'La tabla consolida la estructura académica responsable del diagnóstico y permite comprobar la cobertura por carrera.';
+  if(t.includes('necesidades de formación de')) return 'La tabla presenta las necesidades específicas validadas para esta carrera y la prioridad asignada a cada una.';
+  if(t.includes('matriz consolidada')) return 'La tabla integra los resultados de las carreras para facilitar una lectura institucional de las prioridades.';
+  if(t.includes('referentes')) return 'La tabla relaciona los referentes institucionales con su aplicación concreta dentro de la DNF.';
+  return 'La tabla presenta '+norm(title).toLowerCase()+'.';
+}
+
+function tableSpecificAnalysis(table,title){
+  const rows=[...table.querySelectorAll('tr')].slice(1);
+  const t=norm(title).toLowerCase();
+
+  if(t.includes('frecuencia')||t.includes('recurrencia')){
+    const values=rows.map(row=>{
+      const cells=[...row.querySelectorAll('td')].map(x=>norm(x.textContent));
+      return {label:cells[0]||'',value:Number(String(cells[1]||'').replace(',','.'))||0};
+    }).filter(x=>x.label);
+    const max=Math.max(0,...values.map(x=>x.value));
+    if(max<=1) return 'No se identifican necesidades recurrentes entre carreras: la frecuencia máxima observada es 1.';
+    const leaders=values.filter(x=>x.value===max).map(x=>x.label);
+    return leaders.length===1
+      ? 'La necesidad con mayor recurrencia aparece en '+max+' carreras: '+leaders[0]+'.'
+      : 'La mayor recurrencia es compartida por '+leaders.join(', ')+', con presencia en '+max+' carreras cada una.';
+  }
+
+  const pctRows=[];
+  rows.forEach(row=>{
+    const cells=[...row.querySelectorAll('td')].map(x=>norm(x.textContent));
+    if(!cells.length) return;
+    const pctCell=cells.find(x=>/%/.test(x));
+    if(!pctCell) return;
+    const value=Number(pctCell.replace('%','').replace(',','.').replace(/[^0-9.]/g,''));
+    if(Number.isFinite(value)) pctRows.push([cells[0],value,pctCell]);
+  });
+  if(pctRows.length){
+    const max=Math.max(...pctRows.map(x=>x[1]));
+    const min=Math.min(...pctRows.map(x=>x[1]));
+    const leaders=pctRows.filter(x=>x[1]===max);
+    if(pctRows.length>1 && max===min) return 'La distribución es uniforme: todas las categorías presentan la misma proporción ('+leaders[0][2]+').';
+    if(leaders.length>1) return 'La proporción máxima es compartida por '+leaders.map(x=>x[0]).join(', ')+', con '+leaders[0][2]+' cada una.';
+    return 'La proporción más alta corresponde a '+leaders[0][0]+', con '+leaders[0][2]+'.';
+  }
+
+  if(t.includes('necesidades de formación de')){
+    const priorities={Alta:0,Media:0,Baja:0};
+    rows.forEach(row=>{
+      const cells=[...row.querySelectorAll('td')].map(x=>norm(x.textContent));
+      const p=cells[cells.length-1];
+      if(priorities[p]!==undefined) priorities[p]++;
+    });
+    return 'La carrera registra '+rows.length+' necesidad(es): '+priorities.Alta+' de prioridad Alta, '+priorities.Media+' Media y '+priorities.Baja+' Baja.';
+  }
+  if(t.includes('responsables')) return 'La matriz permite comprobar que cada carrera cuente con programa y coordinación responsable antes del cierre del diagnóstico.';
+  if(t.includes('referentes')) return 'Los referentes incluidos delimitan la relación entre diagnóstico, planificación, formación y seguimiento institucional.';
+  return 'Los datos consolidados en la tabla respaldan la interpretación desarrollada en esta sección.';
+}
+
 function enhanceApaTables(html){
   const holder=document.createElement('div');
   holder.innerHTML=html;
@@ -2986,30 +3089,31 @@ function enhanceApaTables(html){
     const cleanHeading=heading.replace(/^\d+(?:\.\d+)*\s*/, '').trim();
     const title=table.dataset.apaTitle||cleanHeading||('Resultados consolidados: '+headers.slice(0,2).join(' y '))||'Resultados del diagnóstico';
     const rows=[...table.querySelectorAll('tr')].slice(1);
-    let best=null;
-    rows.forEach(row=>{
-      const cells=[...row.querySelectorAll('td')].map(x=>norm(x.textContent));
-      if(!cells.length)return;
-      const pctCell=cells.find(x=>/%/.test(x));
-      if(!pctCell)return;
-      const value=Number(pctCell.replace('%','').replace(',','.').replace(/[^0-9.]/g,''));
-      if(Number.isFinite(value)&&(!best||value>best.value)) best={label:cells[0],value,text:pctCell};
-    });
+
     const block=document.createElement('div');
     block.className='apa-table-block';
     table.parentNode.insertBefore(block,table);
+
     const context=document.createElement('p');
     context.className='apa-table-context';
-    const headerSummary=headers.slice(0,3).map(x=>x.toLowerCase()).join(', ');
-    context.textContent=headerSummary?('Para sustentar la lectura de esta sección, se contrastan '+headerSummary+' mediante la siguiente tabla.'):('Para sustentar la lectura de esta sección, los resultados se organizan en la siguiente tabla.');
+    context.textContent=table.dataset.apaContext||tableSpecificContext(title,headers);
     block.appendChild(context);
+
     const num=document.createElement('div');num.className='apa-table-number';num.textContent='Tabla '+number;block.appendChild(num);
     const ttl=document.createElement('div');ttl.className='apa-table-title';ttl.textContent=title;block.appendChild(ttl);
     block.appendChild(table);
-    const note=document.createElement('div');note.className='apa-table-note';const hasPercent=headers.some(x=>x.includes('%'))||rows.some(row=>[...row.querySelectorAll('td')].some(td=>/%/.test(td.textContent||'')));
-    note.innerHTML=hasPercent?'<em>Nota.</em> Elaboración propia a partir de los registros consolidados en DocFormación. Los porcentajes se calculan sobre la base correspondiente a cada sección; las diferencias por redondeo pueden afectar el total.':'<em>Nota.</em> Elaboración propia a partir de los registros consolidados en DocFormación.';block.appendChild(note);
-    const analysis=document.createElement('p');analysis.className='apa-table-analysis';
-    analysis.innerHTML=best?('<strong>Análisis.</strong> La mayor proporción observada corresponde a <strong>'+esc(best.label)+'</strong>, con '+esc(best.text)+'. Este resultado debe relacionarse con las demás variables de la sección antes de establecer una prioridad o decisión dentro del Plan de Formación.'):('<strong>Análisis.</strong> La tabla permite organizar y comparar la información utilizada en esta sección. Su lectura debe complementarse con los resultados gráficos y el análisis narrativo para orientar la decisión institucional.');
+
+    const note=document.createElement('div');
+    note.className='apa-table-note';
+    const hasPercent=headers.some(x=>x.includes('%'))||rows.some(row=>[...row.querySelectorAll('td')].some(td=>/%/.test(td.textContent||'')));
+    note.innerHTML=hasPercent
+      ? '<em>Nota.</em> Elaboración propia a partir de los registros consolidados en DocFormación. Los porcentajes se calculan sobre la base correspondiente a cada sección; las diferencias por redondeo pueden afectar el total.'
+      : '<em>Nota.</em> Elaboración propia a partir de los registros consolidados en DocFormación.';
+    block.appendChild(note);
+
+    const analysis=document.createElement('p');
+    analysis.className='apa-table-analysis';
+    analysis.innerHTML='<strong>Análisis.</strong> '+esc(table.dataset.apaAnalysis||tableSpecificAnalysis(table,title));
     block.appendChild(analysis);
   });
   return holder.innerHTML;
@@ -3062,10 +3166,23 @@ function dnfHtml(){
     if(key) needFrequency[key]=(needFrequency[key]||0)+1;
   });
 
-  const topNeed=reportEntries(needFrequency)[0]||['Sin información',0];
+  const frequencyEntries=reportEntries(needFrequency);
+  const maxNeedFrequency=frequencyEntries.length?Number(frequencyEntries[0][1]||0):0;
+  const recurrentEntries=frequencyEntries.filter(([,count])=>Number(count)>1);
+  const hasRecurrence=maxNeedFrequency>1;
+  const topRecurring=hasRecurrence?recurrentEntries.filter(([,count])=>Number(count)===maxNeedFrequency):[];
+  const needsDistribution=distributionProfile(needsByCareer);
+  const highDistribution=distributionProfile(highByCareer);
   const highCount=Number(priorityDist.Alta||0);
   const mediumCount=Number(priorityDist.Media||0);
   const lowCount=Number(priorityDist.Baja||0);
+  const needsDistributionText=distributionAnalysisText('Necesidades registradas por carrera',needsByCareer,Math.max(1,totalNeeds));
+  const highDistributionText=distributionAnalysisText('Necesidades de prioridad alta por carrera',highByCareer,Math.max(1,highCount));
+  const recurrenceText=hasRecurrence
+    ? (topRecurring.length===1
+      ? 'La necesidad con mayor recurrencia institucional es '+topRecurring[0][0]+', presente en '+maxNeedFrequency+' carreras.'
+      : 'La mayor recurrencia institucional es compartida por '+topRecurring.map(([need])=>need).join(', ')+', con presencia en '+maxNeedFrequency+' carreras cada una.')
+    : 'No se identificaron necesidades recurrentes entre carreras; la frecuencia inter-carrera máxima es 1.';
 
   const pages=[];
   const add=(tocLabel,body,extraClass='')=>pages.push({tocLabel,body,extraClass});
@@ -3150,8 +3267,8 @@ function dnfHtml(){
     '<div class="sec-title">5. Caracterización institucional de necesidades</div>'+
     '<p class="section-intro">La caracterización resume el alcance del diagnóstico a partir de las carreras configuradas, las necesidades específicas registradas y las líneas genéricas institucionales.</p>'+
     '<div class="kpi-row"><div class="kpi"><strong>'+totalCareers+'</strong><span>Carreras</span></div><div class="kpi"><strong>'+totalNeeds+'</strong><span>Necesidades específicas</span></div><div class="kpi"><strong>'+genericLines.length+'</strong><span>Líneas genéricas</span></div><div class="kpi"><strong>'+fmtPct(coverage)+'</strong><span>Cobertura de carreras</span></div></div>'+
-    '<div class="chart-grid">'+barChart('Necesidades registradas por carrera',needsByCareer,Math.max(1,totalNeeds),'Participación de cada carrera en el conjunto de necesidades',15)+'</div>'+
-    '<p>La cobertura del diagnóstico alcanza <strong>'+fmtPct(coverage)+'</strong> de las carreras configuradas. Este indicador permite verificar si la DNF incorpora necesidades para toda la oferta institucional considerada en el período.</p>'
+    barChart('Necesidades registradas por carrera',needsByCareer,Math.max(1,totalNeeds),'Participación de cada carrera en el conjunto de necesidades',12)+
+    '<p>'+esc(needsDistributionText)+' La cobertura del diagnóstico alcanza <strong>'+fmtPct(coverage)+'</strong> de las carreras configuradas.</p>'
   );
 
   add(null,
@@ -3165,9 +3282,12 @@ function dnfHtml(){
 
   add('6. Análisis de brechas y necesidades institucionales',
     '<div class="sec-title">6. Análisis de brechas y necesidades institucionales</div>'+
-    '<p class="section-intro">En esta DNF, la brecha se representa mediante la necesidad formativa que una carrera declara como requerida para fortalecer su desarrollo académico. El análisis se concentra en la prioridad, recurrencia y distribución institucional de esas necesidades.</p>'+
-    '<div class="chart-grid">'+barChart('Distribución de prioridades',priorityDist,Math.max(1,totalNeeds),'Necesidades específicas clasificadas como Alta, Media o Baja',5)+barChart('Necesidades recurrentes entre carreras',needFrequency,Math.max(1,totalCareers),'Número de carreras en las que aparece cada necesidad',12)+'</div>'+
-    '<p>La DNF registra <strong>'+highCount+'</strong> necesidades de prioridad Alta, <strong>'+mediumCount+'</strong> de prioridad Media y <strong>'+lowCount+'</strong> de prioridad Baja. La necesidad con mayor recurrencia institucional es <strong>'+esc(topNeed[0])+'</strong>, presente en '+topNeed[1]+' carrera(s).</p>'
+    '<p class="section-intro">En esta DNF, la brecha se representa mediante la necesidad formativa que una carrera declara como requerida para fortalecer su desarrollo académico. El análisis distingue la prioridad registrada, la distribución por carrera y la existencia —o ausencia— de recurrencias inter-carrera.</p>'+
+    barChart('Distribución de prioridades',priorityDist,Math.max(1,totalNeeds),'Necesidades específicas clasificadas como Alta, Media o Baja',5)+
+    (hasRecurrence
+      ? barChart('Necesidades recurrentes entre carreras',Object.fromEntries(recurrentEntries),Math.max(1,totalCareers),'Solo se muestran necesidades presentes en más de una carrera',10)
+      : '<div class="callout"><strong>Recurrencia inter-carrera:</strong> No identificada. Todas las necesidades específicas registran frecuencia igual a 1.</div>')+
+    '<p>La DNF registra <strong>'+highCount+'</strong> necesidades de prioridad Alta, <strong>'+mediumCount+'</strong> de prioridad Media y <strong>'+lowCount+'</strong> de prioridad Baja. '+esc(recurrenceText)+'</p>'
   );
 
   add(null,
@@ -3176,18 +3296,20 @@ function dnfHtml(){
     '<table class="data" data-apa-title="Distribución de prioridades por carrera"><tr><th>Carrera</th><th>Alta</th><th>Media</th><th>Baja</th><th>Total</th></tr>'+
       profiles.map(p=>'<tr><td>'+esc(p.career)+'</td><td class="num">'+p.high+'</td><td class="num">'+p.medium+'</td><td class="num">'+p.low+'</td><td class="num">'+p.needs.length+'</td></tr>').join('')+
     '</table>'+
-    '<div class="chart-grid">'+barChart('Necesidades de prioridad alta por carrera',highByCareer,Math.max(1,highCount),'Concentración de necesidades que requieren atención prioritaria',15)+'</div>'
+    barChart('Necesidades de prioridad alta por carrera',highByCareer,Math.max(1,highCount),'Distribución de necesidades que requieren atención prioritaria',12)+
+    '<p>'+esc(highDistributionText)+'</p>'
   );
 
   add('7. Necesidades específicas por carrera',
     '<div class="sec-title">7. Necesidades específicas por carrera</div>'+
     '<p class="lead">Las necesidades específicas se presentan por carrera para conservar la pertinencia disciplinar. Cada registro mantiene su prioridad y se vincula con la coordinación responsable.</p>'+
-    '<div class="chart-grid">'+barChart('Necesidades registradas por carrera',needsByCareer,Math.max(1,totalNeeds),'Cantidad de necesidades específicas declaradas en cada carrera',15)+'</div>'
+    barChart('Necesidades registradas por carrera',needsByCareer,Math.max(1,totalNeeds),'Cantidad de necesidades específicas declaradas en cada carrera',12)
   );
 
   profiles.forEach((p,index)=>{
     const priorityText=p.high?'Alta':p.medium?'Media':p.low?'Baja':'Sin definir';
     add(null,
+      '<div class="career-profile-block">'+
       '<div class="sec-title">7.'+(index+2)+' '+esc(p.career)+'</div>'+
       '<div class="kpi-row"><div class="kpi"><strong>'+p.needs.length+'</strong><span>Necesidades</span></div><div class="kpi"><strong>'+p.high+'</strong><span>Alta</span></div><div class="kpi"><strong>'+p.medium+'</strong><span>Media</span></div><div class="kpi"><strong>'+p.low+'</strong><span>Baja</span></div></div>'+
       '<p><strong>Programa:</strong> '+esc(p.program)+'<br><strong>Coordinador/a:</strong> '+esc(p.coordinator)+'</p>'+
@@ -3195,7 +3317,8 @@ function dnfHtml(){
         p.needs.map((item,i)=>'<tr><td class="num">'+(i+1)+'</td><td>'+esc(item.text)+'</td><td class="num">'+esc(item.priorityOverride||'Sin definir')+'</td></tr>').join('')+
       '</table>'+
       '<div class="sub-title">Interpretación</div>'+
-      '<p>La carrera registra '+p.needs.length+' necesidad(es) específica(s). La prioridad institucional más alta presente en este bloque es <strong>'+esc(priorityText)+'</strong>. Estas necesidades deben trasladarse al Plan respetando su pertinencia y el orden de intervención definido para el período.</p>'
+      '<p>La carrera registra '+p.needs.length+' necesidad(es) específica(s). La prioridad institucional más alta presente en este bloque es <strong>'+esc(priorityText)+'</strong>. Estas necesidades deben trasladarse al Plan respetando su pertinencia y el orden de intervención definido para el período.</p>'+
+      '</div>'
     );
   });
 
@@ -3208,8 +3331,11 @@ function dnfHtml(){
 
   add('9. Priorización institucional',
     '<div class="sec-title">9. Priorización institucional</div>'+
-    '<p class="section-intro">La priorización ordena las necesidades antes de la elaboración del Plan de Formación. Se consideran la prioridad registrada en cada carrera y la recurrencia de una misma necesidad en la institución.</p>'+
-    '<div class="chart-grid">'+barChart('Distribución de prioridades',priorityDist,Math.max(1,totalNeeds),'Composición del diagnóstico según prioridad',5)+barChart('Recurrencia institucional de necesidades',needFrequency,Math.max(1,totalCareers),'Carreras en las que se repite cada necesidad',12)+'</div>'+
+    '<p class="section-intro">La priorización ordena las necesidades antes de la elaboración del Plan de Formación. La prioridad registrada constituye el criterio principal; la recurrencia inter-carrera se utiliza únicamente cuando una misma necesidad aparece en más de una carrera.</p>'+
+    barChart('Distribución de prioridades',priorityDist,Math.max(1,totalNeeds),'Composición del diagnóstico según prioridad',5)+
+    (hasRecurrence
+      ? barChart('Recurrencia institucional de necesidades',Object.fromEntries(recurrentEntries),Math.max(1,totalCareers),'Carreras en las que se repite cada necesidad',10)
+      : '<div class="callout"><strong>Resultado:</strong> No se identificaron necesidades recurrentes entre carreras. En este período la recurrencia no constituye un criterio adicional de priorización.</div>')+
     '<table class="data" data-apa-title="Matriz institucional de priorización"><tr><th>Necesidad</th><th>Carreras donde aparece</th><th>Prioridad mayor registrada</th></tr>'+
       reportEntries(needFrequency).map(([need,count])=>{
         const related=allNeeds.filter(x=>norm(x.text)===need);
@@ -3224,7 +3350,7 @@ function dnfHtml(){
     '<div class="sec-title">10. Propuesta de lineamientos para el Plan de Formación</div>'+
     '<p class="lead">El Plan de Formación debe tomar las necesidades consolidadas en esta DNF y convertirlas en acciones institucionales verificables. La DNF define qué debe atenderse; el Plan define cómo, cuándo, con qué recursos y bajo qué metas.</p>'+
     '<div class="sub-title">10.1 Criterios de traslado al Plan</div>'+
-    '<ol class="number-list"><li>Atender primero las necesidades de prioridad Alta.</li><li>Considerar la recurrencia institucional como criterio complementario de priorización.</li><li>Mantener separadas las necesidades específicas y las líneas genéricas.</li><li>Definir para cada línea seleccionada una modalidad, institución o mecanismo de ejecución pertinente.</li><li>Establecer metas e indicadores que permitan evaluar posteriormente el cumplimiento.</li></ol>'+
+    '<ol class="number-list"><li>Atender primero las necesidades de prioridad Alta.</li><li>'+(hasRecurrence?'Considerar la recurrencia institucional como criterio complementario de priorización.':'En ausencia de recurrencias inter-carrera, priorizar por nivel de prioridad y pertinencia disciplinar; si en futuros períodos aparecen coincidencias, evaluar respuestas institucionales compartidas.')+'</li><li>Mantener separadas las necesidades específicas y las líneas genéricas.</li><li>Definir para cada línea seleccionada una modalidad, institución o mecanismo de ejecución pertinente.</li><li>Establecer metas e indicadores que permitan evaluar posteriormente el cumplimiento.</li></ol>'+
     '<div class="sub-title">10.2 Secuencia sugerida</div>'+
     '<div class="flow"><div class="flow-box">Necesidad priorizada</div><div class="flow-arrow">→</div><div class="flow-box">Ruta formativa</div><div class="flow-arrow">→</div><div class="flow-box">Meta</div><div class="flow-arrow">→</div><div class="flow-box">Seguimiento</div></div>'
   );
@@ -3239,23 +3365,23 @@ function dnfHtml(){
     '<div class="sec-title">11. Resumen ejecutivo</div>'+
     '<p class="lead">La Detección de Necesidades de Formación del período '+esc(periodLabel())+' consolida información de <strong>'+totalCareers+' carreras</strong>, con <strong>'+totalNeeds+' necesidades específicas</strong> y <strong>'+genericLines.length+' líneas genéricas institucionales</strong>.</p>'+
     '<div class="kpi-row"><div class="kpi"><strong>'+totalCareers+'</strong><span>Carreras</span></div><div class="kpi"><strong>'+totalNeeds+'</strong><span>Necesidades</span></div><div class="kpi"><strong>'+highCount+'</strong><span>Prioridad alta</span></div><div class="kpi"><strong>'+fmtPct(coverage)+'</strong><span>Cobertura</span></div></div>'+
-    '<p>La necesidad con mayor recurrencia institucional es <strong>'+esc(topNeed[0])+'</strong>, registrada en '+topNeed[1]+' carrera(s). El diagnóstico identifica '+highCount+' necesidades de prioridad Alta, '+mediumCount+' de prioridad Media y '+lowCount+' de prioridad Baja.</p>'+
+    '<p>'+esc(recurrenceText)+' El diagnóstico identifica '+highCount+' necesidades de prioridad Alta, '+mediumCount+' de prioridad Media y '+lowCount+' de prioridad Baja. '+esc(needsDistributionText)+'</p>'+
     '<p>El siguiente paso consiste en trasladar las necesidades priorizadas al Plan de Formación, definiendo rutas, metas, responsables, modalidades y mecanismos de seguimiento sin convertir este documento en una nómina de docentes.</p>'
   );
 
   add('12. Conclusiones',
     '<div class="sec-title">12. Conclusiones</div>'+
-    '<ol class="number-list"><li>La DNF se consolida a nivel institucional y por carrera, sin requerir información nominal de docentes.</li><li>El período registra '+totalNeeds+' necesidades específicas distribuidas en '+totalCareers+' carreras.</li><li>Las necesidades de prioridad Alta constituyen el primer grupo de atención para la elaboración del Plan.</li><li>La recurrencia de una misma necesidad en distintas carreras permite identificar oportunidades de respuesta institucional compartida.</li><li>Las líneas genéricas deben complementar, y no sustituir, las necesidades específicas de cada carrera.</li><li>La trazabilidad entre DNF, Plan e Informe permite evaluar posteriormente qué necesidades fueron atendidas y con qué resultados.</li></ol>'
+    '<ol class="number-list"><li>La DNF se consolida a nivel institucional y por carrera, sin requerir información nominal de docentes.</li><li>El período registra '+totalNeeds+' necesidades específicas distribuidas en '+totalCareers+' carreras.</li><li>'+esc(needsDistributionText)+'</li><li>Las necesidades de prioridad Alta constituyen el primer grupo de atención para la elaboración del Plan.</li><li>'+(hasRecurrence?'Se identifican necesidades compartidas entre carreras, lo que permite evaluar respuestas institucionales conjuntas.':'No se identifican necesidades específicas compartidas por más de una carrera; por tanto, la priorización debe sustentarse principalmente en la prioridad y pertinencia disciplinar.')+'</li><li>Las líneas genéricas deben complementar, y no sustituir, las necesidades específicas de cada carrera.</li><li>La trazabilidad entre DNF, Plan e Informe permite evaluar posteriormente qué necesidades fueron atendidas y con qué resultados.</li></ol>'
   );
 
   add('13. Recomendaciones',
     '<div class="sec-title">13. Recomendaciones</div>'+
-    '<ul class="number-list"><li>Validar con cada coordinación las necesidades registradas antes del cierre formal del documento.</li><li>Priorizar en el Plan las necesidades clasificadas como Alta y aquellas con recurrencia institucional.</li><li>Mantener actualizado el catálogo de carreras y responsables.</li><li>Evitar utilizar nombres, cédulas o fichas individuales dentro de la DNF institucional.</li><li>Definir metas verificables para cada línea que pase al Plan de Formación.</li><li>Utilizar el Informe de Cumplimiento como retroalimentación para la siguiente DNF.</li></ul>'
+    '<ul class="number-list"><li>Validar con cada coordinación las necesidades registradas antes del cierre formal del documento.</li><li>'+(hasRecurrence?'Priorizar las necesidades clasificadas como Alta y considerar las recurrencias inter-carrera para posibles respuestas compartidas.':'Priorizar las necesidades clasificadas como Alta y mantener seguimiento de posibles convergencias entre carreras en futuras DNF.')+'</li><li>Mantener actualizado el catálogo de carreras y responsables.</li><li>Evitar utilizar nombres, cédulas o fichas individuales dentro de la DNF institucional.</li><li>Definir metas verificables para cada línea que pase al Plan de Formación.</li><li>Utilizar el Informe de Cumplimiento como retroalimentación para la siguiente DNF.</li></ul>'
   );
 
   add('14. Referencias',
     '<div class="sec-title">14. Referencias</div>'+
-    '<ul class="number-list"><li>Constitución de la República del Ecuador.</li><li>Ley Orgánica de Educación Superior (LOES).</li><li>Reglamento de Carrera y Escalafón del Personal Académico del Sistema de Educación Superior.</li><li>Consejo de Aseguramiento de la Calidad de la Educación Superior (CACES). Modelo de evaluación externa aplicable.</li><li>Instituto Superior Tecnológico Quito Metropolitano. Plan Estratégico de Desarrollo Institucional.</li><li>Instituto Superior Tecnológico Quito Metropolitano. Reglamento de Formación Docente.</li><li>Instituto Superior Tecnológico Quito Metropolitano. Manual del proceso de Formación Académica.</li></ul>'
+    '<div class="reference-list"><p>Asamblea Constituyente del Ecuador. (2008). <em>Constitución de la República del Ecuador</em>.</p><p>Asamblea Nacional del Ecuador. <em>Ley Orgánica de Educación Superior (LOES)</em>. Se deberá conservar en el expediente institucional la versión vigente utilizada para este período.</p><p>Consejo de Educación Superior. <em>Reglamento de Carrera y Escalafón del Personal Académico del Sistema de Educación Superior</em>. Se deberá conservar la versión vigente utilizada.</p><p>Consejo de Aseguramiento de la Calidad de la Educación Superior (CACES). <em>Modelo de evaluación externa aplicable</em>. Registrar en el expediente la versión y fecha efectivamente utilizadas.</p><p>Instituto Superior Tecnológico Quito Metropolitano. <em>Plan Estratégico de Desarrollo Institucional</em>. Registrar código, versión y fecha institucional vigentes.</p><p>Instituto Superior Tecnológico Quito Metropolitano. <em>Reglamento de Formación Docente</em>. Registrar código, versión y fecha institucional vigentes.</p><p>Instituto Superior Tecnológico Quito Metropolitano. <em>Manual del proceso de Formación Académica</em>. Registrar código, versión y fecha institucional vigentes.</p></div>'
   );
 
   add('15. Anexos',
