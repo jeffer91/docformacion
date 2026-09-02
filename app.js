@@ -802,21 +802,19 @@ function documentStatus(type){
     issues.push({kind:'teachers-empty',text:'Cargar al menos un docente',view:'docentes'});
   }
 
-  if(type!=='dnf'){
-    state.teachers.forEach(t=>{
-      const entries=teacherMissingEntriesForDocument(type,t);
-      if(entries.length){
-        issues.push({
-          kind:'teacher',
-          teacherId:t.id,
-          name:t.nombre||t.cedula||'Docente',
-          fields:entries,
-          text:(t.nombre||t.cedula||'Docente')+': falta '+entries.map(x=>x.label).join(', '),
-          view:'docentes'
-        });
-      }
-    });
-  }
+  state.teachers.forEach(t=>{
+    const entries=teacherMissingEntriesForDocument(type,t);
+    if(entries.length){
+      issues.push({
+        kind:'teacher',
+        teacherId:t.id,
+        name:t.nombre||t.cedula||'Docente',
+        fields:entries,
+        text:(t.nombre||t.cedula||'Docente')+': falta '+entries.map(x=>x.label).join(', '),
+        view:'docentes'
+      });
+    }
+  });
 
   const withoutProgram=careersInUse.filter(name=>{
     const p=programForCareer(name);
@@ -832,17 +830,6 @@ function documentStatus(type){
   }
 
   if(type==='dnf'){
-    const invalidCareerRows=state.teachers.filter(t=>norm(t.carrera) && !validCareerName(t.carrera));
-    invalidCareerRows.forEach(t=>{
-      issues.push({
-        kind:'teacher',
-        teacherId:t.id,
-        name:t.nombre||t.cedula||'Docente',
-        fields:[{key:'carrera',label:'Carrera principal válida (el valor actual parece un programa de estudio)'}],
-        text:(t.nombre||t.cedula||'Docente')+': carrera principal inválida',
-        view:'docentes'
-      });
-    });
     const withoutNeeds=careersInUse.filter(name=>!needsFor(name).filter(norm).length);
     if(withoutNeeds.length){
       issues.push({
