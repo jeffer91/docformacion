@@ -2626,15 +2626,15 @@ function planHtml(){
     <div class="h1">1. Introducción</div><p>El presente Plan se construye a partir de la Detección de Necesidades de Formación del mismo período. La información de los docentes no se vuelve a ingresar: se hereda de la base institucional y se complementa únicamente con decisiones de planificación.</p>
     <div class="h1">2. Objetivo</div><p>Orientar la formación académica del personal docente mediante rutas pertinentes y verificables, alineadas con las brechas identificadas y las prioridades institucionales.</p>
     <div class="h1">3. Diagnóstico resumido</div><p>La base institucional contiene ${total} docentes. El Plan incluye ${rows.length}, equivalente al ${fmtPct(coverage)}. La meta configurada para el período es ${fmtPct(state.period.targetPercent)}.</p>
-    <div class="h1">4. Docentes incluidos en el Plan</div>
-    <table class="data"><tr><th>Docente</th><th>Carrera</th><th>Nivel</th><th>Programa</th><th>Institución</th><th>Modalidad</th><th>Inicio</th><th>Fin</th><th>Apoyo</th><th>Monto</th></tr>${
-      rows.map(p=>{const t=teacherById(p.teacherId);return`<tr><td>${esc(t?.nombre)}</td><td>${esc(t?.carrera)}</td><td>${esc(p.level)}</td><td>${esc(p.program)}</td><td>${esc(p.institution||'Por definir')}</td><td>${esc(p.modality)}</td><td>${esc(p.plannedStart)}</td><td>${esc(p.plannedEnd)}</td><td>${esc(p.supportType)}</td><td>${esc(p.supportAmount||'—')}</td></tr>`}).join('')
+    <div class="h1">4. Planificación consolidada de la formación</div><p>La identificación nominal de los docentes se mantiene en la gestión interna de la aplicación y no se presenta en el documento institucional.</p>
+    <table class="data"><tr><th>Carrera</th><th>Nivel</th><th>Programa</th><th>Institución</th><th>Modalidad</th><th>Inicio</th><th>Fin</th><th>Apoyo</th><th>Monto</th></tr>${
+      rows.map(p=>{const t=teacherById(p.teacherId);return`<tr><td>${esc(t?.carrera)}</td><td>${esc(p.level)}</td><td>${esc(p.program)}</td><td>${esc(p.institution||'Por definir')}</td><td>${esc(p.modality)}</td><td>${esc(p.plannedStart)}</td><td>${esc(p.plannedEnd)}</td><td>${esc(p.supportType)}</td><td>${esc(p.supportAmount||'—')}</td></tr>`}).join('')
     }</table>
     <div class="h1">5. Acciones institucionales</div><ol>${state.settings.planActions.map(x=>'<li>'+esc(x)+'</li>').join('')}</ol>
     <div class="h1">6. Metas e indicadores</div>
     <table class="data"><tr><th>Indicador</th><th>Meta / referencia</th></tr><tr><td>Docentes incluidos en formación</td><td>${rows.length} docentes</td></tr><tr><td>Cobertura del Plan</td><td>${fmtPct(coverage)}</td></tr><tr><td>Meta institucional configurada</td><td>${fmtPct(state.period.targetPercent)}</td></tr></table>
     <div class="h1">7. Seguimiento</div><p>El seguimiento se efectuará sobre la misma base, registrando estado, fecha real de inicio, fecha prevista de finalización, porcentaje de avance, evidencia y abandono cuando corresponda.</p>
-    <div class="h1">8. Conclusión</div><p>El Plan traduce las prioridades del diagnóstico en una selección concreta de docentes y rutas formativas, manteniendo trazabilidad entre DNF, planificación y resultados.</p>
+    <div class="h1">8. Conclusión</div><p>El Plan traduce las prioridades del diagnóstico en una planificación consolidada de rutas formativas, manteniendo la identificación nominal únicamente en la gestión interna y la trazabilidad entre DNF, planificación y resultados.</p>
   `);
 }
 function informeHtml(){
