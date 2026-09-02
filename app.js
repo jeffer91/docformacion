@@ -1271,10 +1271,10 @@ function renderPeriod() {
       const input=$('#content').querySelector('[name="'+name+'"]');
       if(input) input.value=value;
     });
-    bindExcelActions('periodo',$('#content'));
-  refreshPeriodMissingStyles();
+    refreshPeriodMissingStyles();
   };
 
+  bindExcelActions('periodo',$('#content'));
   refreshPeriodMissingStyles();
   $('#content').querySelectorAll('[name]').forEach(el=>{
     el.addEventListener('input',()=>{
@@ -2049,19 +2049,66 @@ function rowPreviewValues(row){
     .map(([key,value])=>({key,value:String(value)}));
 }
 
+
+const EXCEL_MODULES={
+  PERIODO:{module:'periodo',label:'Datos generales',view:'periodo'},
+  CARRERAS:{module:'carreras',label:'Carreras',view:'carreras'},
+  COORDINACIONES:{module:'dnf',label:'Detección de Necesidades',view:'necesidades'},
+  NECESIDADES:{module:'dnf',label:'Detección de Necesidades',view:'necesidades'},
+  LINEAS_GENERICAS:{module:'dnf',label:'Detección de Necesidades',view:'necesidades'},
+  DOCENTES:{module:'docentes',label:'Docentes',view:'docentes'},
+  PLAN:{module:'plan',label:'Plan de Formación',view:'planificacion'},
+  SEGUIMIENTO:{module:'seguimiento',label:'Seguimiento',view:'seguimiento'}
+};
+
+function workbookModuleInfo(sheetNames){
+  const recognized=sheetNames
+    .filter(name=>EXCEL_MODULES[name])
+    .map(name=>({sheet:name,...EXCEL_MODULES[name]}));
+  const modules=[...new Map(recognized.map(x=>[x.module,x])).values()];
+  return {recognized,modules};
+}
+
+function excelScopeLabel(scope){
+  return {
+    periodo:'Datos generales',
+    carreras:'Carreras',
+    docentes:'Docentes',
+    dnf:'Detección de Necesidades',
+    plan:'Plan de Formación',
+    seguimiento:'Seguimiento',
+    global:'Carga global'
+  }[scope]||'este apartado';
+}
+
 function analyzeExcelImport(scope,result,type='',kind=''){
   const context=excelImportContext(scope,kind);
   const sheets=result?.sheets||{};
   const detected=Object.keys(sheets).filter(name=>Array.isArray(sheets[name])&&sheets[name].length);
-  const expected=context.sheet?[context.sheet]:(context.sheets||[]);
-  const missingSheets=expected.filter(name=>!Array.isArray(sheets[name])||!sheets[name].length);
+  const allowed=context.sheet?[context.sheet]:(context.sheets||[]);
+  const required=context.sheet?[context.sheet]:[];
+  const moduleInfo=workbookModuleInfo(detected);
+  const compatibleSheets=scope==='global'
+    ? detected.filter(name=>EXCEL_MODULES[name])
+    : detected.filter(name=>allowed.includes(name));
+  const incompatibleSheets=scope==='global'
+    ? detected.filter(name=>!EXCEL_MODULES[name])
+    : detected.filter(name=>EXCEL_MODULES[name]&&!allowed.includes(name));
+  const unknownSheets=detected.filter(name=>!EXCEL_MODULES[name]);
+
+  const mismatch=scope!=='global' && compatibleSheets.length===0 && moduleInfo.recognized.length>0;
+  const detectedDestination=mismatch && moduleInfo.modules.length===1
+    ? moduleInfo.modules[0]
+    : null;
+
   const pendingSet=kind?excelIssuePendingSet(type,kind):new Set();
   const priorities=new Set(['Alta','Media','Baja']);
   const accepted={};
   const preview=[];
-  let totalRows=0,validRows=0,ignoredRows=0,matchedRows=0;
+  let totalRows=0,validRows=0,ignoredRows=0,errorRows=0,matchedRows=0;
 
-  const accept=(sheet,row,valid,reason,matched=true)=>{
+  const accept=(sheet,row,status,reason,matched=true)=>{
+    const valid=status==='Aplicar'||status==='Actualizar';
     totalRows++;
     if(valid){
       validRows++;
@@ -2070,88 +2117,100 @@ function analyzeExcelImport(scope,result,type='',kind=''){
       accepted[sheet].push(row);
     }else{
       ignoredRows++;
+      if(status==='Error') errorRows++;
     }
-    preview.push({sheet,row,valid,reason});
+    preview.push({sheet,row,status,valid,reason});
   };
 
-  expected.forEach(sheet=>{
+  compatibleSheets.forEach(sheet=>{
     const rows=Array.isArray(sheets[sheet])?sheets[sheet]:[];
     rows.forEach(row=>{
       if(!kind){
         const nonEmpty=Object.values(row||{}).some(v=>norm(v)!=='');
-        accept(sheet,row,nonEmpty,nonEmpty?'Registro reconocido':'Fila vacía',nonEmpty);
+        accept(sheet,row,nonEmpty?'Aplicar':'Omitir',nonEmpty?'Registro reconocido':'Fila vacía',nonEmpty);
         return;
       }
 
       if(kind==='career-needs'){
         const carrera=norm(row.CARRERA),need=norm(row.NECESIDAD),priority=norm(row.PRIORIDAD_MANUAL);
         const matches=pendingSet.has(careerKey(carrera));
-        const valid=matches&&!!need&&priorities.has(priority);
-        const reason=!matches?'La carrera no está entre las pendientes':!need?'Falta NECESIDAD':!priorities.has(priority)?'PRIORIDAD_MANUAL debe ser Alta, Media o Baja':'Lista para aplicar';
-        accept(sheet,row,valid,reason,matches);
+        if(!matches){accept(sheet,row,'Omitir','La carrera no está entre las pendientes',false);return;}
+        if(!need){accept(sheet,row,'Error','Falta NECESIDAD',true);return;}
+        if(!priorities.has(priority)){accept(sheet,row,'Error','PRIORIDAD_MANUAL debe ser Alta, Media o Baja',true);return;}
+        accept(sheet,row,'Aplicar','Nueva necesidad lista para registrar',true);
         return;
       }
       if(kind==='coordinator'){
         const carrera=norm(row.CARRERA),coord=norm(row.COORDINADOR);
         const matches=pendingSet.has(careerKey(carrera));
-        const valid=matches&&!!coord;
-        accept(sheet,row,valid,!matches?'La carrera no está entre las pendientes':!coord?'Falta COORDINADOR':'Lista para aplicar',matches);
+        if(!matches){accept(sheet,row,'Omitir','La carrera no está entre las pendientes',false);return;}
+        if(!coord){accept(sheet,row,'Error','Falta COORDINADOR',true);return;}
+        accept(sheet,row,'Aplicar','Coordinador listo para registrar',true);
         return;
       }
       if(kind==='need-priority'){
         const carrera=norm(row.CARRERA),need=norm(row.NECESIDAD),priority=norm(row.PRIORIDAD_MANUAL);
         const existing=ensureNeedItems(carrera).some(item=>norm(item.text)===need&&!norm(item.priorityOverride));
-        const valid=existing&&priorities.has(priority);
-        accept(sheet,row,valid,!existing?'No coincide con una necesidad pendiente':!priorities.has(priority)?'Prioridad inválida':'Lista para aplicar',existing);
+        if(!existing){accept(sheet,row,'Omitir','No coincide con una necesidad pendiente',false);return;}
+        if(!priorities.has(priority)){accept(sheet,row,'Error','Prioridad inválida',true);return;}
+        accept(sheet,row,'Actualizar','Se completará la prioridad de la necesidad',true);
         return;
       }
       if(kind==='generic'){
         const line=norm(row.LINEA_GENERICA);
-        accept(sheet,row,!!line,line?'Lista para aplicar':'Falta LINEA_GENERICA',!!line);
+        accept(sheet,row,line?'Aplicar':'Error',line?'Línea genérica lista para registrar':'Falta LINEA_GENERICA',!!line);
         return;
       }
       if(kind==='career-program'){
         const carrera=norm(row.CARRERA),program=norm(row.PROGRAMA);
         const matches=pendingSet.has(careerKey(carrera));
-        const valid=matches&&!!program;
-        accept(sheet,row,valid,!matches?'La carrera no está entre las pendientes':!program?'Falta PROGRAMA':'Lista para aplicar',matches);
+        if(!matches){accept(sheet,row,'Omitir','La carrera no está entre las pendientes',false);return;}
+        if(!program){accept(sheet,row,'Error','Falta PROGRAMA',true);return;}
+        accept(sheet,row,'Actualizar','Se completará el programa de la carrera',true);
         return;
       }
       if(kind==='career-empty'){
         const carrera=norm(row.CARRERA),program=norm(row.PROGRAMA);
-        const valid=!!carrera&&validCareerName(carrera)&&!!program;
-        accept(sheet,row,valid,!carrera?'Falta CARRERA':!validCareerName(carrera)?'Nombre de carrera no válido':!program?'Falta PROGRAMA':'Lista para aplicar',valid);
+        if(!carrera){accept(sheet,row,'Error','Falta CARRERA',false);return;}
+        if(!validCareerName(carrera)){accept(sheet,row,'Error','Nombre de carrera no válido',false);return;}
+        if(!program){accept(sheet,row,'Error','Falta PROGRAMA',false);return;}
+        accept(sheet,row,'Aplicar','Carrera lista para registrar',true);
         return;
       }
       if(kind==='period'){
         const valid=Object.values(row||{}).some(v=>norm(v)!=='');
-        accept(sheet,row,valid,valid?'Lista para aplicar':'Fila vacía',valid);
+        accept(sheet,row,valid?'Actualizar':'Omitir',valid?'Se actualizarán los datos generales':'Fila vacía',valid);
         return;
       }
       if(kind==='teachers-empty'||kind==='teacher'){
         const cedula=norm(row.CEDULA),nombre=norm(row.NOMBRE_COMPLETO),carrera=norm(row.CARRERA_PRINCIPAL);
         const matches=kind==='teachers-empty'||pendingSet.has(cedula);
-        const valid=matches&&!!cedula&&!!nombre&&!!carrera;
-        accept(sheet,row,valid,!matches?'Docente no está entre los pendientes':!cedula?'Falta CEDULA':!nombre?'Falta NOMBRE_COMPLETO':!carrera?'Falta CARRERA_PRINCIPAL':'Lista para aplicar',matches);
+        if(!matches){accept(sheet,row,'Omitir','Docente no está entre los pendientes',false);return;}
+        if(!cedula){accept(sheet,row,'Error','Falta CEDULA',true);return;}
+        if(!nombre){accept(sheet,row,'Error','Falta NOMBRE_COMPLETO',true);return;}
+        if(!carrera){accept(sheet,row,'Error','Falta CARRERA_PRINCIPAL',true);return;}
+        accept(sheet,row,kind==='teacher'?'Actualizar':'Aplicar',kind==='teacher'?'Se actualizará el docente pendiente':'Docente listo para registrar',true);
         return;
       }
       if(kind==='plan-empty'||kind==='plan-teacher'){
         const cedula=norm(row.CEDULA);
         const matches=kind==='plan-empty'||pendingSet.has(cedula);
-        const valid=matches&&!!cedula;
-        accept(sheet,row,valid,!matches?'Docente no está entre los pendientes':!cedula?'Falta CEDULA':'Lista para aplicar',matches);
+        if(!matches){accept(sheet,row,'Omitir','Docente no está entre los pendientes',false);return;}
+        if(!cedula){accept(sheet,row,'Error','Falta CEDULA',true);return;}
+        accept(sheet,row,'Actualizar','Se actualizará la planificación',true);
         return;
       }
       if(kind==='follow-teacher'){
         const cedula=norm(row.CEDULA);
         const matches=pendingSet.has(cedula);
-        const valid=matches&&!!cedula;
-        accept(sheet,row,valid,!matches?'Docente no está entre los pendientes':!cedula?'Falta CEDULA':'Lista para aplicar',matches);
+        if(!matches){accept(sheet,row,'Omitir','Docente no está entre los pendientes',false);return;}
+        if(!cedula){accept(sheet,row,'Error','Falta CEDULA',true);return;}
+        accept(sheet,row,'Actualizar','Se actualizará el seguimiento',true);
         return;
       }
 
       const fallback=Object.values(row||{}).some(v=>norm(v)!=='');
-      accept(sheet,row,fallback,fallback?'Lista para aplicar':'Fila vacía',fallback);
+      accept(sheet,row,fallback?'Aplicar':'Omitir',fallback?'Registro reconocido':'Fila vacía',fallback);
     });
   });
 
@@ -2160,12 +2219,43 @@ function analyzeExcelImport(scope,result,type='',kind=''){
     : 0;
   const errors=[];
   const warnings=[];
-  if(!detected.length) errors.push('El archivo no contiene hojas con datos.');
-  if(missingSheets.length) errors.push('Falta la hoja esperada: '+missingSheets.join(', ')+'.');
-  if(validRows===0 && !missingSheets.length) errors.push('No se encontraron filas completas que puedan aplicarse.');
-  if(ignoredRows) warnings.push(ignoredRows+' fila(s) no se aplicarán porque están incompletas o no coinciden con los pendientes actuales.');
-  if(expectedCount && matchedRows<expectedCount) warnings.push('El archivo resolvería '+matchedRows+' de '+expectedCount+' pendiente(s) de este bloque.');
-  if(kind && detected.some(name=>!expected.includes(name))) warnings.push('Las hojas adicionales se ignorarán en esta carga específica.');
+
+  if(!detected.length){
+    errors.push('El archivo no contiene hojas con datos.');
+  }else if(mismatch){
+    const detectedLabel=moduleInfo.modules.map(x=>x.label).join(' + ');
+    errors.push(
+      'Este archivo corresponde a '+detectedLabel+
+      ' y no a '+excelScopeLabel(scope)+'.'
+    );
+    errors.push(
+      'En este apartado se admiten únicamente: '+allowed.join(', ')+'.'
+    );
+  }else if(required.length && !compatibleSheets.length){
+    errors.push('Este bloque espera la hoja '+required.join(', ')+'.');
+  }else if(!compatibleSheets.length){
+    errors.push('El archivo no contiene ninguna hoja compatible con '+excelScopeLabel(scope)+'.');
+  }
+
+  if(!errors.length && validRows===0){
+    errors.push('No se encontraron filas completas que puedan aplicarse.');
+  }
+  if(errorRows){
+    warnings.push(errorRows+' fila(s) contienen errores y no se aplicarán.');
+  }
+  const omittedOnly=Math.max(0,ignoredRows-errorRows);
+  if(omittedOnly){
+    warnings.push(omittedOnly+' fila(s) se omitirán porque no corresponden a los pendientes actuales o están vacías.');
+  }
+  if(expectedCount && matchedRows<expectedCount){
+    warnings.push('El archivo resolvería '+matchedRows+' de '+expectedCount+' pendiente(s) de este bloque.');
+  }
+  if(!mismatch && incompatibleSheets.length){
+    warnings.push('Se ignorarán hojas de otros módulos: '+incompatibleSheets.join(', ')+'.');
+  }
+  if(unknownSheets.length){
+    warnings.push('Se ignorarán hojas no reconocidas: '+unknownSheets.join(', ')+'.');
+  }
 
   const safeSheets={};
   Object.entries(accepted).forEach(([name,rows])=>{if(rows.length)safeSheets[name]=rows;});
@@ -2174,55 +2264,77 @@ function analyzeExcelImport(scope,result,type='',kind=''){
     context,
     filePath:result?.filePath||'Archivo Excel',
     detected,
-    expected,
-    missingSheets,
+    allowed,
+    compatibleSheets,
+    incompatibleSheets,
     totalRows,
     validRows,
     ignoredRows,
+    errorRows,
     matchedRows,
     expectedCount,
     errors,
     warnings,
     safeSheets,
-    preview:preview.slice(0,12)
+    preview:preview.slice(0,16),
+    mismatch,
+    detectedDestination
   };
 }
-
 function excelAnalysisTable(preview){
-  if(!preview.length) return '<div class="excel-analysis-empty">No hay filas para previsualizar.</div>';
+  if(!preview.length) return '<div class="excel-analysis-empty">No hay filas compatibles para previsualizar.</div>';
   return '<div class="excel-analysis-table-wrap"><table class="excel-analysis-table"><thead><tr><th>Hoja</th><th>Datos detectados</th><th>Estado</th></tr></thead><tbody>'+
     preview.map(item=>{
       const values=rowPreviewValues(item.row);
       const data=values.length?values.map(x=>'<span><strong>'+esc(x.key)+':</strong> '+esc(x.value)+'</span>').join(''):'<span>Fila vacía</span>';
-      return '<tr><td>'+esc(item.sheet)+'</td><td class="excel-preview-values">'+data+'</td><td><span class="excel-row-status '+(item.valid?'ok':'bad')+'">'+esc(item.valid?'Aplicar':'Omitir')+'</span><div class="excel-row-reason">'+esc(item.reason)+'</div></td></tr>';
+      const cls=item.status==='Aplicar'?'ok':item.status==='Actualizar'?'update':item.status==='Error'?'error':'bad';
+      return '<tr><td>'+esc(item.sheet)+'</td><td class="excel-preview-values">'+data+'</td><td><span class="excel-row-status '+cls+'">'+esc(item.status)+'</span><div class="excel-row-reason">'+esc(item.reason)+'</div></td></tr>';
     }).join('')+
   '</tbody></table></div>';
 }
-
 function openExcelAnalysisDialog(scope,result,type='',kind=''){
   const analysis=analyzeExcelImport(scope,result,type,kind);
   pendingExcelImport={scope,type,kind,analysis,sheets:analysis.safeSheets};
   const filename=String(analysis.filePath||'').split(/[\\/]/).pop()||'Archivo Excel';
-  $('#excelAnalysisTitle').textContent='Analizar plantilla antes de importar';
+
+  $('#excelAnalysisTitle').textContent=analysis.mismatch
+    ? 'Archivo de otro módulo'
+    : 'Analizar plantilla antes de importar';
   $('#excelAnalysisSubtitle').textContent=analysis.context.label+' · '+filename;
+
+  const detectedText=analysis.detected.length?analysis.detected.join(', '):'Ninguna';
   $('#excelAnalysisSummary').innerHTML=
     '<div class="excel-analysis-kpis">'+
       '<div><strong>'+analysis.detected.length+'</strong><span>Hojas detectadas</span></div>'+
       '<div><strong>'+analysis.totalRows+'</strong><span>Filas leídas</span></div>'+
       '<div><strong>'+analysis.validRows+'</strong><span>Filas aplicables</span></div>'+
-      '<div><strong>'+analysis.ignoredRows+'</strong><span>Filas omitidas</span></div>'+
+      '<div><strong>'+analysis.ignoredRows+'</strong><span>Filas no aplicables</span></div>'+
     '</div>'+
+    '<div class="excel-match-progress"><strong>Hojas encontradas:</strong> '+esc(detectedText)+'</div>'+
     (analysis.expectedCount?'<div class="excel-match-progress"><strong>Coincidencia con pendientes:</strong> '+analysis.matchedRows+' de '+analysis.expectedCount+'</div>':'')+
-    (analysis.errors.length?'<div class="excel-analysis-message error"><strong>No se puede aplicar todavía.</strong><ul>'+analysis.errors.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>':'')+
+    (analysis.errors.length?'<div class="excel-analysis-message error"><strong>'+(analysis.mismatch?'Archivo no compatible con este apartado.':'No se puede aplicar todavía.')+'</strong><ul>'+analysis.errors.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>':'')+
     (analysis.warnings.length?'<div class="excel-analysis-message warning"><strong>Observaciones del análisis</strong><ul>'+analysis.warnings.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>':'')+
     (!analysis.errors.length?'<div class="excel-analysis-message success"><strong>Archivo reconocido.</strong> Revisa la vista previa y confirma para guardar los cambios.</div>':'');
+
   $('#excelAnalysisPreview').innerHTML=excelAnalysisTable(analysis.preview);
+
   const apply=$('#applyExcelAnalysis');
   apply.disabled=!!analysis.errors.length||analysis.validRows===0;
   apply.textContent=analysis.validRows?'Aplicar '+analysis.validRows+' registro(s)':'Aplicar datos';
+
+  const go=$('#goExcelModule');
+  if(analysis.mismatch && analysis.detectedDestination){
+    go.hidden=false;
+    go.dataset.view=analysis.detectedDestination.view;
+    go.textContent='Ir a '+analysis.detectedDestination.label;
+  }else{
+    go.hidden=true;
+    go.dataset.view='';
+    go.textContent='Ir al módulo correcto';
+  }
+
   $('#excelAnalysisDialog').showModal();
 }
-
 function closeExcelAnalysisDialog(){
   pendingExcelImport=null;
   if($('#excelAnalysisDialog')?.open) $('#excelAnalysisDialog').close();
@@ -3195,6 +3307,11 @@ $('#btnFirebase').onclick=updateFromFirebase;
 $('#closeFirebase').onclick=$('#closeFirebaseBottom').onclick=()=>$('#firebaseDialog').close();
 $('#closeExcelAnalysis').onclick=$('#cancelExcelAnalysis').onclick=closeExcelAnalysisDialog;
 $('#applyExcelAnalysis').onclick=confirmExcelAnalysis;
+$('#goExcelModule').onclick=()=>{
+  const view=$('#goExcelModule').dataset.view;
+  closeExcelAnalysisDialog();
+  if(view) setView(view);
+};
 
 (async function init(){
   const loaded=await window.docformacion.loadData();
