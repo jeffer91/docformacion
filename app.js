@@ -2081,6 +2081,56 @@ function excelScopeLabel(scope){
   }[scope]||'este apartado';
 }
 
+
+function excelYesNoValue(value){
+  if(norm(value)==='') return '';
+  return yes(value)?'Sí':'No';
+}
+
+function teacherPatchFromExcelRow(row){
+  const patch={};
+  const setText=(column,key)=>{if(norm(row[column])!=='') patch[key]=norm(row[column]);};
+  const setYesNo=(column,key)=>{const value=excelYesNoValue(row[column]);if(value) patch[key]=value;};
+
+  setText('NOMBRE_COMPLETO','nombre');
+  setText('CARRERA_PRINCIPAL','carrera');
+  setText('DEDICACION','dedicacion');
+  setText('NIVEL_ACADEMICO_ACTUAL','nivelActual');
+  setText('TITULO_ACADEMICO_ACTUAL','tituloActual');
+  setYesNo('AFIN_TITULO_CARRERA','afinidad');
+  setYesNo('ESTUDIA_ACTUALMENTE','estudiaActualmente');
+  setText('NIVEL_FORMACION_EN_CURSO','nivelCurso');
+  setText('PROGRAMA_EN_CURSO','programaCurso');
+  setText('INSTITUCION_ESTUDIO','institucionCurso');
+  setText('NIVEL_QUE_DESEA_ALCANZAR','nivelDeseado');
+  setText('AREA_O_PROGRAMA_INTERES','areaInteres');
+  setYesNo('DISPUESTO_A_ESTUDIAR','dispuesto');
+  setText('TIPO_FORMACION','tipoFormacion');
+  setText('MODALIDAD_PREFERIDA','modalidadPreferida');
+  setText('INICIO_TENTATIVO_MES_ANIO','inicioTentativo');
+  setText('BARRERA_PRINCIPAL','barrera');
+  setYesNo('ACTUALIZACION_RECIENTE','actualizacionReciente');
+  return patch;
+}
+
+function teacherPatchDifferences(teacher,patch){
+  return Object.entries(patch)
+    .filter(([key,value])=>norm(teacher?.[key])!==norm(value))
+    .map(([key,value])=>({key,from:norm(teacher?.[key]),to:norm(value)}));
+}
+
+function applyTeacherExcelRows(rows){
+  (rows||[]).forEach(row=>{
+    const cedula=norm(row.CEDULA);
+    if(!cedula) return;
+    const teacher=state.teachers.find(t=>String(t.cedula)===cedula);
+    if(!teacher) return;
+    const patch=teacherPatchFromExcelRow(row);
+    Object.assign(teacher,patch);
+    if(patch.carrera && validCareerName(patch.carrera)) ensureCareer(patch.carrera);
+  });
+}
+
 function analyzeExcelImport(scope,result,type='',kind=''){
   const context=excelImportContext(scope,kind);
   const sheets=result?.sheets||{};
@@ -2104,22 +2154,31 @@ function analyzeExcelImport(scope,result,type='',kind=''){
   const pendingSet=kind?excelIssuePendingSet(type,kind):new Set();
   const priorities=new Set(['Alta','Media','Baja']);
   const accepted={};
+  const optionalById={};
   const preview=[];
-  let totalRows=0,validRows=0,ignoredRows=0,errorRows=0,matchedRows=0;
+  const statusCounts={Aplicar:0,Actualizar:0,'Actualizar opcional':0,'Ya completo':0,'Sin cambios':0,Omitir:0,Error:0};
+  let totalRows=0,validRows=0,optionalRows=0,ignoredRows=0,errorRows=0,matchedRows=0;
 
   const accept=(sheet,row,status,reason,matched=true)=>{
     const valid=status==='Aplicar'||status==='Actualizar';
+    const optional=status==='Actualizar opcional';
+    const rowId='excel-row-'+preview.length;
     totalRows++;
+    statusCounts[status]=(statusCounts[status]||0)+1;
+
     if(valid){
       validRows++;
       if(matched) matchedRows++;
       if(!accepted[sheet]) accepted[sheet]=[];
       accepted[sheet].push(row);
+    }else if(optional){
+      optionalRows++;
+      optionalById[rowId]={sheet,row};
     }else{
       ignoredRows++;
       if(status==='Error') errorRows++;
     }
-    preview.push({sheet,row,status,valid,reason});
+    preview.push({id:rowId,sheet,row,status,valid,optional,reason});
   };
 
   compatibleSheets.forEach(sheet=>{
@@ -2182,16 +2241,60 @@ function analyzeExcelImport(scope,result,type='',kind=''){
         accept(sheet,row,valid?'Actualizar':'Omitir',valid?'Se actualizarán los datos generales':'Fila vacía',valid);
         return;
       }
+
       if(kind==='teachers-empty'||kind==='teacher'){
-        const cedula=norm(row.CEDULA),nombre=norm(row.NOMBRE_COMPLETO),carrera=norm(row.CARRERA_PRINCIPAL);
+        const cedula=norm(row.CEDULA);
+        const teacher=state.teachers.find(t=>String(t.cedula)===cedula);
         const matches=kind==='teachers-empty'||pendingSet.has(cedula);
-        if(!matches){accept(sheet,row,'Omitir','Docente no está entre los pendientes',false);return;}
-        if(!cedula){accept(sheet,row,'Error','Falta CEDULA',true);return;}
-        if(!nombre){accept(sheet,row,'Error','Falta NOMBRE_COMPLETO',true);return;}
-        if(!carrera){accept(sheet,row,'Error','Falta CARRERA_PRINCIPAL',true);return;}
-        accept(sheet,row,kind==='teacher'?'Actualizar':'Aplicar',kind==='teacher'?'Se actualizará el docente pendiente':'Docente listo para registrar',true);
+
+        if(!cedula){accept(sheet,row,'Error','Falta CEDULA',matches);return;}
+
+        if(kind==='teacher' && !teacher){
+          accept(sheet,row,'Error','La cédula no existe en la base actual de docentes',false);
+          return;
+        }
+
+        if(kind==='teachers-empty' && !teacher){
+          const nombre=norm(row.NOMBRE_COMPLETO),carrera=norm(row.CARRERA_PRINCIPAL);
+          if(!nombre){accept(sheet,row,'Error','Falta NOMBRE_COMPLETO',true);return;}
+          if(!carrera){accept(sheet,row,'Error','Falta CARRERA_PRINCIPAL',true);return;}
+          accept(sheet,row,'Aplicar','Docente listo para registrar',true);
+          return;
+        }
+
+        const patch=teacherPatchFromExcelRow(row);
+        const diffs=teacherPatchDifferences(teacher,patch);
+
+        if(matches){
+          if(!diffs.length){
+            accept(sheet,row,'Sin cambios','El Excel no modifica la información actual del docente pendiente',true);
+            return;
+          }
+          const simulated={...teacher,...patch};
+          const remaining=teacherMissingEntries(simulated);
+          if(remaining.length){
+            accept(sheet,row,'Error','Después de aplicar esta fila todavía faltaría: '+remaining.map(x=>x.label).join(', '),true);
+            return;
+          }
+          accept(sheet,row,'Actualizar','Se completará la información pendiente del docente',true);
+          return;
+        }
+
+        if(!diffs.length){
+          accept(sheet,row,'Ya completo','El docente ya no presenta pendientes y el Excel coincide con la información guardada',false);
+          return;
+        }
+
+        accept(
+          sheet,
+          row,
+          'Actualizar opcional',
+          'El docente ya está completo, pero el Excel trae '+diffs.length+' cambio(s). Márcalo solo si deseas reemplazar esos datos.',
+          false
+        );
         return;
       }
+
       if(kind==='plan-empty'||kind==='plan-teacher'){
         const cedula=norm(row.CEDULA);
         const matches=kind==='plan-empty'||pendingSet.has(cedula);
@@ -2224,38 +2327,30 @@ function analyzeExcelImport(scope,result,type='',kind=''){
     errors.push('El archivo no contiene hojas con datos.');
   }else if(mismatch){
     const detectedLabel=moduleInfo.modules.map(x=>x.label).join(' + ');
-    errors.push(
-      'Este archivo corresponde a '+detectedLabel+
-      ' y no a '+excelScopeLabel(scope)+'.'
-    );
-    errors.push(
-      'En este apartado se admiten únicamente: '+allowed.join(', ')+'.'
-    );
+    errors.push('Este archivo corresponde a '+detectedLabel+' y no a '+excelScopeLabel(scope)+'.');
+    errors.push('En este apartado se admiten únicamente: '+allowed.join(', ')+'.');
   }else if(required.length && !compatibleSheets.length){
     errors.push('Este bloque espera la hoja '+required.join(', ')+'.');
   }else if(!compatibleSheets.length){
     errors.push('El archivo no contiene ninguna hoja compatible con '+excelScopeLabel(scope)+'.');
   }
 
-  if(!errors.length && validRows===0){
-    errors.push('No se encontraron filas completas que puedan aplicarse.');
+  if(!errors.length && validRows===0 && optionalRows===0){
+    if(statusCounts['Ya completo']>0 && errorRows===0 && statusCounts['Sin cambios']===0){
+      warnings.push('Todos los registros encontrados ya están completos; no es necesario aplicar cambios.');
+    }else{
+      errors.push('No se encontraron filas que puedan aplicarse o actualizarse.');
+    }
   }
-  if(errorRows){
-    warnings.push(errorRows+' fila(s) contienen errores y no se aplicarán.');
-  }
-  const omittedOnly=Math.max(0,ignoredRows-errorRows);
-  if(omittedOnly){
-    warnings.push(omittedOnly+' fila(s) se omitirán porque no corresponden a los pendientes actuales o están vacías.');
-  }
-  if(expectedCount && matchedRows<expectedCount){
-    warnings.push('El archivo resolvería '+matchedRows+' de '+expectedCount+' pendiente(s) de este bloque.');
-  }
-  if(!mismatch && incompatibleSheets.length){
-    warnings.push('Se ignorarán hojas de otros módulos: '+incompatibleSheets.join(', ')+'.');
-  }
-  if(unknownSheets.length){
-    warnings.push('Se ignorarán hojas no reconocidas: '+unknownSheets.join(', ')+'.');
-  }
+
+  if(errorRows) warnings.push(errorRows+' fila(s) contienen errores y no se aplicarán.');
+  if(statusCounts['Ya completo']) warnings.push(statusCounts['Ya completo']+' registro(s) ya están completos y no necesitan cambios.');
+  if(statusCounts['Sin cambios']) warnings.push(statusCounts['Sin cambios']+' registro(s) pendientes no cambian con este archivo.');
+  if(optionalRows) warnings.push(optionalRows+' registro(s) de docentes completos traen cambios opcionales. Puedes seleccionarlos individualmente.');
+  if(statusCounts.Omitir) warnings.push(statusCounts.Omitir+' fila(s) se omitirán porque no corresponden al bloque actual o están vacías.');
+  if(expectedCount && matchedRows<expectedCount) warnings.push('El archivo puede resolver '+matchedRows+' de '+expectedCount+' pendiente(s) actuales de este bloque.');
+  if(!mismatch && incompatibleSheets.length) warnings.push('Se ignorarán hojas de otros módulos: '+incompatibleSheets.join(', ')+'.');
+  if(unknownSheets.length) warnings.push('Se ignorarán hojas no reconocidas: '+unknownSheets.join(', ')+'.');
 
   const safeSheets={};
   Object.entries(accepted).forEach(([name,rows])=>{if(rows.length)safeSheets[name]=rows;});
@@ -2269,14 +2364,17 @@ function analyzeExcelImport(scope,result,type='',kind=''){
     incompatibleSheets,
     totalRows,
     validRows,
+    optionalRows,
     ignoredRows,
     errorRows,
     matchedRows,
     expectedCount,
+    statusCounts,
     errors,
     warnings,
     safeSheets,
-    preview:preview.slice(0,16),
+    optionalById,
+    preview:preview.slice(0,20),
     mismatch,
     detectedDestination
   };
@@ -2287,11 +2385,42 @@ function excelAnalysisTable(preview){
     preview.map(item=>{
       const values=rowPreviewValues(item.row);
       const data=values.length?values.map(x=>'<span><strong>'+esc(x.key)+':</strong> '+esc(x.value)+'</span>').join(''):'<span>Fila vacía</span>';
-      const cls=item.status==='Aplicar'?'ok':item.status==='Actualizar'?'update':item.status==='Error'?'error':'bad';
-      return '<tr><td>'+esc(item.sheet)+'</td><td class="excel-preview-values">'+data+'</td><td><span class="excel-row-status '+cls+'">'+esc(item.status)+'</span><div class="excel-row-reason">'+esc(item.reason)+'</div></td></tr>';
+      const cls=item.status==='Aplicar'?'ok':
+        item.status==='Actualizar'?'update':
+        item.status==='Actualizar opcional'?'optional':
+        item.status==='Ya completo'?'complete':
+        item.status==='Sin cambios'?'same':
+        item.status==='Error'?'error':'bad';
+      const optional=item.optional
+        ? '<label class="excel-optional-choice"><input type="checkbox" data-excel-optional="'+esc(item.id)+'"> Aplicar este cambio</label>'
+        : '';
+      return '<tr><td>'+esc(item.sheet)+'</td><td class="excel-preview-values">'+data+'</td><td><span class="excel-row-status '+cls+'">'+esc(item.status)+'</span><div class="excel-row-reason">'+esc(item.reason)+'</div>'+optional+'</td></tr>';
     }).join('')+
   '</tbody></table></div>';
 }
+function selectedOptionalExcelRows(){
+  if(!pendingExcelImport) return [];
+  return [...document.querySelectorAll('[data-excel-optional]:checked')]
+    .map(input=>pendingExcelImport.analysis.optionalById?.[input.dataset.excelOptional])
+    .filter(Boolean);
+}
+
+function refreshExcelAnalysisApplyButton(){
+  if(!pendingExcelImport) return;
+  const {analysis}=pendingExcelImport;
+  const optionalSelected=selectedOptionalExcelRows().length;
+  const totalApply=analysis.validRows+optionalSelected;
+  const apply=$('#applyExcelAnalysis');
+  apply.disabled=!!analysis.errors.length||totalApply===0;
+  apply.textContent=totalApply?'Aplicar '+totalApply+' registro(s)':'Aplicar datos';
+  const optionalInfo=$('#excelOptionalSummary');
+  if(optionalInfo){
+    optionalInfo.textContent=analysis.optionalRows
+      ? optionalSelected+' de '+analysis.optionalRows+' actualización(es) opcional(es) seleccionada(s)'
+      : '';
+  }
+}
+
 function openExcelAnalysisDialog(scope,result,type='',kind=''){
   const analysis=analyzeExcelImport(scope,result,type,kind);
   pendingExcelImport={scope,type,kind,analysis,sheets:analysis.safeSheets};
@@ -2303,24 +2432,24 @@ function openExcelAnalysisDialog(scope,result,type='',kind=''){
   $('#excelAnalysisSubtitle').textContent=analysis.context.label+' · '+filename;
 
   const detectedText=analysis.detected.length?analysis.detected.join(', '):'Ninguna';
+  const noChangeCount=(analysis.statusCounts?.['Ya completo']||0)+(analysis.statusCounts?.['Sin cambios']||0);
   $('#excelAnalysisSummary').innerHTML=
     '<div class="excel-analysis-kpis">'+
-      '<div><strong>'+analysis.detected.length+'</strong><span>Hojas detectadas</span></div>'+
       '<div><strong>'+analysis.totalRows+'</strong><span>Filas leídas</span></div>'+
-      '<div><strong>'+analysis.validRows+'</strong><span>Filas aplicables</span></div>'+
-      '<div><strong>'+analysis.ignoredRows+'</strong><span>Filas no aplicables</span></div>'+
+      '<div><strong>'+analysis.validRows+'</strong><span>Pendientes a actualizar</span></div>'+
+      '<div><strong>'+noChangeCount+'</strong><span>Ya completos / sin cambios</span></div>'+
+      '<div><strong>'+analysis.errorRows+'</strong><span>Errores</span></div>'+
     '</div>'+
     '<div class="excel-match-progress"><strong>Hojas encontradas:</strong> '+esc(detectedText)+'</div>'+
-    (analysis.expectedCount?'<div class="excel-match-progress"><strong>Coincidencia con pendientes:</strong> '+analysis.matchedRows+' de '+analysis.expectedCount+'</div>':'')+
+    (analysis.expectedCount?'<div class="excel-match-progress"><strong>Pendientes que puede resolver:</strong> '+analysis.matchedRows+' de '+analysis.expectedCount+'</div>':'')+
+    (analysis.optionalRows?'<div class="excel-match-progress excel-optional-summary" id="excelOptionalSummary">0 de '+analysis.optionalRows+' actualización(es) opcional(es) seleccionada(s)</div>':'')+
     (analysis.errors.length?'<div class="excel-analysis-message error"><strong>'+(analysis.mismatch?'Archivo no compatible con este apartado.':'No se puede aplicar todavía.')+'</strong><ul>'+analysis.errors.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>':'')+
     (analysis.warnings.length?'<div class="excel-analysis-message warning"><strong>Observaciones del análisis</strong><ul>'+analysis.warnings.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>':'')+
-    (!analysis.errors.length?'<div class="excel-analysis-message success"><strong>Archivo reconocido.</strong> Revisa la vista previa y confirma para guardar los cambios.</div>':'');
+    (!analysis.errors.length?'<div class="excel-analysis-message success"><strong>Archivo reconocido.</strong> Solo se aplicarán los pendientes válidos y las actualizaciones opcionales que selecciones.</div>':'');
 
   $('#excelAnalysisPreview').innerHTML=excelAnalysisTable(analysis.preview);
-
-  const apply=$('#applyExcelAnalysis');
-  apply.disabled=!!analysis.errors.length||analysis.validRows===0;
-  apply.textContent=analysis.validRows?'Aplicar '+analysis.validRows+' registro(s)':'Aplicar datos';
+  document.querySelectorAll('[data-excel-optional]').forEach(input=>input.onchange=refreshExcelAnalysisApplyButton);
+  refreshExcelAnalysisApplyButton();
 
   const go=$('#goExcelModule');
   if(analysis.mismatch && analysis.detectedDestination){
@@ -2341,6 +2470,10 @@ function closeExcelAnalysisDialog(){
 }
 
 function applySpecificExcelImport(kind,sheets){
+  if(kind==='teacher' && sheets.DOCENTES?.length){
+    applyTeacherExcelRows(sheets.DOCENTES);
+    return;
+  }
   if(kind==='need-priority' && sheets.NECESIDADES?.length){
     sheets.NECESIDADES.forEach(row=>{
       const carrera=norm(row.CARRERA);
@@ -2389,16 +2522,28 @@ function applySpecificExcelImport(kind,sheets){
 
 async function confirmExcelAnalysis(){
   if(!pendingExcelImport) return;
-  const {type,scope,kind,sheets}=pendingExcelImport;
+  const {type,scope,kind,sheets,analysis}=pendingExcelImport;
   const before=type?issueTotal(documentStatus(type).issues):null;
-  applySpecificExcelImport(kind,sheets||{});
+
+  const finalSheets={};
+  Object.entries(sheets||{}).forEach(([name,rows])=>{finalSheets[name]=[...rows];});
+  const optionalSelected=selectedOptionalExcelRows();
+  optionalSelected.forEach(({sheet,row})=>{
+    if(!finalSheets[sheet]) finalSheets[sheet]=[];
+    finalSheets[sheet].push(row);
+  });
+
+  applySpecificExcelImport(kind,finalSheets);
   await save();
   const after=type?issueTotal(documentStatus(type).issues):null;
+  const mandatoryApplied=analysis?.validRows||0;
   closeExcelAnalysisDialog();
   render();
+
   if(before!==null && after!==null){
     const resolved=Math.max(0,before-after);
-    toast('Importación aplicada · '+resolved+' pendiente(s) resuelto(s) · '+after+' restante(s)');
+    const optionalText=optionalSelected.length?' · '+optionalSelected.length+' actualización(es) opcional(es) aplicada(s)':'';
+    toast('Importación aplicada · '+resolved+' pendiente(s) resuelto(s) · '+after+' restante(s)'+optionalText);
   }else{
     toast(scope==='global'?'Excel global aplicado correctamente':'Excel aplicado correctamente');
   }
