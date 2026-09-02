@@ -2861,6 +2861,15 @@ function compactDist(title,map,total){
 function reportEntries(map){
   return Object.entries(map||{}).filter(([,v])=>Number(v)>0).sort((a,b)=>b[1]-a[1]);
 }
+function normalizedNeedKey(value){
+  return norm(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
 function figureContextFor(title){
   const t=norm(title).toLowerCase();
   if(t.includes('nivel académico actual')) return 'Para establecer el punto de partida de la cualificación docente, se examina la distribución de los niveles académicos registrados.';
@@ -3161,12 +3170,20 @@ function dnfHtml(){
   });
 
   const priorityDist={Alta:0,Media:0,Baja:0};
-  const needFrequency={};
+  const needFrequencyByKey={};
+  const needLabelByKey={};
   allNeeds.forEach(item=>{
     const priority=norm(item.priorityOverride)||'Sin definir';
     if(priorityDist[priority]!==undefined) priorityDist[priority]++;
-    const key=norm(item.text);
-    if(key) needFrequency[key]=(needFrequency[key]||0)+1;
+    const key=normalizedNeedKey(item.text);
+    if(key){
+      needFrequencyByKey[key]=(needFrequencyByKey[key]||0)+1;
+      if(!needLabelByKey[key]) needLabelByKey[key]=norm(item.text);
+    }
+  });
+  const needFrequency={};
+  Object.entries(needFrequencyByKey).forEach(([key,count])=>{
+    needFrequency[needLabelByKey[key]||key]=count;
   });
 
   const frequencyEntries=reportEntries(needFrequency);
@@ -3341,7 +3358,7 @@ function dnfHtml(){
       : '<div class="callout"><strong>Resultado:</strong> No se identificaron necesidades recurrentes entre carreras. En este período la recurrencia no constituye un criterio adicional de priorización.</div>')+
     '<table class="data" data-apa-title="Matriz institucional de priorización"><tr><th>Necesidad</th><th>Carreras donde aparece</th><th>Prioridad mayor registrada</th></tr>'+
       reportEntries(needFrequency).map(([need,count])=>{
-        const related=allNeeds.filter(x=>norm(x.text)===need);
+        const related=allNeeds.filter(x=>normalizedNeedKey(x.text)===normalizedNeedKey(need));
         const rank={Alta:3,Media:2,Baja:1};
         const highest=related.map(x=>x.priorityOverride).sort((a,b)=>(rank[b]||0)-(rank[a]||0))[0]||'Sin definir';
         return '<tr><td>'+esc(need)+'</td><td class="num">'+count+'</td><td class="num">'+esc(highest)+'</td></tr>';
