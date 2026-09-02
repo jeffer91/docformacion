@@ -535,10 +535,10 @@
           imageTimeout: 8000,
           removeContainer: true,
           backgroundColor: '#ffffff',
-          width: pages[i].scrollWidth,
-          height: pages[i].scrollHeight,
-          windowWidth: pages[i].scrollWidth,
-          windowHeight: pages[i].scrollHeight
+          width: pages[i].clientWidth,
+          height: pages[i].clientHeight,
+          windowWidth: pages[i].clientWidth,
+          windowHeight: pages[i].clientHeight
         });
 
         const jpegBlob = await canvasToJpegBlob(canvas, quality);
