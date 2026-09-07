@@ -33,28 +33,30 @@
 
       host = document.createElement('div');
       host.style.position = 'fixed';
-      host.style.left = '-20000px';
+      host.style.left = '0';
       host.style.top = '0';
       host.style.width = '794px';
       host.style.background = '#fff';
-      host.style.zIndex = '-1';
+      host.style.pointerEvents = 'none';
+      host.style.zIndex = '-2147483647';
       host.innerHTML = `
         <style>
           ${styles}
-          .pdf-emergency-root{font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff;width:100%;font-size:9pt;line-height:1.2}
-          .pdf-emergency-page{min-height:255mm;box-sizing:border-box;page-break-after:always;break-after:page;padding:10mm 11mm 12mm}
-          .pdf-emergency-flow{padding:10mm 11mm 12mm}
+          .pdf-emergency-root{font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff;width:180mm;max-width:180mm;margin:0 auto;font-size:9pt;line-height:1.2;overflow-x:hidden}
+          .pdf-emergency-page{min-height:267mm;box-sizing:border-box;page-break-after:always;break-after:page;padding:0;width:180mm;max-width:180mm}
+          .pdf-emergency-flow{padding:0;width:180mm;max-width:180mm}
           .pdf-emergency-flow .q-section,.pdf-emergency-flow .q-sub{display:block!important}
           .pdf-emergency-flow .q-career-block,.pdf-emergency-flow .career-profile-block{break-inside:auto!important;page-break-inside:auto!important}
           .pdf-emergency-flow .q-table-block,.pdf-emergency-flow .apa-table-block{break-inside:auto!important;page-break-inside:auto!important}
-          .pdf-emergency-flow table{width:100%!important;border-collapse:collapse!important;page-break-inside:auto!important}
+          .pdf-emergency-flow table{width:100%!important;max-width:100%!important;border-collapse:collapse!important;page-break-inside:auto!important;table-layout:auto!important}
           .pdf-emergency-flow thead{display:table-header-group!important}
           .pdf-emergency-flow tr{break-inside:avoid!important;page-break-inside:avoid!important}
-          .pdf-emergency-flow th,.pdf-emergency-flow td{font-size:8pt!important;line-height:1.12!important;padding:3px 4px!important}
+          .pdf-emergency-flow th,.pdf-emergency-flow td{font-size:8pt!important;line-height:1.12!important;padding:3px 4px!important;overflow-wrap:anywhere!important}
           .pdf-emergency-flow .sec-title{font-size:15pt!important;line-height:1.15!important;margin:14pt 0 7pt!important;break-after:avoid!important}
           .pdf-emergency-flow .sub-title,.pdf-emergency-flow .h2{font-size:10.5pt!important;line-height:1.18!important;margin:9pt 0 4pt!important;break-after:avoid!important}
           .pdf-emergency-flow .q-legal-card,.pdf-emergency-flow .q-insight,.pdf-emergency-flow .q-interpret{break-inside:avoid!important;page-break-inside:avoid!important}
           .pdf-emergency-flow .pdf-page,.pdf-emergency-flow .pdf-body{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important}
+          .pdf-emergency-root img{max-width:100%!important}
         </style>
         <div class="pdf-emergency-root">
           <section class="pdf-emergency-page">${cover}</section>
@@ -71,15 +73,17 @@
       const root = host.querySelector('.pdf-emergency-root');
       const filename = payload.filename || 'Deteccion_Necesidades_Formacion.pdf';
       const worker = window.html2pdf().set({
-        margin: [10, 11, 12, 11],
+        margin: [15, 15, 15, 15],
         filename,
-        image: { type: 'jpeg', quality: 0.9 },
+        image: { type: 'jpeg', quality: 0.92 },
         html2canvas: {
-          scale: 1,
+          scale: 1.15,
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
           windowWidth: 794,
+          scrollX: 0,
+          scrollY: 0,
           imageTimeout: 8000
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
@@ -100,7 +104,7 @@
         filePath: filename,
         pages: typeof pdf.getNumberOfPages === 'function' ? pdf.getNumberOfPages() : undefined,
         recovered: true,
-        recoveryMode: 'continuous-flow'
+        recoveryMode: 'continuous-flow-zero-origin'
       };
     } catch (error) {
       console.error('[DocFormación] Falló el generador PDF de respaldo:', error);
