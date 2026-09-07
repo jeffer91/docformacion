@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260907-1655';
+  const LOCAL_BUILD = '20260907-1705';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -60,6 +60,10 @@
     await loadScript('institutional-pdf-layout-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('pdf-emergency-fallback.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('pdf-web-geometry-fix.js?v=' + encodeURIComponent(activeBuild));
+
+    // Sustituye html2pdf para Plan/Informe: pagina el contenido y rasteriza
+    // cada hoja A4 directamente, evitando cualquier desplazamiento horizontal.
+    await loadScript('pdf-raster-pages-fix.js?v=' + encodeURIComponent(activeBuild));
 
     // Última capa: muestra una barra independiente en la tarjeta del documento
     // y escucha el avance real/por etapas de DNF, Plan e Informe.
