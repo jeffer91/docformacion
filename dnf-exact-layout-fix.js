@@ -40,8 +40,20 @@
       if (heading) heading.className = 'sub-title';
     });
 
+    // Toda tabla de la DNF debe poder repartirse por filas entre páginas.
+    // Esto incluye las tablas extensas de anexos y convergencias, que antes
+    // quedaban como un único bloque y podían provocar una página imposible de ajustar.
+    [...doc.querySelectorAll('.q-table-block')].forEach(block => {
+      block.classList.add('apa-table-block');
+    });
+
+    // Cada carrera deja de ser un bloque indivisible. Conservamos su título como
+    // subtítulo y liberamos sus componentes (resumen, tabla e interpretación)
+    // para que el paginador los distribuya de forma natural entre hojas A4.
     [...doc.querySelectorAll('.q-career-block')].forEach(block => {
-      block.classList.add('career-profile-block');
+      const heading = block.querySelector(':scope > .h2');
+      if (heading) heading.className = 'sub-title';
+      unwrap(block);
     });
 
     // El paginador institucional trabaja con bloques hermanos para poder
@@ -96,7 +108,6 @@
       .pdf-body ul,.pdf-body ol{margin:4pt 0 9pt;padding-left:19pt}
       .pdf-body li{margin:0 0 4pt;line-height:1.18;orphans:2;widows:2}
       .q-table-block{margin:9pt 0 6pt!important}
-      .q-career-block{margin:0 0 15pt!important}
       .q-legal-card{break-inside:avoid!important;page-break-inside:avoid!important}
       .q-kpis,.q-mini-kpis,.q-flow,.q-insight,.q-interpret{break-inside:avoid!important;page-break-inside:avoid!important}
       .toc{width:100%;border-collapse:collapse;margin-top:5mm}
