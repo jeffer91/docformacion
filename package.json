@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "check": "node --check main.js && node --check preload.js && node --check bootstrap.js && node --check web-adapter.js && node --check app.js && node --check period-dnf-fix.js && node --check institutional-plan-fix.js && node --check dnf-quality-fix.js"
+    "check": "node --check main.js && node --check preload.js && node --check bootstrap.js && node --check web-adapter.js && node --check app.js && node --check period-dnf-fix.js && node --check institutional-plan-fix.js && node --check dnf-quality-fix.js && node --check dnf-exact-layout-fix.js"
   },
   "dependencies": {
     "xlsx": "^0.18.5"
