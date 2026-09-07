@@ -15,6 +15,25 @@
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 
+  function documentType(payload = {}) {
+    const value = String(payload.filename || '').toLowerCase();
+    if (value.includes('informe')) return 'informe';
+    if (value.includes('plan de formación')) return 'plan';
+    if (value.includes('necesidades')) return 'dnf';
+    return window.__DOCFORMACION_ACTIVE_PDF_TYPE || 'plan';
+  }
+
+  function emitProgress(payload, percent, phase = 'render', extra = {}) {
+    window.dispatchEvent(new CustomEvent('docformacion-pdf-progress', {
+      detail: {
+        type: documentType(payload),
+        percent: Math.max(0, Math.min(100, Number(percent) || 0)),
+        phase,
+        ...extra
+      }
+    }));
+  }
+
   function waitForFrame(frame) {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('No se pudo preparar el documento para PDF.')), 12000);
@@ -31,9 +50,13 @@
     }
 
     let frame = null;
+    let progressTimer = null;
     try {
+      emitProgress(payload, 5, 'preparing');
+
       frame = document.createElement('iframe');
       frame.setAttribute('aria-hidden', 'true');
+      frame.tabIndex = -1;
       frame.style.position = 'fixed';
       frame.style.left = '0';
       frame.style.top = '0';
@@ -42,12 +65,16 @@
       frame.style.border = '0';
       frame.style.background = '#fff';
       frame.style.pointerEvents = 'none';
+      frame.style.opacity = '0';
+      frame.style.clipPath = 'inset(100%)';
+      frame.style.overflow = 'hidden';
       frame.style.zIndex = '-2147483647';
 
       const loaded = waitForFrame(frame);
       document.body.appendChild(frame);
       frame.srcdoc = payload.html || '';
       await loaded;
+      emitProgress(payload, 15, 'preparing');
 
       const doc = frame.contentDocument;
       if (!doc?.body) return { ok: false, error: 'No se pudo preparar el contenido del PDF.' };
@@ -67,6 +94,7 @@
         await Promise.race([doc.fonts.ready, new Promise(resolve => setTimeout(resolve, 1500))]);
       }
       await new Promise(resolve => frame.contentWindow.requestAnimationFrame(() => frame.contentWindow.requestAnimationFrame(resolve)));
+      emitProgress(payload, 25, 'layout');
 
       const bodyRect = doc.body.getBoundingClientRect();
       const overflowX = Math.max(doc.body.scrollWidth, doc.documentElement.scrollWidth) - Math.ceil(bodyRect.width);
@@ -80,6 +108,7 @@
       }
 
       const filename = payload.filename || 'documento.pdf';
+      emitProgress(payload, 35, 'render');
       const worker = window.html2pdf().set({
         margin: [15, 15, 15, 15],
         filename,
@@ -107,20 +136,34 @@
         }
       }).from(doc.body).toPdf();
 
+      let synthetic = 35;
+      progressTimer = setInterval(() => {
+        synthetic = Math.min(82, synthetic + 3);
+        emitProgress(payload, synthetic, 'render');
+      }, 450);
+
       const pdf = await worker.get('pdf');
+      clearInterval(progressTimer);
+      progressTimer = null;
+      emitProgress(payload, 88, 'assembling');
+
       const blob = pdf.output('blob');
       if (!blob || !blob.size) return { ok: false, error: 'El PDF se generó vacío.' };
 
+      emitProgress(payload, 95, 'downloading');
       saveBlob(blob, filename);
+      emitProgress(payload, 100, 'done');
       return {
         ok: true,
         downloaded: true,
         filePath: filename,
         pages: typeof pdf.getNumberOfPages === 'function' ? pdf.getNumberOfPages() : undefined,
         size: blob.size,
-        renderer: 'stable-web-geometry'
+        renderer: 'stable-web-geometry-hidden-surface'
       };
     } catch (error) {
+      if (progressTimer) clearInterval(progressTimer);
+      emitProgress(payload, 0, 'error', { message: error?.message || String(error) });
       console.error('[DocFormación] Falló el render estable del PDF:', error);
       return { ok: false, error: error?.message || String(error) };
     } finally {
