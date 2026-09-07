@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260907-1120';
+  const LOCAL_BUILD = '20260907-1215';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -44,13 +44,12 @@
     setBuildLabel(activeBuild);
     setStylesheetBuild(activeBuild);
 
-    // En web cargamos siempre el adaptador con la versión remota más reciente.
-    // En Electron preload.js ya expone window.docformacion.
     if (!window.docformacion) {
       await loadScript('web-adapter.js?v=' + encodeURIComponent(activeBuild));
     }
     await loadScript('app.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('period-dnf-fix.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('institutional-plan-fix.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
