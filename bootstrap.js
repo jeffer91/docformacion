@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260907-1540';
+  const LOCAL_BUILD = '20260907-1545';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -56,6 +56,9 @@
     await loadScript('template-names-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('plan-excel-institutional-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('plan-template-split-fix.js?v=' + encodeURIComponent(activeBuild));
+    // Debe cargarse al final: captura cualquier error del paginador institucional
+    // y garantiza una descarga continua de la DNF como último recurso.
+    await loadScript('pdf-emergency-fallback.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
