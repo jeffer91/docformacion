@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260907-1645';
+  const LOCAL_BUILD = '20260907-1655';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -57,17 +57,13 @@
     await loadScript('plan-excel-institutional-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('plan-template-split-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Normaliza portada, encabezado, márgenes y firmas del Plan/Informe según
-    // el estándar institucional RGI antes de cualquier exportación.
     await loadScript('institutional-pdf-layout-fix.js?v=' + encodeURIComponent(activeBuild));
-
-    // Respaldo especializado para la DNF cuando una página exacta no puede
-    // repaginarse sin desbordamiento.
     await loadScript('pdf-emergency-fallback.js?v=' + encodeURIComponent(activeBuild));
-
-    // Debe quedar al final: el motor web estable elimina el desplazamiento
-    // horizontal causado por renderizar iframes con coordenadas negativas.
     await loadScript('pdf-web-geometry-fix.js?v=' + encodeURIComponent(activeBuild));
+
+    // Última capa: muestra una barra independiente en la tarjeta del documento
+    // y escucha el avance real/por etapas de DNF, Plan e Informe.
+    await loadScript('pdf-progress-ui-fix.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
