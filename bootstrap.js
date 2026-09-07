@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260907-1215';
+  const LOCAL_BUILD = '20260907-1230';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -50,6 +50,7 @@
     await loadScript('app.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('period-dnf-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('institutional-plan-fix.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('dnf-quality-fix.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
