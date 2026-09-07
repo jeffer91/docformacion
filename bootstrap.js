@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260907-1300';
+  const LOCAL_BUILD = '20260907-1315';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -53,6 +53,7 @@
     await loadScript('dnf-quality-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-exact-layout-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('template-names-fix.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('plan-excel-institutional-fix.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
