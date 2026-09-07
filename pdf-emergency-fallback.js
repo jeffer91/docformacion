@@ -15,13 +15,21 @@
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 
+  function emitProgress(percent, phase='render', extra={}) {
+    window.dispatchEvent(new CustomEvent('docformacion-pdf-progress', {
+      detail: { type:'dnf', percent:Math.max(0,Math.min(100,Number(percent)||0)), phase, ...extra }
+    }));
+  }
+
   async function generateFlowPdf(payload) {
     if (typeof window.html2pdf !== 'function') {
       return { ok: false, error: 'No está disponible el generador PDF de respaldo.' };
     }
 
     let host = null;
+    let progressTimer = null;
     try {
+      emitProgress(10,'fallback');
       const parsed = new DOMParser().parseFromString(payload.html || '', 'text/html');
       const pages = [...parsed.querySelectorAll('.pdf-document > .pdf-page')];
       if (!pages.length) return { ok: false, error: 'No se encontró contenido de la DNF.' };
@@ -32,12 +40,16 @@
       const styles = [...parsed.head.querySelectorAll('style')].map(style => style.textContent || '').join('\n');
 
       host = document.createElement('div');
+      host.setAttribute('aria-hidden','true');
       host.style.position = 'fixed';
       host.style.left = '0';
       host.style.top = '0';
       host.style.width = '794px';
       host.style.background = '#fff';
       host.style.pointerEvents = 'none';
+      host.style.opacity = '0';
+      host.style.clipPath = 'inset(100%)';
+      host.style.overflow = 'hidden';
       host.style.zIndex = '-2147483647';
       host.innerHTML = `
         <style>
@@ -69,6 +81,7 @@
       if (document.fonts?.ready) {
         await Promise.race([document.fonts.ready, new Promise(resolve => setTimeout(resolve, 1200))]);
       }
+      emitProgress(25,'fallback');
 
       const root = host.querySelector('.pdf-emergency-root');
       const filename = payload.filename || 'Deteccion_Necesidades_Formacion.pdf';
@@ -93,20 +106,34 @@
         }
       }).from(root).toPdf();
 
+      let synthetic=30;
+      emitProgress(synthetic,'render');
+      progressTimer=setInterval(()=>{
+        synthetic=Math.min(84,synthetic+3);
+        emitProgress(synthetic,'render');
+      },450);
+
       const pdf = await worker.get('pdf');
+      clearInterval(progressTimer);
+      progressTimer=null;
+      emitProgress(90,'assembling');
       const blob = pdf.output('blob');
       if (!blob || !blob.size) return { ok: false, error: 'El PDF de respaldo se generó vacío.' };
 
+      emitProgress(96,'downloading');
       saveBlob(blob, filename);
+      emitProgress(100,'done');
       return {
         ok: true,
         downloaded: true,
         filePath: filename,
         pages: typeof pdf.getNumberOfPages === 'function' ? pdf.getNumberOfPages() : undefined,
         recovered: true,
-        recoveryMode: 'continuous-flow-zero-origin'
+        recoveryMode: 'continuous-flow-hidden-surface'
       };
     } catch (error) {
+      if(progressTimer) clearInterval(progressTimer);
+      emitProgress(0,'error',{message:error?.message||String(error)});
       console.error('[DocFormación] Falló el generador PDF de respaldo:', error);
       return { ok: false, error: error?.message || String(error) };
     } finally {
