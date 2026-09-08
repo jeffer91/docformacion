@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260908-1545';
+  const LOCAL_BUILD = '20260908-1605';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -73,11 +73,11 @@
     // Plan/Informe: rasterizado A4 página por página.
     await loadScript('pdf-raster-pages-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // DNF: reemplaza la repaginación síncrona que podía dejar la interfaz
-    // aparentemente congelada. Pagina de forma asíncrona y reporta avance real.
+    // DNF: renderizador asíncrono sin rAF en iframe oculto. Evita el bloqueo
+    // en "Preparando documento" y reporta etapas reales de paginación/render.
     await loadScript('dnf-async-pdf-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Última capa: barra independiente para DNF, Plan e Informe.
+    // Última capa: barra independiente + contador de tiempo por documento.
     await loadScript('pdf-progress-ui-fix.js?v=' + encodeURIComponent(activeBuild));
   }
 
