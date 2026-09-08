@@ -16,29 +16,55 @@
     }));
   }
 
-  function nextFrame(win) {
-    return new Promise(resolve => {
-      const raf = win?.requestAnimationFrame || window.requestAnimationFrame;
-      raf(() => raf(resolve));
-    });
-  }
-
   function pause(ms = 0) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  function waitForFrame(frame) {
+  // IMPORTANTE: no esperamos requestAnimationFrame dentro del iframe oculto.
+  // Chromium puede suspender rAF en iframes totalmente transparentes/clipped,
+  // que era la causa de que la DNF quedara indefinidamente en "Preparando".
+  async function yieldToUi(ms = 0) {
+    await pause(ms);
+  }
+
+  function withTimeout(promise, ms, message) {
+    let timer;
+    return Promise.race([
+      promise.finally(() => clearTimeout(timer)),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), ms);
+      })
+    ]);
+  }
+
+  function waitForFrame(frame, html) {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('No se pudo preparar la DNF para PDF.')), 12000);
-      frame.onload = () => {
+      let settled = false;
+      const finish = (fn, value) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timer);
-        resolve();
+        fn(value);
       };
-      frame.onerror = () => {
-        clearTimeout(timer);
-        reject(new Error('No se pudo preparar la DNF para PDF.'));
-      };
+      const timer = setTimeout(() => finish(reject, new Error('La superficie de render de la DNF tardó demasiado en cargar.')), 10000);
+      frame.onload = () => finish(resolve);
+      frame.onerror = () => finish(reject, new Error('No se pudo cargar la superficie de render de la DNF.'));
+
+      // Asignar srcdoc ANTES de insertar el iframe evita la carrera con about:blank.
+      frame.srcdoc = html || '';
+      document.body.appendChild(frame);
     });
+  }
+
+  async function waitForStructure(frame, timeoutMs = 5000) {
+    const started = performance.now();
+    while (performance.now() - started < timeoutMs) {
+      const doc = frame.contentDocument;
+      const pages = doc ? doc.querySelectorAll('.pdf-document > .pdf-page') : [];
+      if (doc?.body && pages.length >= 3) return doc;
+      await pause(50);
+    }
+    throw new Error('La DNF se cargó, pero no apareció la estructura institucional de páginas.');
   }
 
   function saveBlob(blob, filename) {
@@ -118,8 +144,7 @@
     if (!table) return null;
 
     const originalTable = sourceBlock.querySelector('table.data,table');
-    const rows = [...table.rows];
-    rows.forEach(row => row.remove());
+    [...table.rows].forEach(row => row.remove());
     const tbody = table.tBodies[0] || table.appendChild(doc.createElement('tbody'));
     headerRows(originalTable).forEach(row => tbody.appendChild(row.cloneNode(true)));
 
@@ -140,32 +165,44 @@
     return { part, tbody, table };
   }
 
+  function flattenSourceNodes(doc, sourcePages) {
+    const nodes = [];
+    const unwrapClasses = new Set(['q-section', 'q-sub', 'q-career-block', 'career-profile-block']);
+
+    const pushNode = node => {
+      if (!node || node.nodeType !== 1) return;
+      const shouldUnwrap = [...unwrapClasses].some(cls => node.classList?.contains(cls));
+      if (shouldUnwrap && node.children?.length) {
+        [...node.children].forEach(child => pushNode(child.cloneNode(true)));
+        return;
+      }
+      nodes.push(node.cloneNode(true));
+    };
+
+    sourcePages.slice(2).forEach(page => {
+      const body = page.querySelector('.pdf-body');
+      if (!body) return;
+      [...body.children].forEach(pushNode);
+    });
+    return nodes;
+  }
+
   async function paginate(doc, root, sourcePages) {
     const cover = sourcePages[0].cloneNode(true);
     const index = sourcePages[1].cloneNode(true);
     const template = sourcePages.find((page, idx) => idx > 1 && page.querySelector('.pdf-body')) || sourcePages[2];
-
-    const sourceNodes = [];
-    sourcePages.slice(2).forEach(page => {
-      const body = page.querySelector('.pdf-body');
-      if (!body) return;
-      [...body.children].forEach(child => sourceNodes.push(child.cloneNode(true)));
-    });
+    const sourceNodes = flattenSourceNodes(doc, sourcePages);
 
     root.innerHTML = '';
     root.appendChild(cover);
     root.appendChild(index);
 
-    const generated = [cover, index];
     let built = null;
-
     const startPage = () => {
       built = cloneTemplatePage(doc, template);
       root.appendChild(built.page);
-      generated.push(built.page);
       return built;
     };
-
     const ensurePage = () => built || startPage();
 
     const appendRegular = async sourceNode => {
@@ -180,30 +217,22 @@
 
       if (bodyOverflows(built.body)) {
         clone.classList.add('dnf-long-block');
-        await nextFrame(doc.defaultView);
+        // Solo cedemos al event loop visible; nunca al rAF del iframe oculto.
+        await yieldToUi(0);
       }
     };
 
     const appendTable = async sourceBlock => {
       const sourceTable = sourceBlock.matches?.('table') ? sourceBlock : sourceBlock.querySelector?.('table.data,table');
-      if (!sourceTable) {
-        await appendRegular(sourceBlock);
-        return;
-      }
+      if (!sourceTable) return appendRegular(sourceBlock);
 
       const rows = dataRows(sourceTable);
-      if (!rows.length) {
-        await appendRegular(sourceBlock);
-        return;
-      }
+      if (!rows.length) return appendRegular(sourceBlock);
 
       ensurePage();
       let first = true;
       let partInfo = makeTablePart(doc, sourceBlock, sourceTable, true, false);
-      if (!partInfo) {
-        await appendRegular(sourceBlock);
-        return;
-      }
+      if (!partInfo) return appendRegular(sourceBlock);
 
       built.body.appendChild(partInfo.part);
       if (bodyOverflows(built.body) && built.body.children.length > 1) {
@@ -240,7 +269,7 @@
           if (bodyOverflows(built.body)) rowClone.classList.add('dnf-long-block');
         }
 
-        if ((r + 1) % 6 === 0) await pause(0);
+        if ((r + 1) % 2 === 0) await yieldToUi(0);
       }
 
       if (sourceBlock !== sourceTable) {
@@ -255,20 +284,27 @@
             startPage();
             built.body.appendChild(extraClone);
           }
+          await yieldToUi(0);
         }
       }
     };
 
     const totalNodes = Math.max(1, sourceNodes.length);
     for (let i = 0; i < sourceNodes.length; i++) {
+      // Emitimos ANTES de procesar el bloque para que la UI no parezca congelada
+      // si ese bloque requiere varias mediciones de layout.
+      const prePct = 8 + (i / totalNodes) * 17;
+      emit(prePct, 'layout', { current: i, total: totalNodes, stage: 'paginate' });
+      await yieldToUi(0);
+
       const node = sourceNodes[i];
       const isTable = node.matches?.('table') || node.classList?.contains('apa-table-block') || node.classList?.contains('q-table-block') || !!node.querySelector?.('table.data');
       if (isTable) await appendTable(node);
       else await appendRegular(node);
 
       const pct = 8 + ((i + 1) / totalNodes) * 17;
-      emit(pct, 'layout', { current: i + 1, total: totalNodes });
-      if ((i + 1) % 3 === 0) await pause(0);
+      emit(pct, 'layout', { current: i + 1, total: totalNodes, stage: 'paginate' });
+      await yieldToUi(i % 3 === 2 ? 4 : 0);
     }
 
     const pages = [...root.querySelectorAll(':scope > .pdf-page')];
@@ -309,7 +345,7 @@
 
     let frame = null;
     try {
-      emit(3, 'preparing');
+      emit(3, 'preparing', { stage: 'surface' });
       frame = document.createElement('iframe');
       frame.setAttribute('aria-hidden', 'true');
       frame.tabIndex = -1;
@@ -321,22 +357,27 @@
       frame.style.border = '0';
       frame.style.opacity = '0';
       frame.style.pointerEvents = 'none';
-      frame.style.clipPath = 'inset(100%)';
-      frame.style.zIndex = '-2147483647';
+      frame.style.zIndex = '-1';
+      // No usamos clip-path: Chromium puede suspender el pipeline de layout/paint
+      // de superficies totalmente recortadas, aun cuando luego se midan por JS.
 
-      const loaded = waitForFrame(frame);
-      document.body.appendChild(frame);
-      frame.srcdoc = payload.html || '';
-      await loaded;
+      await waitForFrame(frame, payload.html || '');
+      emit(5, 'preparing', { stage: 'structure' });
 
-      const doc = frame.contentDocument;
-      if (!doc?.body) throw new Error('No se pudo preparar el contenido de la DNF.');
+      const doc = await withTimeout(
+        waitForStructure(frame, 5000),
+        6000,
+        'La estructura de la DNF tardó demasiado en estar disponible.'
+      );
       addGuardCss(doc);
+
       if (doc.fonts?.ready) {
-        await Promise.race([doc.fonts.ready, pause(1200)]);
+        await Promise.race([doc.fonts.ready, pause(900)]);
       }
-      await nextFrame(frame.contentWindow);
-      emit(7, 'layout');
+      // Forzamos una lectura de layout y cedemos al event loop principal.
+      void doc.body.offsetHeight;
+      await yieldToUi(16);
+      emit(7, 'layout', { stage: 'paginate' });
 
       const sourcePages = [...doc.querySelectorAll('.pdf-document > .pdf-page')];
       if (sourcePages.length < 3) throw new Error('La DNF no contiene la estructura institucional esperada.');
@@ -344,17 +385,21 @@
       const pages = await paginate(doc, root, sourcePages);
       if (!pages.length) throw new Error('No se encontraron páginas para generar la DNF.');
 
-      await nextFrame(frame.contentWindow);
-      emit(27, 'layout', { current: 0, total: pages.length });
+      void doc.body.offsetHeight;
+      await yieldToUi(16);
+      emit(27, 'layout', { current: 0, total: pages.length, stage: 'render' });
 
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true, putOnlyUsedFonts: true, precision: 2 });
-      const scale = pages.length >= 50 ? 1.0 : 1.12;
-      const quality = pages.length >= 50 ? 0.78 : 0.82;
+      const scale = pages.length >= 50 ? 0.92 : pages.length >= 35 ? 1.0 : 1.08;
+      const quality = pages.length >= 50 ? 0.76 : 0.8;
 
       for (let i = 0; i < pages.length; i++) {
         let canvas = null;
         try {
+          emit(27 + (i / pages.length) * 63, 'render', { current: i, total: pages.length, stage: 'render' });
+          await yieldToUi(0);
+
           canvas = await window.html2canvas(pages[i], {
             scale,
             useCORS: true,
@@ -377,18 +422,18 @@
           pdf.addImage(bytes, 'JPEG', 0, 0, 210, 297, 'dnf-async-' + i, 'FAST');
 
           const percent = 27 + ((i + 1) / pages.length) * 63;
-          emit(percent, 'render', { current: i + 1, total: pages.length });
+          emit(percent, 'render', { current: i + 1, total: pages.length, stage: 'render' });
         } finally {
           if (canvas) {
             canvas.width = 1;
             canvas.height = 1;
           }
         }
-        if ((i + 1) % 2 === 0) await pause(12);
+        await yieldToUi((i + 1) % 2 === 0 ? 14 : 0);
       }
 
       emit(93, 'assembling', { current: pages.length, total: pages.length });
-      await pause(20);
+      await yieldToUi(20);
       const blob = pdf.output('blob');
       if (!blob?.size) throw new Error('El PDF se generó vacío.');
 
@@ -397,7 +442,7 @@
       saveBlob(blob, filename);
       emit(100, 'done', { current: pages.length, total: pages.length });
 
-      return { ok: true, downloaded: true, filePath: filename, pages: pages.length, size: blob.size, renderer: 'dnf-async-page-renderer' };
+      return { ok: true, downloaded: true, filePath: filename, pages: pages.length, size: blob.size, renderer: 'dnf-async-page-renderer-v2' };
     } catch (error) {
       console.error('[DocFormación] Falló el generador asíncrono de DNF:', error);
       emit(0, 'error', { message: error?.message || String(error) });
@@ -410,10 +455,9 @@
   api.generatePDF = async function dnfAsyncGeneratePDF(payload) {
     if (!isWeb || !payload?.exactPages) return previousGeneratePDF(payload);
 
-    const result = await renderDnf(payload);
-    if (result?.ok) return result;
-
-    console.warn('[DocFormación] El generador asíncrono de DNF falló; se intenta el generador anterior.', result?.error || result);
-    return previousGeneratePDF(payload);
+    // En web usamos exclusivamente el renderizador DNF v2. Volver al generador
+    // anterior tras un fallo podía reintroducir el bloqueo original y dejar la UI
+    // sin una respuesta clara.
+    return renderDnf(payload);
   };
 })();
