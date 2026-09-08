@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260908-0825';
+  const LOCAL_BUILD = '20260908-1125';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -54,6 +54,10 @@
     // Filtro maestro de la aplicación: cada período conserva su propio estado
     // y gobierna DNF, Plan e Informe, además de sus meses documentales.
     await loadScript('period-manager-fix.js?v=' + encodeURIComponent(activeBuild));
+
+    // Migración puntual solicitada: la información que ya estaba construida en
+    // Abril 2026-Sep 2026 pertenece al período real Oct 2025-Sep 2026.
+    await loadScript('period-existing-data-migration-fix.js?v=' + encodeURIComponent(activeBuild));
 
     await loadScript('institutional-plan-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-quality-fix.js?v=' + encodeURIComponent(activeBuild));
