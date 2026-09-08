@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260907-1705';
+  const LOCAL_BUILD = '20260908-0825';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -50,6 +50,11 @@
     await loadScript('pdf-reliability-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('app.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('period-dnf-fix.js?v=' + encodeURIComponent(activeBuild));
+
+    // Filtro maestro de la aplicación: cada período conserva su propio estado
+    // y gobierna DNF, Plan e Informe, además de sus meses documentales.
+    await loadScript('period-manager-fix.js?v=' + encodeURIComponent(activeBuild));
+
     await loadScript('institutional-plan-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-quality-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-exact-layout-fix.js?v=' + encodeURIComponent(activeBuild));
