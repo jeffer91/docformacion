@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260908-1645';
+  const LOCAL_BUILD = '20260908-1700';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -51,12 +51,7 @@
     await loadScript('app.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('period-dnf-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Filtro maestro de la aplicación: cada período conserva su propio estado
-    // y gobierna DNF, Plan e Informe, además de sus meses documentales.
     await loadScript('period-manager-fix.js?v=' + encodeURIComponent(activeBuild));
-
-    // Migración puntual solicitada: la información que ya estaba construida en
-    // Abril 2026-Sep 2026 pertenece al período real Oct 2025-Sep 2026.
     await loadScript('period-existing-data-migration-fix.js?v=' + encodeURIComponent(activeBuild));
 
     await loadScript('institutional-plan-fix.js?v=' + encodeURIComponent(activeBuild));
@@ -70,19 +65,21 @@
     await loadScript('pdf-emergency-fallback.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('pdf-web-geometry-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Plan/Informe: rasterizado A4 página por página.
+    // Plan e Informe mantienen el rasterizado A4 estable.
     await loadScript('pdf-raster-pages-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // DNF v2: mantenemos el paginador asíncrono como respaldo interno.
+    // DNF: los motores anteriores quedan cargados solo para compatibilidad,
+    // pero la capa final no depende de ellos.
     await loadScript('dnf-async-pdf-fix.js?v=' + encodeURIComponent(activeBuild));
-
-    // DNF v3: capa final exclusiva para web. No espera iframe.onload/srcdoc;
-    // escribe el documento directamente en una superficie local y renderiza
-    // cada hoja A4 con timeout por página. Evita el bloqueo en 4%.
     await loadScript('dnf-direct-render-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Última capa: barra independiente + contador de tiempo por documento.
+    // UI de progreso y contador.
     await loadScript('pdf-progress-ui-fix.js?v=' + encodeURIComponent(activeBuild));
+
+    // Enrutador FINAL: para DNF llama directamente al motor v2 expuesto,
+    // evitando toda la cadena histórica de wrappers. Incluye watchdog de atasco.
+    await loadScript('pdf-final-router-fix.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('pdf-progress-extra-ui-fix.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
