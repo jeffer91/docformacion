@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260908-1125';
+  const LOCAL_BUILD = '20260908-1545';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -70,12 +70,14 @@
     await loadScript('pdf-emergency-fallback.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('pdf-web-geometry-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Sustituye html2pdf para Plan/Informe: pagina el contenido y rasteriza
-    // cada hoja A4 directamente, evitando cualquier desplazamiento horizontal.
+    // Plan/Informe: rasterizado A4 página por página.
     await loadScript('pdf-raster-pages-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Última capa: muestra una barra independiente en la tarjeta del documento
-    // y escucha el avance real/por etapas de DNF, Plan e Informe.
+    // DNF: reemplaza la repaginación síncrona que podía dejar la interfaz
+    // aparentemente congelada. Pagina de forma asíncrona y reporta avance real.
+    await loadScript('dnf-async-pdf-fix.js?v=' + encodeURIComponent(activeBuild));
+
+    // Última capa: barra independiente para DNF, Plan e Informe.
     await loadScript('pdf-progress-ui-fix.js?v=' + encodeURIComponent(activeBuild));
   }
 
