@@ -8,6 +8,7 @@
     informe: 'Informe de Cumplimiento del Plan de Formación'
   };
   const hideTimers = new Map();
+  const runs = new Map();
 
   function injectStyles() {
     if (document.getElementById('pdfProgressUiStyles')) return;
@@ -17,16 +18,19 @@
       .pdf-progress-shell{margin:12px 0 2px;padding:10px 12px;border:1px solid #d8e2ec;border-radius:10px;background:#f7f9fb;transition:opacity .2s ease}
       .pdf-progress-shell[hidden]{display:none!important}
       .pdf-progress-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:7px;font-size:11px;color:#324a5f}
+      .pdf-progress-head-right{display:flex;align-items:center;gap:10px;white-space:nowrap}
       .pdf-progress-head strong{font-size:11px;color:#173f67;white-space:nowrap}
+      .pdf-progress-time{font-variant-numeric:tabular-nums;color:#637689;font-size:10px;font-weight:700}
       .pdf-progress-track{width:100%;height:8px;border-radius:999px;background:#e4eaf0;overflow:hidden}
       .pdf-progress-fill{height:100%;width:0;border-radius:999px;background:#173f67;transition:width .28s ease}
-      .pdf-progress-detail{margin-top:6px;font-size:10px;color:#637689}
+      .pdf-progress-detail{margin-top:6px;font-size:10px;color:#637689;line-height:1.35}
       .pdf-progress-shell[data-state="done"]{background:#f2faf6;border-color:#cfe8da}
       .pdf-progress-shell[data-state="done"] .pdf-progress-fill{background:#2f7b58}
       .pdf-progress-shell[data-state="done"] .pdf-progress-head strong{color:#2f7b58}
       .pdf-progress-shell[data-state="error"]{background:#fff6f5;border-color:#f0d2cf}
       .pdf-progress-shell[data-state="error"] .pdf-progress-fill{background:#a23b34}
       .pdf-progress-shell[data-state="error"] .pdf-progress-head strong{color:#a23b34}
+      .pdf-progress-stalled{color:#8a5b00;font-weight:700}
     `;
     document.head.appendChild(style);
   }
@@ -67,7 +71,10 @@
     shell.innerHTML = `
       <div class="pdf-progress-head">
         <span>Generando PDF</span>
-        <strong data-pdf-progress-percent>0%</strong>
+        <div class="pdf-progress-head-right">
+          <span class="pdf-progress-time" data-pdf-progress-time>00:00</span>
+          <strong data-pdf-progress-percent>0%</strong>
+        </div>
       </div>
       <div class="pdf-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <div class="pdf-progress-fill"></div>
@@ -81,10 +88,27 @@
     return shell;
   }
 
+  function formatElapsed(ms) {
+    const total = Math.max(0, Math.floor(Number(ms || 0) / 1000));
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    if (hours > 0) return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+    return String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+  }
+
   function phaseLabel(detail) {
     const phase = detail.phase || 'render';
-    if (phase === 'starting' || phase === 'preparing') return 'Preparando documento…';
-    if (phase === 'layout') return 'Ajustando formato A4…';
+    if (phase === 'starting') return 'Iniciando generación…';
+    if (phase === 'preparing') {
+      if (detail.stage === 'surface') return 'Preparando superficie de render…';
+      if (detail.stage === 'structure') return 'Cargando estructura del documento…';
+      return 'Preparando documento…';
+    }
+    if (phase === 'layout') {
+      if (detail.stage === 'paginate' && detail.total) return `Organizando contenido ${Number(detail.current || 0)} de ${Number(detail.total)}…`;
+      return 'Ajustando y paginando formato A4…';
+    }
     if (phase === 'fallback') return 'Reorganizando contenido para que encaje correctamente…';
     if (phase === 'assembling') return 'Armando el archivo PDF…';
     if (phase === 'downloading') return 'Preparando la descarga…';
@@ -112,6 +136,51 @@
     return 10;
   }
 
+  function stopRunTimer(type) {
+    const run = runs.get(type);
+    if (!run) return;
+    if (run.timer) clearInterval(run.timer);
+    run.timer = null;
+  }
+
+  function refreshElapsed(type) {
+    const run = runs.get(type);
+    const shell = ensureProgress(type);
+    if (!run || !shell || shell.hidden) return;
+
+    const now = performance.now();
+    const elapsed = now - run.startedAt;
+    const time = shell.querySelector('[data-pdf-progress-time]');
+    if (time) time.textContent = formatElapsed(elapsed);
+
+    const detailEl = shell.querySelector('.pdf-progress-detail');
+    if (!detailEl || run.finished) return;
+
+    const idleMs = now - run.lastProgressAt;
+    const base = phaseLabel(run.lastDetail || {});
+    if (idleMs >= 15000) {
+      const idleSeconds = Math.floor(idleMs / 1000);
+      detailEl.innerHTML = `${base} <span class="pdf-progress-stalled">· sin avance visible ${idleSeconds} s</span>`;
+    } else {
+      detailEl.textContent = base;
+    }
+  }
+
+  function startRun(type, detail) {
+    stopRunTimer(type);
+    const now = performance.now();
+    const run = {
+      startedAt: now,
+      lastProgressAt: now,
+      lastPercent: calculatePercent(detail),
+      lastDetail: detail,
+      finished: false,
+      timer: null
+    };
+    run.timer = setInterval(() => refreshElapsed(type), 1000);
+    runs.set(type, run);
+  }
+
   function showProgress(type, detail = {}) {
     const shell = ensureProgress(type);
     if (!shell) return;
@@ -123,10 +192,23 @@
     }
 
     const percent = calculatePercent(detail);
+    let run = runs.get(type);
+    if (!run || detail.phase === 'starting') {
+      startRun(type, detail);
+      run = runs.get(type);
+    } else {
+      if (percent !== run.lastPercent || detail.phase !== run.lastDetail?.phase || detail.current !== run.lastDetail?.current) {
+        run.lastProgressAt = performance.now();
+      }
+      run.lastPercent = percent;
+      run.lastDetail = detail;
+    }
+
     const fill = shell.querySelector('.pdf-progress-fill');
     const pct = shell.querySelector('[data-pdf-progress-percent]');
     const text = shell.querySelector('.pdf-progress-detail');
     const track = shell.querySelector('.pdf-progress-track');
+    const time = shell.querySelector('[data-pdf-progress-time]');
 
     shell.hidden = false;
     shell.dataset.state = detail.phase === 'error' ? 'error' : detail.phase === 'done' ? 'done' : 'working';
@@ -134,17 +216,23 @@
     if (pct) pct.textContent = `${percent}%`;
     if (text) text.textContent = phaseLabel(detail);
     if (track) track.setAttribute('aria-valuenow', String(percent));
+    if (time && run) time.textContent = formatElapsed(performance.now() - run.startedAt);
+
+    if (detail.phase === 'done' || detail.phase === 'error') {
+      if (run) run.finished = true;
+      stopRunTimer(type);
+    }
 
     if (detail.phase === 'done') {
       hideTimers.set(type, setTimeout(() => {
         shell.hidden = true;
         shell.dataset.state = '';
-      }, 3000));
+      }, 4500));
     } else if (detail.phase === 'error') {
       hideTimers.set(type, setTimeout(() => {
         shell.hidden = true;
         shell.dataset.state = '';
-      }, 6500));
+      }, 9000));
     }
   }
 
