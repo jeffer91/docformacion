@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260909-1655';
+  const LOCAL_BUILD = '20260909-1705';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -88,7 +88,8 @@
     await loadScript('dnf-vector-pdf-v3.js?v=' + encodeURIComponent(activeBuild));
 
     // Las capas PDF se cargan en orden inverso de ejecución porque cada una envuelve doc.save().
-    // Resultado final al guardar: Sección 4 → Sección 5 → Sección 6 → Sección 7 → Sección 8.
+    // Resultado final al guardar: Sección 4 → Sección 5 → Sección 6 → Sección 7 → Sección 8 → Sección 9.
+    await loadScript('dnf-section9-pdf.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-section8-pdf.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-section7-pdf.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-section6-pdf.js?v=' + encodeURIComponent(activeBuild));
