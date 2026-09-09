@@ -4,7 +4,7 @@
 
   const previousGeneratePDF = api.generatePDF.bind(api);
   const isWeb = location.protocol === 'http:' || location.protocol === 'https:';
-  const ENGINE = 'dnf-native-print-v1';
+  const ENGINE = 'dnf-native-print-v2';
 
   const EXPECTED_SECTIONS = [
     '1. Introducción',
@@ -74,9 +74,7 @@
   }
 
   async function waitForAssets(doc) {
-    if (doc.fonts?.ready) {
-      await Promise.race([doc.fonts.ready, pause(1800)]);
-    }
+    if (doc.fonts?.ready) await Promise.race([doc.fonts.ready, pause(1800)]);
     const pending = [...doc.images].filter(img => !img.complete).map(img => new Promise(resolve => {
       const done = () => resolve();
       img.addEventListener('load', done, { once: true });
@@ -92,7 +90,7 @@
       html,body{margin:0!important;padding:0!important;background:#fff!important;overflow:visible!important}
       .pdf-document{margin:0!important;padding:0!important;background:#fff!important}
       .pdf-page{width:210mm!important;height:297mm!important;min-width:210mm!important;max-width:210mm!important;min-height:297mm!important;max-height:297mm!important;box-sizing:border-box!important;overflow:hidden!important;margin:0!important;background:#fff!important;position:relative!important;transform:none!important}
-      .pdf-page .pdf-body{overflow:hidden!important;transform:none!important;width:auto!important;max-width:none!important}
+      .pdf-page .pdf-body{overflow:hidden!important;transform:none!important}
       .pdf-page table{max-width:100%!important}
       .pdf-page img,.pdf-page svg{max-width:100%!important}
       .pdf-page .apa-table-block,.pdf-page .q-table-block{break-inside:auto!important;page-break-inside:auto!important}
@@ -110,7 +108,7 @@
       @page{size:A4 portrait;margin:0}
       html,body{width:210mm!important;margin:0!important;padding:0!important;background:#fff!important}
       .pdf-document{width:210mm!important;margin:0!important;padding:0!important}
-      .pdf-page{width:210mm!important;height:297mm!important;min-height:297mm!important;max-height:297mm!important;margin:0!important;padding:0!important;box-sizing:border-box!important;overflow:hidden!important;break-after:page!important;page-break-after:always!important;box-shadow:none!important;transform:none!important}
+      .pdf-page{width:210mm!important;height:297mm!important;min-height:297mm!important;max-height:297mm!important;margin:0!important;box-sizing:border-box!important;overflow:hidden!important;break-after:page!important;page-break-after:always!important;box-shadow:none!important;transform:none!important}
       .pdf-page:last-child{break-after:auto!important;page-break-after:auto!important}
       .pdf-page .pdf-body{transform:none!important}
       *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
@@ -157,11 +155,9 @@
     const table = part.querySelector('table.data,table');
     if (!table) return null;
     const originalTable = sourceBlock.querySelector('table.data,table');
-
     [...table.rows].forEach(row => row.remove());
     const tbody = table.tBodies[0] || table.appendChild(doc.createElement('tbody'));
     headerRows(originalTable).forEach(row => tbody.appendChild(row.cloneNode(true)));
-
     part.querySelector('.apa-table-note')?.remove();
     part.querySelector('.apa-table-analysis')?.remove();
 
@@ -244,8 +240,8 @@
       let first = true;
       let partInfo = makeTablePart(doc, sourceBlock, sourceTable, true, false);
       if (!partInfo) return appendRegular(sourceBlock);
-
       built.body.appendChild(partInfo.part);
+
       if (bodyOverflows(built.body) && built.body.children.length > 1) {
         built.body.removeChild(partInfo.part);
         startPage();
@@ -280,9 +276,7 @@
           if (bodyOverflows(built.body)) {
             rowClone.classList.add('dnf-long-block');
             await pause(0);
-            if (bodyOverflows(built.body)) {
-              throw new Error('Una fila de tabla es demasiado alta para una página A4.');
-            }
+            if (bodyOverflows(built.body)) throw new Error('Una fila de tabla es demasiado alta para una página A4.');
           }
         }
         if ((r + 1) % 3 === 0) await pause(0);
@@ -344,30 +338,20 @@
   }
 
   function validateDocument(doc, pages, sectionPages) {
-    if (pages.length <= 3) {
-      throw new Error('La DNF quedó en solo tres páginas; la repaginación no se completó.');
-    }
-    if (doc.querySelector('.source-page')) {
-      throw new Error('La página fuente temporal no fue reemplazada por páginas finales.');
-    }
+    if (pages.length <= 3) throw new Error('La DNF quedó en solo tres páginas; la repaginación no se completó.');
+    if (doc.querySelector('.source-page')) throw new Error('La página fuente temporal no fue reemplazada por páginas finales.');
 
     const missing = EXPECTED_SECTIONS.filter(label => !sectionPages.has(normalized(label)));
-    if (missing.length) {
-      throw new Error('La DNF está incompleta. Faltan secciones: ' + missing.join(', '));
-    }
+    if (missing.length) throw new Error('La DNF está incompleta. Faltan secciones: ' + missing.join(', '));
 
     for (const page of pages) {
       const body = page.querySelector('.pdf-body');
-      if (body && bodyOverflows(body)) {
-        throw new Error('La página ' + page.dataset.pdfPage + ' conserva contenido fuera del área A4.');
-      }
+      if (body && bodyOverflows(body)) throw new Error('La página ' + page.dataset.pdfPage + ' conserva contenido fuera del área A4.');
       const transformed = [...page.querySelectorAll('.pdf-body')].some(bodyEl => {
         const value = bodyEl.style.transform || '';
         return value && value !== 'none';
       });
-      if (transformed) {
-        throw new Error('La página ' + page.dataset.pdfPage + ' fue escalada; la DNF debe conservar tamaño de texto real.');
-      }
+      if (transformed) throw new Error('La página ' + page.dataset.pdfPage + ' fue escalada; la DNF debe conservar tamaño de texto real.');
     }
   }
 
@@ -378,11 +362,8 @@
       cleaned = true;
       if (frame?.parentNode) frame.remove();
     };
-    try {
-      frame.contentWindow?.addEventListener('afterprint', cleanup, { once: true });
-    } catch (_error) {}
+    try { frame.contentWindow?.addEventListener('afterprint', cleanup, { once: true }); } catch (_error) {}
     setTimeout(cleanup, 120000);
-    return cleanup;
   }
 
   async function printDnf(payload) {
@@ -405,6 +386,7 @@
 
       await waitForFrame(frame, payload.html || '');
       const doc = await waitForStructure(frame);
+      doc.title = String(payload.filename || 'Deteccion de Necesidades de Formacion').replace(/\.pdf$/i, '');
       addLayoutCss(doc);
       await waitForAssets(doc);
       void doc.body.offsetHeight;
