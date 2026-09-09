@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260909-1325';
+  const LOCAL_BUILD = '20260909-1518';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -84,8 +84,9 @@
     await loadScript('dnf-native-print-fix.js?v=' + encodeURIComponent(activeBuild));
 
     // Capa final de la DNF en GitHub Pages: jsPDF vectorial, A4 en puntos,
-    // encabezado por cajas calculadas y cuerpo APA 7. Por ahora genera solo
-    // las partes aprobadas: portada + Introducción.
+    // encabezado por cajas calculadas y cuerpo académico con márgenes de 1 pulgada,
+    // Times 12, doble espacio y paginación real. Genera las partes aprobadas:
+    // portada + Introducción + Base Legal.
     await loadScript('dnf-vector-pdf.js?v=' + encodeURIComponent(activeBuild));
   }
 
