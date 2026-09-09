@@ -5,7 +5,7 @@
   if (!api || typeof api.generatePDF !== 'function') return;
 
   const previousGeneratePDF = api.generatePDF.bind(api);
-  const ENGINE = 'dnf-vector-jspdf-v1';
+  const ENGINE = 'dnf-vector-jspdf-v2';
   const CM = 72 / 2.54;
   const MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
@@ -27,6 +27,88 @@
     'El proceso de detección permite, además, analizar las necesidades desde diferentes perspectivas, considerando información relacionada con el nivel académico alcanzado por los docentes, sus intereses de formación, las modalidades de estudio, la disponibilidad para iniciar o continuar estudios y sus aspiraciones académicas de corto y mediano plazo. Estas variables forman parte del componente cuantitativo utilizado en el diagnóstico institucional y permiten establecer tendencias y prioridades para la toma de decisiones.',
     'De manera complementaria, el análisis incorpora información cualitativa obtenida mediante la participación de las coordinaciones académicas, permitiendo validar los resultados obtenidos, identificar necesidades que pueden no encontrarse explícitamente reflejadas en los datos cuantitativos y establecer criterios de priorización de acuerdo con la pertinencia curricular, el perfil docente y las necesidades institucionales. La combinación de ambas fuentes fortalece la comprensión de la realidad del claustro y contribuye a una planificación más contextualizada de la formación docente.',
     'Por tanto, los resultados obtenidos mediante este proceso constituyen un insumo para la planificación del Plan de Formación Docente del ITSQMET, permitiendo definir líneas de formación específicas y transversales, establecer prioridades institucionales y orientar acciones de seguimiento que contribuyan al fortalecimiento progresivo de la cualificación académica del personal docente. De esta manera, la detección de necesidades se integra al ciclo institucional de planificación y mejora continua, procurando que las decisiones relacionadas con la formación docente se encuentren sustentadas en información actualizada y pertinente.'
+  ];
+
+  const BASE_LEGAL = [
+    {
+      title: '2.1. Normativa Constitucional, Legal y Reglamentaria Nacional',
+      items: [
+        {
+          text: 'el Artículo 349 de la Constitución de la República del Ecuador establece: “El Estado garantizará al personal docente, en todos los niveles y modalidades, estabilidad, actualización, formación continua y mejoramiento pedagógico y académico”; y además que “la ley regulará la carrera docente y el escalafón; establecerá un sistema nacional de evaluación del desempeño y la política salarial en todos los niveles”.',
+          bold: ['Artículo 349 de la Constitución de la República del Ecuador']
+        },
+        {
+          text: 'el Artículo 26 de la Constitución de la República del Ecuador declara a la educación como un derecho de las personas y un deber ineludible del Estado, y garantiza que el acceso, permanencia, calidad y culminación de los procesos formativos estén bajo su responsabilidad directa, lo cual incluye la calidad del personal docente como condición esencial.',
+          bold: ['Artículo 26 de la Constitución de la República del Ecuador']
+        },
+        {
+          text: 'el Artículo 118 de la Ley Orgánica de Educación Superior (LOES) establece: “Las instituciones del Sistema de Educación Superior implementarán políticas de formación y capacitación permanentes para su personal académico. Estas políticas deberán considerar el fortalecimiento de capacidades profesionales, académicas, investigativas y de vinculación con la sociedad”.',
+          bold: ['Artículo 118 de la Ley Orgánica de Educación Superior (LOES)']
+        },
+        {
+          text: 'el Artículo 9 de la LOES determina que el Estado, a través de sus instituciones, debe garantizar la calidad de la educación superior, estableciendo estándares para los procesos académicos, incluidos los de formación del talento humano docente.',
+          bold: ['Artículo 9 de la LOES']
+        },
+        {
+          text: 'el Artículo 96 de la LOES, sobre requisitos del personal académico, señala que los docentes deberán poseer títulos de tercer y cuarto nivel de conformidad con los niveles de la oferta académica impartida, promoviendo la formación continua como criterio de habilitación.',
+          bold: ['Artículo 96 de la LOES']
+        },
+        {
+          text: 'el Artículo 2 del Reglamento de Carrera y Escalafón del Profesor del Sistema de Educación Superior (Acuerdo No. SENESCYT-2019-023) dispone: “La carrera académica se sustentará en criterios técnicos y objetivos relacionados con la formación académica, producción científica, innovación, vinculación con la sociedad y desempeño institucional”. Asimismo, exige procesos de formación planificados y pertinentes para la mejora continua.',
+          bold: ['Artículo 2 del Reglamento de Carrera y Escalafón del Profesor del Sistema de Educación Superior (Acuerdo No. SENESCYT-2019-023)']
+        }
+      ]
+    },
+    {
+      title: '2.2. Normativa del Modelo de Evaluación Externa del CACES',
+      items: [
+        {
+          text: 'el Indicador 3.2.4 del Modelo de Evaluación Externa de Institutos Superiores Técnicos y Tecnológicos (CACES, 2021) establece que: “La institución evidencia la existencia de un plan de formación continua y pertinente del personal académico, que responde a un diagnóstico de necesidades, se encuentra alineado a su planificación institucional y se ejecuta de manera sistemática, con evaluación de resultados”.',
+          bold: ['Indicador 3.2.4 del Modelo de Evaluación Externa de Institutos Superiores Técnicos y Tecnológicos (CACES, 2021)']
+        },
+        {
+          text: 'el Criterio 3.2 del mismo modelo señala: “La gestión del personal académico se orienta a garantizar su cualificación, estabilidad, desarrollo profesional y desempeño docente”. En este sentido, se considera obligatoria la existencia de políticas institucionales de formación fundamentadas en evidencia diagnóstica.',
+          bold: ['Criterio 3.2 del mismo modelo']
+        },
+        {
+          text: 'el Anexo Técnico del Modelo de Evaluación Externa (CACES, 2021) indica como evidencia requerida para el indicador 3.2.4: “Diagnóstico institucional actualizado de necesidades de formación académica del personal docente, desagregado por carrera, modalidad, nivel de formación y afinidad con la oferta académica”. Además, requiere: “Resultados de la ejecución del plan de formación y mecanismos de seguimiento”.',
+          bold: ['Anexo Técnico del Modelo de Evaluación Externa (CACES, 2021)']
+        },
+        {
+          text: 'el documento metodológico del CACES sobre evaluación institucional establece que los procesos de cualificación docente deben guardar pertinencia con el perfil profesional y el plan estratégico de desarrollo institucional, y que dicha formación debe formar parte de una cultura institucional de mejora continua (CACES, 2020, Guía metodológica para la autoevaluación).',
+          bold: ['documento metodológico del CACES sobre evaluación institucional']
+        }
+      ]
+    },
+    {
+      title: '2.3. Normativa Institucional del ITSQMET',
+      items: [
+        {
+          text: 'el Reglamento de Formación y Capacitación de los Docentes del ITSQMET, aprobado mediante resolución institucional en octubre de 2023, establece en su Artículo 6 que: “Todos los docentes del Instituto deberán contar con un Plan de Formación Individual alineado a su perfil profesional, a las necesidades de la carrera en la que se desempeña, y a los lineamientos institucionales de mejora de la calidad académica”.',
+          bold: ['Reglamento de Formación y Capacitación de los Docentes del ITSQMET', 'Artículo 6']
+        },
+        {
+          text: 'el mismo reglamento dispone en su Artículo 7 que: “La elaboración del Plan de Formación Institucional se sustentará en un diagnóstico sistemático de necesidades formativas, basado en datos cuantitativos y cualitativos, alineado al Plan Estratégico de Desarrollo Institucional (PEDI) y al Modelo de Evaluación Externa del CACES”.',
+          bold: ['Artículo 7']
+        },
+        {
+          text: 'el Plan Estratégico de Desarrollo Institucional (PEDI) 2023–2030 del ITSQMET, aprobado en sesión de Consejo Directivo, establece como uno de sus objetivos estratégicos: “Fortalecer las competencias del talento humano docente mediante procesos de formación planificada, pertinente y sostenible, orientados a la excelencia académica y alineados a la planificación institucional”.',
+          bold: ['Plan Estratégico de Desarrollo Institucional (PEDI) 2023–2030 del ITSQMET']
+        },
+        {
+          text: 'el PEDI, en su Eje Estratégico 2: Gestión Académica, incluye como meta operativa 2.2.3: “Implementar un sistema institucional de formación docente con base en diagnósticos anuales y estrategias de acompañamiento profesional y académico”.',
+          bold: ['PEDI, en su Eje Estratégico 2: Gestión Académica', 'meta operativa 2.2.3']
+        },
+        {
+          text: 'la Política Institucional de Formación Docente del ITSQMET, también aprobada en 2023, señala como principio rector que: “La formación docente deberá articularse con las necesidades institucionales, los perfiles de egreso de las carreras y las exigencias del entorno profesional y académico”. Esta política establece que la formación debe ser obligatoria, progresiva y compatible con la planificación docente individual.',
+          bold: ['Política Institucional de Formación Docente del ITSQMET']
+        },
+        {
+          text: 'el Manual del Proceso de Formación Académica del ITSQMET determina en su fase inicial que la detección de necesidades de formación debe contemplar cinco dimensiones: nivel académico, afinidad con la carrera, trayectoria profesional, requerimientos de acreditación y metas del plan institucional, como condición para elaborar el Plan de Formación Institucional.',
+          bold: ['Manual del Proceso de Formación Académica del ITSQMET']
+        }
+      ]
+    }
   ];
 
   function emit(percent, phase = 'render', extra = {}) {
@@ -256,26 +338,6 @@
     });
   }
 
-  function wrapWords(doc, text, firstWidth, otherWidth) {
-    const words = String(text || '').trim().split(/\s+/).filter(Boolean);
-    const lines = [];
-    let line = '';
-    let available = firstWidth;
-
-    words.forEach(word => {
-      const candidate = line ? line + ' ' + word : word;
-      if (doc.getTextWidth(candidate) <= available) {
-        line = candidate;
-      } else {
-        if (line) lines.push(line);
-        line = word;
-        available = otherWidth;
-      }
-    });
-    if (line) lines.push(line);
-    return lines;
-  }
-
   function introductionParagraphs() {
     const period = periodText(false);
     return INTRODUCTION.map(text => {
@@ -284,28 +346,102 @@
     });
   }
 
-  function drawIntroduction(doc) {
+  function splitStyledSpans(text, boldPhrases = []) {
+    const source = String(text || '');
+    const phrases = [...new Set((boldPhrases || []).filter(Boolean))].sort((a, b) => b.length - a.length);
+    if (!phrases.length) return [{ text: source, style: 'normal' }];
+
+    const matches = [];
+    phrases.forEach(phrase => {
+      let from = 0;
+      while (from < source.length) {
+        const index = source.indexOf(phrase, from);
+        if (index < 0) break;
+        matches.push({ start: index, end: index + phrase.length, style: 'bold' });
+        from = index + phrase.length;
+      }
+    });
+    matches.sort((a, b) => a.start - b.start || b.end - a.end);
+
+    const accepted = [];
+    let cursor = -1;
+    matches.forEach(match => {
+      if (match.start >= cursor) {
+        accepted.push(match);
+        cursor = match.end;
+      }
+    });
+
+    const spans = [];
+    let pos = 0;
+    accepted.forEach(match => {
+      if (match.start > pos) spans.push({ text: source.slice(pos, match.start), style: 'normal' });
+      spans.push({ text: source.slice(match.start, match.end), style: match.style });
+      pos = match.end;
+    });
+    if (pos < source.length) spans.push({ text: source.slice(pos), style: 'normal' });
+    return spans;
+  }
+
+  function createBodyWriter(doc) {
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const bodyW = pageW - BODY.left - BODY.right;
     let y = BODY.top;
 
+    function setBodyFont(style = 'normal', size = BODY.fontSize) {
+      doc.setFont('times', style);
+      doc.setFontSize(size);
+      doc.setTextColor(0);
+    }
+
     function newPage() {
       doc.addPage();
       const pageNo = doc.getNumberOfPages();
       drawHeader(doc, pageNo);
-      doc.setFont('times', 'normal');
-      doc.setFontSize(BODY.fontSize);
-      doc.setTextColor(0);
+      setBodyFont();
       y = BODY.top;
     }
 
-    function paragraph(text) {
-      doc.setFont('times', 'normal');
-      doc.setFontSize(BODY.fontSize);
-      doc.setTextColor(0);
+    function ensureSpace(height) {
+      if (y + height > pageH - BODY.bottom) newPage();
+    }
 
-      const lines = wrapWords(doc, text, bodyW - BODY.paragraphIndent, bodyW);
+    function heading(text, level = 1) {
+      setBodyFont('bold', 12);
+      const lines = doc.splitTextToSize(String(text || ''), bodyW);
+      const before = level === 1 ? 0 : 12;
+      const after = level === 1 ? 18 : 12;
+      const height = before + lines.length * BODY.lineHeight + after + BODY.lineHeight * 2;
+      ensureSpace(height);
+      y += before;
+      doc.text(lines, BODY.left, y, { align: 'left', lineHeightFactor: 2 });
+      y += lines.length * BODY.lineHeight + after;
+    }
+
+    function wrapPlain(text, firstWidth, otherWidth) {
+      setBodyFont('normal');
+      const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+      const lines = [];
+      let line = '';
+      let available = firstWidth;
+      words.forEach(word => {
+        const candidate = line ? line + ' ' + word : word;
+        if (doc.getTextWidth(candidate) <= available) {
+          line = candidate;
+        } else {
+          if (line) lines.push(line);
+          line = word;
+          available = otherWidth;
+        }
+      });
+      if (line) lines.push(line);
+      return lines;
+    }
+
+    function paragraph(text) {
+      setBodyFont('normal');
+      const lines = wrapPlain(text, bodyW - BODY.paragraphIndent, bodyW);
       let index = 0;
 
       while (index < lines.length) {
@@ -317,10 +453,8 @@
 
         let take = Math.min(Math.max(available, 1), lines.length - index);
         const remaining = lines.length - index - take;
-
-        if (remaining === 1 && take > 2) {
-          take -= 1;
-        } else if (remaining === 1 && take <= 2 && lines.length - index > 1) {
+        if (remaining === 1 && take > 2) take -= 1;
+        else if (remaining === 1 && take <= 2 && lines.length - index > 1) {
           newPage();
           continue;
         }
@@ -339,24 +473,146 @@
           doc.text(lines[absolute], x, y, { align: 'left' });
           y += BODY.lineHeight;
         }
-
         index += take;
         if (index < lines.length) newPage();
       }
     }
 
-    doc.addPage();
-    drawHeader(doc, 2);
-    doc.setTextColor(0);
-    doc.setFont('times', 'bold');
-    doc.setFontSize(12);
-    doc.text('1. Introducción', BODY.left, y);
-    y += BODY.lineHeight * 1.5;
+    function styledWords(spans) {
+      const words = [];
+      spans.forEach(span => {
+        String(span.text || '').trim().split(/\s+/).filter(Boolean).forEach(word => {
+          words.push({ word, style: span.style || 'normal' });
+        });
+      });
+      return words;
+    }
 
+    function measureWord(item) {
+      setBodyFont(item.style || 'normal');
+      return doc.getTextWidth(item.word);
+    }
+
+    function layoutStyledLines(spans, width) {
+      const words = styledWords(spans);
+      const lines = [];
+      let line = [];
+      let lineWidth = 0;
+      setBodyFont('normal');
+      const baseSpace = doc.getTextWidth(' ');
+
+      words.forEach(item => {
+        const wordWidth = measureWord(item);
+        const candidate = line.length ? lineWidth + baseSpace + wordWidth : wordWidth;
+        if (line.length && candidate > width) {
+          lines.push(line);
+          line = [item];
+          lineWidth = wordWidth;
+        } else {
+          line.push(item);
+          lineWidth = candidate;
+        }
+      });
+      if (line.length) lines.push(line);
+      return lines;
+    }
+
+    function lineWordWidth(line) {
+      return line.reduce((sum, item) => sum + measureWord(item), 0);
+    }
+
+    function drawStyledLine(line, x, width, justify) {
+      if (!line.length) return;
+      const wordsWidth = lineWordWidth(line);
+      setBodyFont('normal');
+      const normalSpace = doc.getTextWidth(' ');
+      const gap = justify && line.length > 1 ? Math.max(normalSpace, (width - wordsWidth) / (line.length - 1)) : normalSpace;
+      let cursor = x;
+
+      line.forEach((item, index) => {
+        setBodyFont(item.style || 'normal');
+        doc.text(item.word, cursor, y);
+        cursor += doc.getTextWidth(item.word);
+        if (index < line.length - 1) cursor += gap;
+      });
+    }
+
+    function legalParagraph(text, boldPhrases = []) {
+      const indent = BODY.paragraphIndent;
+      const contentX = BODY.left + indent;
+      const width = bodyW - indent;
+      const spans = splitStyledSpans(text, boldPhrases);
+      const lines = layoutStyledLines(spans, width);
+      let index = 0;
+
+      while (index < lines.length) {
+        let available = Math.floor((pageH - BODY.bottom - y) / BODY.lineHeight);
+        if (available < 2 && lines.length - index > 1) {
+          newPage();
+          available = Math.floor((pageH - BODY.bottom - y) / BODY.lineHeight);
+        }
+
+        let take = Math.min(Math.max(available, 1), lines.length - index);
+        const remaining = lines.length - index - take;
+        if (remaining === 1 && take > 2) take -= 1;
+        else if (remaining === 1 && take <= 2 && lines.length - index > 1) {
+          newPage();
+          continue;
+        }
+        if (take <= 0) {
+          newPage();
+          continue;
+        }
+
+        for (let offset = 0; offset < take; offset++) {
+          const absolute = index + offset;
+          if (absolute === 0) {
+            setBodyFont('bold');
+            doc.text('Que', BODY.left, y);
+          }
+          const isLastLine = absolute === lines.length - 1;
+          drawStyledLine(lines[absolute], contentX, width, !isLastLine);
+          y += BODY.lineHeight;
+        }
+        index += take;
+        if (index < lines.length) newPage();
+      }
+      y += 8;
+    }
+
+    newPage();
+    return {
+      heading,
+      paragraph,
+      legalParagraph,
+      ensureSpace,
+      newPage,
+      getY: () => y
+    };
+  }
+
+  function drawApprovedBody(doc) {
+    const writer = createBodyWriter(doc);
+
+    writer.heading('1. Introducción', 1);
     const paragraphs = introductionParagraphs();
     paragraphs.forEach((text, index) => {
-      emit(25 + (index / Math.max(1, paragraphs.length)) * 55, 'render', { stage: 'introduction', current: index + 1, total: paragraphs.length });
-      paragraph(text);
+      emit(22 + (index / Math.max(1, paragraphs.length)) * 28, 'render', { stage: 'introduction', current: index + 1, total: paragraphs.length });
+      writer.paragraph(text);
+    });
+
+    writer.heading('2. Base Legal', 1);
+    BASE_LEGAL.forEach((section, sectionIndex) => {
+      writer.heading(section.title, 2);
+      section.items.forEach((item, itemIndex) => {
+        emit(55 + ((sectionIndex + itemIndex / Math.max(1, section.items.length)) / BASE_LEGAL.length) * 30, 'render', {
+          stage: 'base-legal',
+          section: sectionIndex + 1,
+          current: itemIndex + 1,
+          total: section.items.length
+        });
+        writer.legalParagraph(item.text, item.bold);
+      });
     });
   }
 
@@ -398,13 +654,13 @@
       keywords: 'ITSQMET, formación docente, DNF, necesidades de formación'
     });
 
-    emit(15, 'render', { stage: 'cover' });
+    emit(12, 'render', { stage: 'cover' });
     drawCover(doc);
 
-    emit(25, 'render', { stage: 'introduction' });
-    drawIntroduction(doc);
+    emit(20, 'render', { stage: 'body' });
+    drawApprovedBody(doc);
 
-    emit(88, 'render', { stage: 'footer' });
+    emit(90, 'render', { stage: 'footer' });
     drawFooters(doc);
 
     const filename = String(payload.filename || (documentCode() || 'DNF') + ' - Detección de Necesidades de Formación.pdf');
@@ -418,7 +674,7 @@
       filePath: filename,
       renderer: ENGINE,
       pages: doc.getNumberOfPages(),
-      scope: 'cover+introduction'
+      scope: 'cover+introduction+base-legal'
     };
   }
 
@@ -437,5 +693,5 @@
   };
 
   window.__DOCFORMACION_DNF_RENDERER = ENGINE;
-  window.__DOCFORMACION_DNF_VECTOR_STAGE = 'cover+introduction';
+  window.__DOCFORMACION_DNF_VECTOR_STAGE = 'cover+introduction+base-legal';
 })();
