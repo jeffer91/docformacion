@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260909-1518';
+  const LOCAL_BUILD = '20260909-1530';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -56,11 +56,7 @@
 
     await loadScript('institutional-plan-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-quality-fix.js?v=' + encodeURIComponent(activeBuild));
-
-    // Sección 1 de la DNF: plantilla maestra institucional. Solo usa el período
-    // seleccionado y mantiene fijos el texto y las citas bibliográficas aprobadas.
     await loadScript('dnf-introduction-fix.js?v=' + encodeURIComponent(activeBuild));
-
     await loadScript('dnf-exact-layout-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('template-names-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('plan-excel-institutional-fix.js?v=' + encodeURIComponent(activeBuild));
@@ -69,25 +65,20 @@
     await loadScript('institutional-pdf-layout-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('pdf-emergency-fallback.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('pdf-web-geometry-fix.js?v=' + encodeURIComponent(activeBuild));
-
-    // Plan e Informe mantienen su salida actual.
     await loadScript('pdf-raster-pages-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Motores históricos de DNF conservados mientras migramos el documento
-    // sección por sección al nuevo motor vectorial.
     await loadScript('dnf-async-pdf-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-direct-render-fix.js?v=' + encodeURIComponent(activeBuild));
-
     await loadScript('pdf-progress-ui-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('pdf-final-router-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('pdf-progress-extra-ui-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-native-print-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Capa final de la DNF en GitHub Pages: jsPDF vectorial, A4 en puntos,
-    // encabezado por cajas calculadas y cuerpo académico con márgenes de 1 pulgada,
-    // Times 12, doble espacio y paginación real. Genera las partes aprobadas:
-    // portada + Introducción + Base Legal.
+    // Motor vectorial base aprobado.
     await loadScript('dnf-vector-pdf.js?v=' + encodeURIComponent(activeBuild));
+    // Capa vectorial vigente: portada + Introducción + Base Legal + Alineación Estratégica.
+    // Construye texto, viñetas, citas, negritas y saltos directamente con jsPDF.
+    await loadScript('dnf-vector-pdf-v3.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
