@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260908-1700';
+  const LOCAL_BUILD = '20260909-1236';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -65,21 +65,20 @@
     await loadScript('pdf-emergency-fallback.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('pdf-web-geometry-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Plan e Informe mantienen el rasterizado A4 estable.
+    // Plan e Informe mantienen su salida actual.
     await loadScript('pdf-raster-pages-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // DNF: los motores anteriores quedan cargados solo para compatibilidad,
-    // pero la capa final no depende de ellos.
+    // Motores históricos de DNF conservados como respaldo interno.
     await loadScript('dnf-async-pdf-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-direct-render-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // UI de progreso y contador.
     await loadScript('pdf-progress-ui-fix.js?v=' + encodeURIComponent(activeBuild));
-
-    // Enrutador FINAL: para DNF llama directamente al motor v2 expuesto,
-    // evitando toda la cadena histórica de wrappers. Incluye watchdog de atasco.
     await loadScript('pdf-final-router-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('pdf-progress-extra-ui-fix.js?v=' + encodeURIComponent(activeBuild));
+
+    // Capa final de la DNF web: repagina el documento completo y utiliza
+    // impresión nativa del navegador para conservar texto real y seleccionable.
+    await loadScript('dnf-native-print-fix.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
