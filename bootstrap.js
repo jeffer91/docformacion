@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260909-1248';
+  const LOCAL_BUILD = '20260909-1305';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -56,6 +56,11 @@
 
     await loadScript('institutional-plan-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-quality-fix.js?v=' + encodeURIComponent(activeBuild));
+
+    // Sección 1 de la DNF: plantilla maestra institucional. Solo usa el período
+    // seleccionado y mantiene fijos el texto y las citas bibliográficas aprobadas.
+    await loadScript('dnf-introduction-fix.js?v=' + encodeURIComponent(activeBuild));
+
     await loadScript('dnf-exact-layout-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('template-names-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('plan-excel-institutional-fix.js?v=' + encodeURIComponent(activeBuild));
