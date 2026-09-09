@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260909-1305';
+  const LOCAL_BUILD = '20260909-1325';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -73,17 +73,20 @@
     // Plan e Informe mantienen su salida actual.
     await loadScript('pdf-raster-pages-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Motores históricos de DNF conservados como respaldo interno.
+    // Motores históricos de DNF conservados mientras migramos el documento
+    // sección por sección al nuevo motor vectorial.
     await loadScript('dnf-async-pdf-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-direct-render-fix.js?v=' + encodeURIComponent(activeBuild));
 
     await loadScript('pdf-progress-ui-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('pdf-final-router-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('pdf-progress-extra-ui-fix.js?v=' + encodeURIComponent(activeBuild));
-
-    // Capa final de la DNF web: repagina el documento completo y utiliza
-    // impresión nativa del navegador para conservar texto real y seleccionable.
     await loadScript('dnf-native-print-fix.js?v=' + encodeURIComponent(activeBuild));
+
+    // Capa final de la DNF en GitHub Pages: jsPDF vectorial, A4 en puntos,
+    // encabezado por cajas calculadas y cuerpo APA 7. Por ahora genera solo
+    // las partes aprobadas: portada + Introducción.
+    await loadScript('dnf-vector-pdf.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
