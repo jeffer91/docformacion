@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260909-1236';
+  const LOCAL_BUILD = '20260909-1248';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
