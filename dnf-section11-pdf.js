@@ -28,6 +28,7 @@
   }
 
   function bibliographyState(){return typeof window.__DOCFORMACION_DNF_BIBLIOGRAPHY==='function'?window.__DOCFORMACION_DNF_BIBLIOGRAPHY():{used:[],unresolved:[]};}
+  function withPeriod(value){const text=clean(value);return text&&!/[.!?]$/.test(text)?text+'.':text;}
 
   function createWriter(doc){
     const pageW=doc.internal.pageSize.getWidth(),pageH=doc.internal.pageSize.getHeight(),bodyW=pageW-BODY.left-BODY.right;let y=BODY.top;
@@ -36,13 +37,13 @@
     function ensureSpace(h){if(y+h>pageH-BODY.bottom)newPage();}
     function heading(text){font('bold',12);const lines=doc.splitTextToSize(clean(text),bodyW);ensureSpace(lines.length*BODY.lineHeight+BODY.lineHeight*2);doc.text(lines,BODY.left,y,{lineHeightFactor:2});y+=lines.length*BODY.lineHeight+18;}
     function token(word,style){return{word,style};}
+    function addTokens(out,text,style){clean(text).split(/\s+/).filter(Boolean).forEach(w=>out.push(token(w,style)));}
     function sourceTokens(source){
-      const out=[];
-      const prefix=clean(source.author)+'. ('+clean(source.year)+').';
-      prefix.split(/\s+/).filter(Boolean).forEach(w=>out.push(token(w,'normal')));
+      const out=[],author=clean(source.author).replace(/[.]+$/,'');
+      addTokens(out,author+'. ('+clean(source.year)+').','normal');
       const article=source.type==='Artículo';
-      clean(source.title).split(/\s+/).filter(Boolean).forEach(w=>out.push(token(w,article?'normal':'italic')));
-      const pub=clean(source.publisher);if(pub){pub.split(/\s+/).filter(Boolean).forEach(w=>out.push(token(w,article?'italic':'normal')));}
+      addTokens(out,withPeriod(source.title),article?'normal':'italic');
+      if(clean(source.publisher)) addTokens(out,withPeriod(source.publisher),article?'italic':'normal');
       return out;
     }
     function widthOf(t){font(t.style,12);return doc.getTextWidth(t.word);}
