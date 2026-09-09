@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260909-1530';
+  const LOCAL_BUILD = '20260909-1545';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -77,8 +77,10 @@
     // Motor vectorial base aprobado.
     await loadScript('dnf-vector-pdf.js?v=' + encodeURIComponent(activeBuild));
     // Capa vectorial vigente: portada + Introducción + Base Legal + Alineación Estratégica.
-    // Construye texto, viñetas, citas, negritas y saltos directamente con jsPDF.
     await loadScript('dnf-vector-pdf-v3.js?v=' + encodeURIComponent(activeBuild));
+    // Sección 4 fija: Metodología y Enfoque. Se añade al PDF vectorial sin campos manuales,
+    // manteniendo Times 12, doble espacio, párrafos justificados, jerarquía y viñetas.
+    await loadScript('dnf-methodology-pdf.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
