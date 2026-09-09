@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260909-1605';
+  const LOCAL_BUILD = '20260909-1625';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -74,21 +74,20 @@
     await loadScript('pdf-progress-extra-ui-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-native-print-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // La sección 5 incorpora datos de caracterización a la base global, al período
-    // y a las plantillas Excel. Se carga después de los parches de interfaz existentes.
+    // Datos variables de las secciones 5 y 6. Se cargan antes del motor vectorial
+    // para ampliar formularios, validaciones y plantillas Excel.
     await loadScript('dnf-section5-data-fix.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('dnf-section6-data-fix.js?v=' + encodeURIComponent(activeBuild));
 
     // Motor vectorial base aprobado.
     await loadScript('dnf-vector-pdf.js?v=' + encodeURIComponent(activeBuild));
     // Capa vectorial vigente: portada + Introducción + Base Legal + Alineación Estratégica.
     await loadScript('dnf-vector-pdf-v3.js?v=' + encodeURIComponent(activeBuild));
 
-    // La capa de caracterización se envuelve ANTES de Metodología. Así, al guardar,
-    // Metodología se agrega primero (sección 4) y Caracterización después (sección 5).
+    // Las capas PDF se cargan en orden inverso de ejecución porque cada una envuelve doc.save().
+    // Resultado final al guardar: Sección 4 → Sección 5 → Sección 6.
+    await loadScript('dnf-section6-pdf.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-characterization-pdf.js?v=' + encodeURIComponent(activeBuild));
-
-    // Sección 4 fija: Metodología y Enfoque. Se añade al PDF vectorial sin campos manuales,
-    // manteniendo Times 12, doble espacio, párrafos justificados, jerarquía y viñetas.
     await loadScript('dnf-methodology-pdf.js?v=' + encodeURIComponent(activeBuild));
   }
 
