@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260909-1725';
+  const LOCAL_BUILD = '20260910-0835';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -75,12 +75,13 @@
     await loadScript('pdf-progress-extra-ui-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-native-print-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Datos variables y biblioteca maestra. Se cargan antes del motor vectorial.
+    // Datos variables, biblioteca maestra y configuración automática de anexos.
     await loadScript('dnf-section5-data-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-section6-data-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-section7-data-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-section8-data-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-bibliography-data.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('dnf-section12-data.js?v=' + encodeURIComponent(activeBuild));
 
     // Motor vectorial base aprobado.
     await loadScript('dnf-vector-pdf.js?v=' + encodeURIComponent(activeBuild));
@@ -88,7 +89,8 @@
     await loadScript('dnf-vector-pdf-v3.js?v=' + encodeURIComponent(activeBuild));
 
     // Las capas PDF se cargan en orden inverso de ejecución porque cada una envuelve doc.save().
-    // Resultado final al guardar: Sección 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11.
+    // Resultado final al guardar: Sección 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12.
+    await loadScript('dnf-section12-pdf.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-section11-pdf.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-section10-pdf.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-section9-pdf.js?v=' + encodeURIComponent(activeBuild));
