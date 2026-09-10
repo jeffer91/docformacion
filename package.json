@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "check": "node --check main.js && node --check preload.js && node --check bootstrap.js && node --check web-adapter.js && node --check app.js && node --check period-manager-fix.js && node --check period-existing-data-migration-fix.js && node --check dnf-template-workflow-v2.js && node --check dnf-template-view-fix.js && node --check pdf-progress-ui-fix.js && node --check workflow-canonical-v3.js"
+    "check": "node --check main.js && node --check preload.js && node --check bootstrap.js && node --check web-adapter.js && node --check app.js && node --check period-manager-fix.js && node --check period-existing-data-migration-fix.js && node --check dnf-template-workflow-v2.js && node --check dnf-template-view-fix.js && node --check pdf-progress-ui-fix.js && node --check workflow-canonical-v3.js && node --check dnf-rich-document-v4.js"
   },
   "dependencies": {
     "xlsx": "^0.18.5"
