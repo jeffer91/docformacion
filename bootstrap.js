@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260910-1625';
+  const LOCAL_BUILD = '20260910-1645';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -66,6 +66,9 @@
     // Generador institucional completo de la DNF: conserva el núcleo canónico,
     // pero recupera la profundidad académica, análisis y anexos visuales.
     await loadScript('dnf-rich-document-v4.js?v=' + encodeURIComponent(activeBuild));
+
+    // Ajustes finales de portada DNF.
+    await loadScript('dnf-cover-cleanup-v5.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
