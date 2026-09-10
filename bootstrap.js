@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260910-1138';
+  const LOCAL_BUILD = '20260910-1142';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -86,6 +86,7 @@
 
     // Flujo vigente: plantillas separadas por período, Carreras primero y DNF después.
     await loadScript('dnf-template-workflow-v2.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('dnf-template-view-fix.js?v=' + encodeURIComponent(activeBuild));
 
     // Motor vectorial base aprobado.
     await loadScript('dnf-vector-pdf.js?v=' + encodeURIComponent(activeBuild));
