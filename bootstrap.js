@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260910-1142';
+  const LOCAL_BUILD = '20260910-1505';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -47,65 +47,21 @@
     if (!window.docformacion) {
       await loadScript('web-adapter.js?v=' + encodeURIComponent(activeBuild));
     }
-    await loadScript('pdf-reliability-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('app.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('render-careers-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('period-dnf-fix.js?v=' + encodeURIComponent(activeBuild));
 
+    // Núcleo de la aplicación y persistencia por período.
+    await loadScript('app.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('period-manager-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('period-existing-data-migration-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    await loadScript('institutional-plan-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-quality-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-introduction-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-exact-layout-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('template-names-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('plan-excel-institutional-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('plan-template-split-fix.js?v=' + encodeURIComponent(activeBuild));
-
-    await loadScript('institutional-pdf-layout-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('pdf-emergency-fallback.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('pdf-web-geometry-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('pdf-raster-pages-fix.js?v=' + encodeURIComponent(activeBuild));
-
-    await loadScript('dnf-async-pdf-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-direct-render-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('pdf-progress-ui-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('pdf-final-router-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('pdf-progress-extra-ui-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-native-print-fix.js?v=' + encodeURIComponent(activeBuild));
-
-    // Datos variables, biblioteca maestra, anexos y flujo DNF.
-    await loadScript('dnf-section5-data-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-section6-data-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-section7-data-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-section8-data-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-bibliography-data.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-section12-data.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-workflow-fix.js?v=' + encodeURIComponent(activeBuild));
-
-    // Flujo vigente: plantillas separadas por período, Carreras primero y DNF después.
+    // Flujo DNF vigente: Carreras primero y DNF después, ambas mediante plantillas separadas.
     await loadScript('dnf-template-workflow-v2.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-template-view-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Motor vectorial base aprobado.
-    await loadScript('dnf-vector-pdf.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-vector-pdf-v3.js?v=' + encodeURIComponent(activeBuild));
+    // Indicador de progreso reutilizado por los tres documentos.
+    await loadScript('pdf-progress-ui-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Las capas PDF se cargan en orden inverso de ejecución porque cada una envuelve doc.save().
-    // Resultado final al guardar: Sección 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12.
-    await loadScript('dnf-section12-pdf.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-section11-pdf.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-section10-pdf.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-section9-pdf.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-section8-pdf.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-section7-pdf.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-section6-pdf.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-characterization-pdf.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-methodology-pdf.js?v=' + encodeURIComponent(activeBuild));
-
-    // Debe cargarse al final: evita el bloqueo de serialización/descarga del PDF completo.
-    await loadScript('dnf-generation-performance-fix.js?v=' + encodeURIComponent(activeBuild));
+    // Capa canónica final. Unifica DNF → Plan → Informe, plantillas, trazabilidad y PDF.
+    await loadScript('workflow-canonical-v3.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
