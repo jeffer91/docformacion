@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260910-1015';
+  const LOCAL_BUILD = '20260910-1138';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -75,7 +75,7 @@
     await loadScript('pdf-progress-extra-ui-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-native-print-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Datos variables, biblioteca maestra, anexos y flujo DNF simplificado.
+    // Datos variables, biblioteca maestra, anexos y flujo DNF.
     await loadScript('dnf-section5-data-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-section6-data-fix.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-section7-data-fix.js?v=' + encodeURIComponent(activeBuild));
@@ -83,6 +83,9 @@
     await loadScript('dnf-bibliography-data.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-section12-data.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-workflow-fix.js?v=' + encodeURIComponent(activeBuild));
+
+    // Flujo vigente: plantillas separadas por período, Carreras primero y DNF después.
+    await loadScript('dnf-template-workflow-v2.js?v=' + encodeURIComponent(activeBuild));
 
     // Motor vectorial base aprobado.
     await loadScript('dnf-vector-pdf.js?v=' + encodeURIComponent(activeBuild));
