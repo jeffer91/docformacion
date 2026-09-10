@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260910-1505';
+  const LOCAL_BUILD = '20260910-1625';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -60,8 +60,12 @@
     // Indicador de progreso reutilizado por los tres documentos.
     await loadScript('pdf-progress-ui-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Capa canónica final. Unifica DNF → Plan → Informe, plantillas, trazabilidad y PDF.
+    // Núcleo canónico: unifica DNF → Plan → Informe, plantillas y trazabilidad.
     await loadScript('workflow-canonical-v3.js?v=' + encodeURIComponent(activeBuild));
+
+    // Generador institucional completo de la DNF: conserva el núcleo canónico,
+    // pero recupera la profundidad académica, análisis y anexos visuales.
+    await loadScript('dnf-rich-document-v4.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
