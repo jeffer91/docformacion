@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260910-0955';
+  const LOCAL_BUILD = '20260910-1015';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -100,8 +100,7 @@
     await loadScript('dnf-characterization-pdf.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('dnf-methodology-pdf.js?v=' + encodeURIComponent(activeBuild));
 
-    // Debe cargarse al final: desactiva la compresión síncrona del PDF completo
-    // y permite que el navegador pinte el progreso antes del render vectorial.
+    // Debe cargarse al final: evita el bloqueo de serialización/descarga del PDF completo.
     await loadScript('dnf-generation-performance-fix.js?v=' + encodeURIComponent(activeBuild));
   }
 
