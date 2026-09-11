@@ -2,6 +2,10 @@
   'use strict';
 
   const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const SOURCE_CATALOG = Object.freeze({
+    legal: Object.freeze({ version:'legal-ec-2026-09', label:'Base legal institucional' }),
+    bibliography: Object.freeze({ version:'bibliografia-formacion-2026-09', label:'Bibliografía institucional de Formación' })
+  });
   const DEFAULT_LEGAL = [
     ['Constitución de la República del Ecuador','Marco constitucional de la educación superior y de la mejora continua institucional.'],
     ['Ley Orgánica de Educación Superior (LOES)','Calidad, aseguramiento de la calidad y perfeccionamiento del personal académico.'],
@@ -47,8 +51,37 @@
     return clean(state?.period?.reportCode) || 'UGPA-RGI3-01-PRO-31';
   }
 
+  function hasExplicitLegal() {
+    return Array.isArray(state?.baseLegal) && state.baseLegal.some(item => clean(item?.name || item?.title));
+  }
+
+  function explicitBibliographyRows() {
+    const rows = Array.isArray(state?.bibliography) ? state.bibliography : [];
+    return rows
+      .map(item => clean(typeof item === 'string' ? item : item?.text || item?.reference))
+      .filter(Boolean);
+  }
+
+  function sourceConfirmations() {
+    const stored = state?.period?.sourceConfirmations || {};
+    const explicitLegal = hasExplicitLegal();
+    const explicitBibliography = explicitBibliographyRows().length > 0;
+    return {
+      legal: {
+        confirmed: explicitLegal || clean(stored.legalVersion) === SOURCE_CATALOG.legal.version,
+        version: explicitLegal ? 'datos-del-periodo' : SOURCE_CATALOG.legal.version,
+        mode: explicitLegal ? 'period-data' : 'institutional-template'
+      },
+      bibliography: {
+        confirmed: explicitBibliography || clean(stored.bibliographyVersion) === SOURCE_CATALOG.bibliography.version,
+        version: explicitBibliography ? 'datos-del-periodo' : SOURCE_CATALOG.bibliography.version,
+        mode: explicitBibliography ? 'period-data' : 'institutional-template'
+      }
+    };
+  }
+
   function legalRows() {
-    if (Array.isArray(state?.baseLegal) && state.baseLegal.length) {
+    if (hasExplicitLegal()) {
       return state.baseLegal
         .map(item => [clean(item?.name || item?.title), clean(item?.application || item?.content || item?.provision)])
         .filter(row => row[0]);
@@ -57,10 +90,7 @@
   }
 
   function bibliographyRows() {
-    const rows = Array.isArray(state?.bibliography) ? state.bibliography : [];
-    const cleanRows = rows
-      .map(item => clean(typeof item === 'string' ? item : item?.text || item?.reference))
-      .filter(Boolean);
+    const cleanRows = explicitBibliographyRows();
     return cleanRows.length ? cleanRows : [...DEFAULT_BIBLIOGRAPHY];
   }
 
@@ -79,6 +109,7 @@
     const model = window.docformacionModel;
     if (!model) throw new Error('El modelo de datos del período no está disponible.');
     const snapshot = model.snapshot();
+    const confirmations = sourceConfirmations();
     return {
       period: {
         ...snapshot.period,
@@ -97,6 +128,7 @@
       genericLines: genericLines(),
       legal: legalRows(),
       bibliography: bibliographyRows(),
+      sourceConfirmations: confirmations,
       documentTitle,
       documentCode,
       origins: {
@@ -104,8 +136,12 @@
         needs: clean(state?.dnfTemplateFlow?.dnfFileName) || 'Modelo interno del período',
         plan: clean(state?.workflowV3?.planFileName) || 'Modelo interno del período',
         report: clean(state?.workflowV3?.reportFileName) || 'Modelo interno del período',
-        legal: Array.isArray(state?.baseLegal) && state.baseLegal.length ? 'Datos del período' : 'Plantilla institucional',
-        bibliography: Array.isArray(state?.bibliography) && state.bibliography.length ? 'Datos del período' : 'Plantilla institucional'
+        legal: hasExplicitLegal()
+          ? 'Datos del período'
+          : SOURCE_CATALOG.legal.label + ' · ' + SOURCE_CATALOG.legal.version + (confirmations.legal.confirmed ? ' · confirmada' : ' · pendiente de confirmación'),
+        bibliography: explicitBibliographyRows().length
+          ? 'Datos del período'
+          : SOURCE_CATALOG.bibliography.label + ' · ' + SOURCE_CATALOG.bibliography.version + (confirmations.bibliography.confirmed ? ' · confirmada' : ' · pendiente de confirmación')
       }
     };
   }
@@ -114,6 +150,8 @@
     build,
     periodLabel,
     documentTitle,
-    documentCode
+    documentCode,
+    sourceCatalog: SOURCE_CATALOG,
+    sourceConfirmations
   });
 })();

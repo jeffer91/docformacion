@@ -13,6 +13,8 @@ function testArchitecture() {
   const sectionEngine = read('core/preview/section-engine.js');
   const pdfEngine = read('core/pdf/engine.js');
   const pdfComponents = read('core/pdf/components.js');
+  const fullPdf = read('documents/pdf.js');
+  const context = read('documents/context.js');
   const bootstrap = read('bootstrap.js');
   const templateView = read('documents/dnf/template-view.js');
 
@@ -27,6 +29,12 @@ function testArchitecture() {
   ['Detección de Necesidades de Formación', 'Plan de Formación Docente', 'Informe de Cumplimiento'].forEach(text => {
     assert(!corePdf.includes(text), 'El Core PDF no debe contener texto institucional de Formación: ' + text);
   });
+
+  assert(pdfEngine.includes('options.initialHeader !== false'), 'El Core PDF debe permitir una primera página sin encabezado');
+  assert(pdfEngine.includes('options.firstPageFooter === false'), 'El Core PDF debe permitir una primera página sin pie');
+  assert(fullPdf.includes('initialHeader: false'), 'El PDF completo debe reservar la primera página exclusivamente para portada');
+  assert(fullPdf.includes('firstPageFooter: false'), 'El PDF completo no debe insertar pie en la portada');
+  assert(context.includes('sourceConfirmations'), 'El contexto documental debe exponer confirmación versionada de fuentes');
 
   [
     'core/calculations/base.js',
@@ -106,7 +114,22 @@ function testCanonicalValidation() {
   assert.strictEqual(sandbox.docformacionValidation.documentReadiness('dnf').ready, false, 'DNF no debe estar lista sin prioridad válida');
 
   sandbox.state.coordinations[0].needItems[0].priorityOverride = 'Alta';
-  assert.strictEqual(sandbox.docformacionValidation.documentReadiness('dnf').ready, true, 'DNF debe quedar lista con catálogo, necesidad y prioridad válidos');
+  assert.strictEqual(
+    sandbox.docformacionValidation.documentReadiness('dnf').ready,
+    false,
+    'DNF no debe quedar lista usando Base Legal/Bibliografía predeterminadas sin confirmación'
+  );
+
+  const sourceCatalog = sandbox.docformacionDocumentContext.sourceCatalog;
+  sandbox.state.period.sourceConfirmations = {
+    legalVersion: sourceCatalog.legal.version,
+    bibliographyVersion: sourceCatalog.bibliography.version
+  };
+  assert.strictEqual(
+    sandbox.docformacionValidation.documentReadiness('dnf').ready,
+    true,
+    'DNF debe quedar lista con catálogo, necesidad, prioridad y fuentes institucionales confirmadas'
+  );
 
   sandbox.state.needPlan = [{
     dnfCode:'DNF-01-01', career:'Enfermería', needText:'Necesidad A', priority:'Alta',
@@ -143,6 +166,54 @@ function testCanonicalValidation() {
   assert.strictEqual(sandbox.docformacionValidation.documentReadiness('informe').ready, false, 'Un cambio posterior en el Plan debe invalidar el Informe importado');
 }
 
+function testPdfCoverIsolation() {
+  const calls = [];
+  let pages = 1;
+  let currentPage = 1;
+  class FakePdf {
+    setDrawColor() {}
+    setLineWidth() {}
+    rect() {}
+    setFont() {}
+    setFontSize() {}
+    setTextColor() {}
+    setFillColor() {}
+    text(value) { calls.push({ page:currentPage, value:String(value) }); }
+    addPage() { pages += 1; currentPage = pages; }
+    getNumberOfPages() { return pages; }
+    setPage(page) { currentPage = page; }
+    setProperties() {}
+    output() { return { size:1 }; }
+  }
+
+  const sandbox = {
+    console,
+    window: {
+      jspdf:{ jsPDF:FakePdf },
+      docformacionPdfComponents:{ create(){ return {}; } }
+    }
+  };
+  sandbox.window.window = sandbox.window;
+  const context = vm.createContext(sandbox);
+  runInContext('core/pdf/engine.js', context);
+
+  const writer = sandbox.window.docformacionPdfCore.createWriter({
+    initialHeader:false,
+    firstPageFooter:false,
+    header:{ organization:'ORG', title:'TITLE', period:'PERIOD', code:'CODE' },
+    footer:(page, total) => 'Página ' + page + ' de ' + total
+  });
+  writer.finish({ title:'Prueba' });
+  assert.strictEqual(calls.length, 0, 'La portada aislada no debe recibir encabezado ni pie');
+
+  writer.newPage();
+  writer.finish({ title:'Prueba' });
+  assert(calls.some(call => call.page === 2 && call.value === 'ORG'), 'Las páginas interiores deben conservar encabezado');
+  assert(calls.some(call => call.page === 2 && call.value.includes('Página 2 de 2')), 'Las páginas interiores deben conservar pie');
+  assert(!calls.some(call => call.page === 1), 'La página 1 debe permanecer limpia después de terminar el PDF');
+}
+
 testArchitecture();
 testCanonicalValidation();
-console.log('Architecture and canonical validation checks passed.');
+testPdfCoverIsolation();
+console.log('Architecture, canonical validation and PDF cover checks passed.');
