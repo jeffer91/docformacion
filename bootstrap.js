@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260911-1530';
+  const LOCAL_BUILD = '20260911-1615';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -28,7 +28,7 @@
     try {
       const response = await fetch('version.json?t=' + Date.now(), {
         cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
+        headers: { 'Cache-Control':'no-cache' }
       });
       if (!response.ok) return LOCAL_BUILD;
       const data = await response.json();
@@ -92,7 +92,10 @@
     await loadScript('core/diagnostics/index.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/system-views.js?v=' + encodeURIComponent(activeBuild));
 
-    // Refresco final: Inicio y las vistas activas deben partir siempre de los módulos canónicos ya cargados.
+    // Capa visual SVD 2.0: Período → Documentos → Secciones → Contenido.
+    await loadScript('ui/svd-shell.js?v=' + encodeURIComponent(activeBuild));
+
+    // Refresco final con todos los módulos disponibles.
     if (typeof render === 'function') render();
   }
 
