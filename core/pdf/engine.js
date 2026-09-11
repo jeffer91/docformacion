@@ -99,7 +99,7 @@
       return { blob, pages, size: blob.size };
     }
 
-    header();
+    if (options.initialHeader !== false) header();
 
     return Object.freeze({
       ...components,
