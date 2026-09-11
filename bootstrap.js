@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260911-1450';
+  const LOCAL_BUILD = '20260911-1530';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -70,6 +70,7 @@
     // Cálculos y validaciones documentales sobre una sola fuente de datos.
     await loadScript('documents/calculations.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/validation.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('ui/canonical-status.js?v=' + encodeURIComponent(activeBuild));
 
     // Plan e Informe: flujo canónico sin autoridades ni motor PDF duplicados.
     await loadScript('documents/workflow-canonical.js?v=' + encodeURIComponent(activeBuild));
@@ -90,6 +91,9 @@
     // Diagnóstico y vistas universales.
     await loadScript('core/diagnostics/index.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/system-views.js?v=' + encodeURIComponent(activeBuild));
+
+    // Refresco final: Inicio y las vistas activas deben partir siempre de los módulos canónicos ya cargados.
+    if (typeof render === 'function') render();
   }
 
   start().catch(error => {
