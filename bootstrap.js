@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260911-1200';
+  const LOCAL_BUILD = '20260911-1450';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -57,9 +57,8 @@
     await loadScript('core/data/model.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/context.js?v=' + encodeURIComponent(activeBuild));
 
-    // El período es el contexto global obligatorio.
+    // El período es el contexto global obligatorio. Las migraciones históricas ya no forman parte del runtime.
     await loadScript('core/periods/manager.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('core/periods/migrate-existing-data.js?v=' + encodeURIComponent(activeBuild));
 
     // DNF: importación validada de Carreras y Necesidades.
     await loadScript('documents/dnf/workflow.js?v=' + encodeURIComponent(activeBuild));
@@ -83,7 +82,8 @@
     await loadScript('documents/section-renderers.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/pdf.js?v=' + encodeURIComponent(activeBuild));
 
-    // Vista previa y PDF independientes por sección.
+    // Vista previa de elementos institucionales y secciones de contenido.
+    await loadScript('core/preview/document-elements.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('core/preview/section-engine.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/document-sections.js?v=' + encodeURIComponent(activeBuild));
 
