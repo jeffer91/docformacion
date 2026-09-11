@@ -5,6 +5,7 @@
   const MODALITIES = ['Presencial','Virtual','Híbrida'];
   const SUPPORTS = ['Sin apoyo económico','Económico','Convenio / beca','Gestión interna'];
   const FOLLOW_STATUSES = ['No iniciado','En proceso','Finalizado','No ejecutado'];
+  const DOCUMENT_ELEMENTS = ['cover','header'];
   const clean = value => String(value ?? '').trim();
   const key = value => clean(value)
     .normalize('NFD')
@@ -169,13 +170,64 @@
     };
   }
 
-  function documentReadiness(type, ctxArg) {
+  function elementReadiness(type, elementId, ctxArg) {
     const ctx = ctxArg || window.docformacionDocumentContext?.build?.();
-    if (!ctx?.period?.active) return { ready:false, missing:['período activo'] };
+    if (!ctx) return { ready:false, missing:['contexto documental'] };
+    const missing = [];
+    if (!ctx.period.active) missing.push('período activo');
+    if (!clean(ctx.documentTitle?.(type))) missing.push('título del documento');
+    if (!clean(ctx.documentCode?.(type))) missing.push('código documental');
+
+    if (elementId === 'cover') {
+      if (!clean(ctx.period?.version)) missing.push('versión documental');
+      const authorities = ctx.authorities || {};
+      [
+        ['elaborado por', authorities.preparedBy],
+        ['cargo de elaboración', authorities.preparedRole],
+        ['revisado por', authorities.reviewedBy],
+        ['cargo de revisión', authorities.reviewedRole],
+        ['aprobado por', authorities.approvedBy],
+        ['cargo de aprobación', authorities.approvedRole]
+      ].forEach(([label, value]) => { if (!clean(value)) missing.push(label); });
+    }
+
+    return { ready: missing.length === 0, missing: [...new Set(missing)] };
+  }
+
+  function baseReadiness(type, ctx) {
     if (type === 'dnf') return dnf(ctx);
     if (type === 'plan') return plan(ctx);
     if (type === 'informe') return report(ctx);
     return { ready:false, missing:['tipo de documento desconocido'] };
+  }
+
+  function documentReadiness(type, ctxArg) {
+    const ctx = ctxArg || window.docformacionDocumentContext?.build?.();
+    if (!ctx?.period?.active) return { ready:false, missing:['período activo'], elements:[], sections:[] };
+
+    const manifestDocument = window.DOCFORMACION_MANIFEST?.documents?.[type];
+    if (!manifestDocument) return { ready:false, missing:['tipo de documento desconocido'], elements:[], sections:[] };
+
+    const base = baseReadiness(type, ctx);
+    const elements = DOCUMENT_ELEMENTS.map(id => ({ id, ...elementReadiness(type, id, ctx) }));
+    const sections = (manifestDocument.sections || []).map(section => ({
+      id:section.id,
+      title:section.title,
+      ...sectionReadiness(type, section, ctx)
+    }));
+
+    const missing = new Set(base.missing || []);
+    elements.forEach(item => item.missing.forEach(value => missing.add(value)));
+    sections.forEach(item => item.missing.forEach(value => missing.add(value)));
+
+    const ready = base.ready === true && elements.every(item => item.ready) && sections.every(item => item.ready);
+    return {
+      ready,
+      missing:[...missing],
+      base,
+      elements,
+      sections
+    };
   }
 
   window.docformacionValidation = Object.freeze({
@@ -190,6 +242,7 @@
     plan,
     report,
     sectionReadiness,
+    elementReadiness,
     documentReadiness
   });
 })();
