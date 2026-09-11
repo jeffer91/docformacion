@@ -12,12 +12,27 @@
     .toLowerCase()
     .replace(/\s+/g, ' ');
 
+  function needsFingerprint(rows) {
+    return (rows || []).map(row => [row.code,row.career,row.need,row.priority].map(clean).join('|'))
+      .sort((a,b) => a.localeCompare(b, 'es'))
+      .join('||');
+  }
+
+  function planFingerprint(rows) {
+    return (rows || []).map(row => [
+      row.dnfCode,row.career,row.needText,row.priority,row.action,row.modality,
+      row.plannedStart,row.plannedEnd,row.indicator,Number(row.targetPercent || 0),
+      row.evidence,row.responsibleRole,row.supportType,Number(row.supportAmount || 0),row.observations
+    ].map(clean).join('|')).sort((a,b) => a.localeCompare(b, 'es')).join('||');
+  }
+
   function planRowMissing(row) {
     const missing = [];
     if (!clean(row.action)) missing.push('acción');
     if (!MODALITIES.includes(clean(row.modality))) missing.push('modalidad');
     if (!/^\d{4}-\d{2}$/.test(clean(row.plannedStart))) missing.push('inicio');
     if (!/^\d{4}-\d{2}$/.test(clean(row.plannedEnd))) missing.push('fin');
+    if (clean(row.plannedEnd) && clean(row.plannedStart) && clean(row.plannedEnd) < clean(row.plannedStart)) missing.push('fin posterior al inicio');
     if (!clean(row.indicator)) missing.push('indicador');
     if (!(Number(row.targetPercent) > 0 && Number(row.targetPercent) <= 100)) missing.push('meta');
     if (!clean(row.evidence)) missing.push('medio de verificación');
@@ -66,8 +81,12 @@
   function plan(ctx) {
     const dnfState = dnf(ctx);
     const missing = dnfState.ready ? [] : ['DNF completa'];
-    if (state?.workflowV3?.planImported !== true) missing.push('plantilla del Plan confirmada');
+    const workflow = state?.workflowV3 || {};
+    if (workflow.planImported !== true) missing.push('plantilla del Plan confirmada');
     if (!ctx.plan.length) missing.push('acciones del Plan');
+    if (workflow.planImported === true && workflow.planSourceFingerprint !== needsFingerprint(ctx.needs)) {
+      missing.push('Plan actualizado respecto de la DNF vigente');
+    }
     const invalid = ctx.plan.filter(row => planRowMissing(row).length);
     if (invalid.length) missing.push('campos obligatorios de todas las acciones del Plan');
     return { ready: missing.length === 0, missing: [...new Set(missing)], invalidRows: invalid.length };
@@ -76,8 +95,12 @@
   function report(ctx) {
     const planState = plan(ctx);
     const missing = planState.ready ? [] : ['Plan de Formación completo'];
-    if (state?.workflowV3?.reportImported !== true) missing.push('plantilla del Informe confirmada');
+    const workflow = state?.workflowV3 || {};
+    if (workflow.reportImported !== true) missing.push('plantilla del Informe confirmada');
     if (!ctx.report.length) missing.push('seguimiento del Informe');
+    if (workflow.reportImported === true && workflow.reportSourceFingerprint !== planFingerprint(ctx.plan)) {
+      missing.push('Informe actualizado respecto del Plan vigente');
+    }
     const invalid = ctx.report.filter(row => reportRowMissing(row).length);
     if (invalid.length) missing.push('campos obligatorios de todo el seguimiento');
     return { ready: missing.length === 0, missing: [...new Set(missing)], invalidRows: invalid.length };
@@ -134,6 +157,8 @@
   }
 
   window.docformacionValidation = Object.freeze({
+    needsFingerprint,
+    planFingerprint,
     planRowMissing,
     reportRowMissing,
     careerCatalog,
