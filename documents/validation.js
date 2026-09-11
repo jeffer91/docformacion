@@ -65,7 +65,7 @@
     return { ready: missing.length === 0, missing };
   }
 
-  function dnf(ctx) {
+  function dnfCore(ctx) {
     const catalog = careerCatalog(ctx);
     const missing = [...catalog.missing];
     const imported = state?.dnfTemplateFlow?.dnfImported === true;
@@ -75,6 +75,20 @@
     const represented = new Set(ctx.needs.map(row => key(row.career)));
     const uncovered = ctx.careers.filter(row => !represented.has(key(row.name)));
     if (uncovered.length) missing.push('al menos una necesidad por carrera activa');
+    return { ready: missing.length === 0, missing: [...new Set(missing)] };
+  }
+
+  function sourceGovernance(ctx) {
+    const missing = [];
+    if (!ctx?.sourceConfirmations?.legal?.confirmed) missing.push('base legal institucional confirmada');
+    if (!ctx?.sourceConfirmations?.bibliography?.confirmed) missing.push('bibliografía institucional confirmada');
+    return { ready: missing.length === 0, missing };
+  }
+
+  function dnf(ctx) {
+    const core = dnfCore(ctx);
+    const sources = sourceGovernance(ctx);
+    const missing = [...core.missing, ...sources.missing];
     return { ready: missing.length === 0, missing: [...new Set(missing)] };
   }
 
@@ -108,11 +122,13 @@
 
   function dataAvailability(ctx) {
     const catalog = careerCatalog(ctx);
-    const dnfState = dnf(ctx);
+    const dnfState = dnfCore(ctx);
     const planState = plan(ctx);
     const reportState = report(ctx);
     const activeKeys = new Set(ctx.careers.map(row => key(row.name)));
     const coordKeys = new Set(ctx.coordinations.map(row => key(row.carrera)));
+    const legalConfirmed = !!ctx?.sourceConfirmations?.legal?.confirmed;
+    const bibliographyConfirmed = !!ctx?.sourceConfirmations?.bibliography?.confirmed;
     return {
       periodo: { ready: !!ctx.period.active, label: 'período activo' },
       carreras: { ready: catalog.ready, label: catalog.missing.join(', ') || 'carreras' },
@@ -123,8 +139,14 @@
       },
       necesidades: { ready: dnfState.ready, label: dnfState.missing.join(', ') || 'necesidades DNF' },
       lineasGenericas: { ready: ctx.genericLines.length > 0, label: 'líneas genéricas' },
-      baseLegal: { ready: ctx.legal.length > 0, label: 'base legal' },
-      bibliografia: { ready: ctx.bibliography.length > 0, label: 'bibliografía' },
+      baseLegal: {
+        ready: ctx.legal.length > 0 && legalConfirmed,
+        label: legalConfirmed ? 'base legal' : 'base legal institucional pendiente de confirmación'
+      },
+      bibliografia: {
+        ready: ctx.bibliography.length > 0 && bibliographyConfirmed,
+        label: bibliographyConfirmed ? 'bibliografía' : 'bibliografía institucional pendiente de confirmación'
+      },
       plan: { ready: planState.ready, label: planState.missing.join(', ') || 'Plan' },
       seguimiento: { ready: reportState.ready, label: reportState.missing.join(', ') || 'seguimiento' }
     };
@@ -162,6 +184,8 @@
     planRowMissing,
     reportRowMissing,
     careerCatalog,
+    sourceGovernance,
+    dnfCore,
     dnf,
     plan,
     report,
