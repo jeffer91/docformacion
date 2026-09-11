@@ -8,53 +8,41 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>DocFormación ITSQMET</title>
-  <link rel="icon" href="favicon.svg?v=20260911-1530" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="favicon.svg?v=20260911-1530" />
-  <link rel="stylesheet" href="styles.css?v=20260911-1530" />
+  <link rel="icon" href="favicon.svg?v=20260911-1615" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="favicon.svg?v=20260911-1615" />
+  <link rel="stylesheet" href="styles.css?v=20260911-1615" />
+  <style>
+    /* Evita mostrar la navegación heredada antes de cargar SVD 2.0. */
+    #legacyNav{display:none!important}
+    .app-shell{display:block!important}
+  </style>
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">DF</div>
-        <div>
-          <strong>DocFormación</strong>
-          <span>UGPA · Formación Docente</span>
-        </div>
-      </div>
-
+    <!-- Compatibilidad interna: las vistas heredadas siguen disponibles, pero ya no son navegación permanente. -->
+    <div id="legacyNav" hidden>
       <nav id="nav">
         <button class="nav-item active" data-view="inicio">Inicio</button>
-
-        <div class="nav-label">DATOS</div>
         <button class="nav-item" data-view="periodo">Datos del período</button>
         <button class="nav-item" data-view="carreras">Carreras</button>
         <button class="nav-item" data-view="docentes">Docentes</button>
-
-        <div class="nav-label">DOCUMENTOS</div>
         <button class="nav-item doc-link" data-view="doc-dnf">Detección de Necesidades</button>
         <button class="nav-item doc-link" data-view="doc-plan">Plan de Formación</button>
         <button class="nav-item doc-link" data-view="doc-informe">Informe de Cumplimiento</button>
-
-        <div class="nav-label">SISTEMA</div>
         <button class="nav-item" data-view="configuracion">Configuración</button>
         <button class="nav-item" data-view="diagnostico">Diagnóstico</button>
       </nav>
-
-      <div class="sidebar-footer">
-        <button id="btnTemplate" class="secondary full" hidden>Plantilla Excel global</button>
-        <button id="btnImport" class="primary full" hidden>Importar Excel global</button>
-        <button id="btnFirebase" class="secondary full" hidden>Actualizar desde Firebase</button>
-        <div class="firebase-readonly-note" hidden>Solo lectura · Formación Docente</div>
-        <div class="firebase-readonly-note" id="buildVersion">Build 20260911-1530</div>
-      </div>
-    </aside>
+      <button id="btnTemplate" hidden>Plantilla Excel global</button>
+      <button id="btnImport" hidden>Importar Excel global</button>
+      <button id="btnFirebase" hidden>Actualizar desde Firebase</button>
+      <div id="buildVersion">Build 20260911-1615</div>
+    </div>
 
     <main class="main">
       <header class="topbar">
         <div>
-          <h1 id="viewTitle">Inicio</h1>
-          <p id="viewSubtitle">Gestión integrada de DNF, Plan e Informe.</p>
+          <h1 id="viewTitle">DocFormación</h1>
+          <p id="viewSubtitle">Gestión documental</p>
         </div>
         <div class="save-state" id="saveState">Guardado</div>
       </header>
@@ -117,6 +105,6 @@
 
   <div id="toast" class="toast"></div>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="bootstrap.js?v=20260911-1530"></script>
+  <script src="bootstrap.js?v=20260911-1615"></script>
 </body>
 </html>
