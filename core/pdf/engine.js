@@ -78,6 +78,7 @@
     function finish(meta = {}) {
       const pages = doc.getNumberOfPages();
       for (let page = 1; page <= pages; page++) {
+        if (page === 1 && options.firstPageFooter === false) continue;
         doc.setPage(page);
         doc.setFillColor(255);
         doc.rect(0, pageH - 13, pageW, 13, 'F');
