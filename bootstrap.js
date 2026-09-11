@@ -55,17 +55,19 @@
     await loadScript('documents/manifest.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('core/data/model.js?v=' + encodeURIComponent(activeBuild));
 
-    // Período como contexto global obligatorio de la información.
+    // Período como contexto global de la información.
     await loadScript('core/periods/manager.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('core/periods/migrate-existing-data.js?v=' + encodeURIComponent(activeBuild));
 
     // Flujo DNF vigente: Carreras -> DNF -> Plan -> Informe.
     await loadScript('documents/dnf/workflow.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/dnf/template-view.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('documents/workflow.js?v=' + encodeURIComponent(activeBuild));
 
-    // Infraestructura compartida de progreso PDF.
+    // Indicador de progreso reutilizado por los tres documentos.
     await loadScript('core/preview/pdf-progress.js?v=' + encodeURIComponent(activeBuild));
+
+    // Flujo documental canónico y trazabilidad DNF -> Plan -> Informe.
+    await loadScript('documents/workflow.js?v=' + encodeURIComponent(activeBuild));
 
     // Generador institucional DNF y configuración de portada.
     await loadScript('documents/dnf/pdf.js?v=' + encodeURIComponent(activeBuild));
