@@ -96,10 +96,53 @@
     $$('.system-go').forEach(button => button.onclick = () => setView(button.dataset.view));
   }
 
+  function sourceControl(id, title, source, catalog) {
+    const explicit = source?.mode === 'period-data';
+    const checked = source?.confirmed ? 'checked' : '';
+    const disabled = explicit ? 'disabled' : '';
+    const version = explicit ? 'Datos propios del período' : (catalog?.version || source?.version || 'sin versión');
+    return `<label class="source-confirmation-card" for="${id}">
+      <div>
+        <strong>${html(title)}</strong>
+        <span>${html(version)}</span>
+        <small>${explicit ? 'La fuente fue cargada específicamente para este período y se considera confirmada.' : 'Confirma que esta versión institucional es la que corresponde utilizar en el período activo.'}</small>
+      </div>
+      <input id="${id}" type="checkbox" ${checked} ${disabled}>
+    </label>`;
+  }
+
+  async function saveSourceConfirmations() {
+    const catalog = window.docformacionDocumentContext?.sourceCatalog || {};
+    const context = window.docformacionDocumentContext?.build?.();
+    if (!state?.period || !context) return;
+
+    const current = state.period.sourceConfirmations && typeof state.period.sourceConfirmations === 'object'
+      ? { ...state.period.sourceConfirmations }
+      : {};
+    const legalExplicit = context.sourceConfirmations?.legal?.mode === 'period-data';
+    const bibliographyExplicit = context.sourceConfirmations?.bibliography?.mode === 'period-data';
+
+    current.legalVersion = legalExplicit
+      ? ''
+      : (document.getElementById('confirmLegalSource')?.checked ? String(catalog.legal?.version || '') : '');
+    current.bibliographyVersion = bibliographyExplicit
+      ? ''
+      : (document.getElementById('confirmBibliographySource')?.checked ? String(catalog.bibliography?.version || '') : '');
+    current.confirmedAt = new Date().toISOString();
+    state.period.sourceConfirmations = current;
+
+    await save();
+    if (typeof toast === 'function') toast('Fuentes institucionales actualizadas');
+    renderConfigurationView();
+  }
+
   function renderConfigurationView() {
     const model = window.docformacionModel?.snapshot?.() || {};
     const manifest = window.DOCFORMACION_MANIFEST || {};
     const firebase = state?.integrations?.firebase || {};
+    const context = window.docformacionDocumentContext?.build?.() || {};
+    const catalog = window.docformacionDocumentContext?.sourceCatalog || {};
+    const sources = context.sourceConfirmations || {};
 
     $('#content').innerHTML = `
       <div class="section-title">
@@ -119,10 +162,24 @@
           </tbody></table>
         </div>
       </div>
+
+      <div class="system-panel">
+        <h3>Fuentes institucionales del período</h3>
+        <p class="system-source-intro">Las plantillas predeterminadas ya no se consideran válidas de forma silenciosa. Debes confirmar la versión institucional que corresponde al período, salvo que exista una fuente específica cargada en los datos del período.</p>
+        <div class="source-confirmation-grid">
+          ${sourceControl('confirmLegalSource', 'Base legal', sources.legal, catalog.legal)}
+          ${sourceControl('confirmBibliographySource', 'Bibliografía', sources.bibliography, catalog.bibliography)}
+        </div>
+        <div class="dialog-actions source-confirmation-actions"><button class="primary" id="saveSourceConfirmations">Guardar confirmación de fuentes</button></div>
+      </div>
+
       <div class="system-panel system-note">
         <strong>Regla de configuración</strong>
-        <p>Los datos académicos se mantienen en el modelo del período. Esta pantalla no duplica carreras, docentes, coordinaciones ni necesidades; solo muestra configuración y contexto global.</p>
+        <p>Los datos académicos se mantienen en el modelo del período. Esta pantalla no duplica carreras, docentes, coordinaciones ni necesidades; solo muestra configuración, gobierno de fuentes y contexto global.</p>
       </div>`;
+
+    const saveButton = document.getElementById('saveSourceConfirmations');
+    if (saveButton) saveButton.onclick = saveSourceConfirmations;
   }
 
   function injectStyles() {
@@ -145,8 +202,12 @@
       .system-section-list>div{display:grid;grid-template-columns:170px minmax(0,1fr);gap:4px 12px;padding:9px 10px;border-radius:9px;background:#f8fafc}
       .system-section-list span{font-weight:700}
       .system-section-list small{grid-column:2;color:#738197}
-      .system-note p{margin:6px 0 0;color:#66758a;line-height:1.5}
-      @media(max-width:960px){.system-doc-grid{grid-template-columns:1fr}.system-section-list>div{grid-template-columns:1fr}.system-section-list small{grid-column:1}}
+      .system-note p,.system-source-intro{margin:6px 0 0;color:#66758a;line-height:1.5}
+      .system-source-intro{margin-bottom:14px;font-size:12px}
+      .source-confirmation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+      .source-confirmation-card{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px;border:1px solid #dfe5ef;border-radius:12px;background:#f8fafc;cursor:pointer}
+      .source-confirmation-card>div{display:flex;flex-direction:column;gap:4px}.source-confirmation-card strong{color:#1f2937}.source-confirmation-card span{font-size:11px;color:#173b67;font-weight:800}.source-confirmation-card small{font-size:11px;color:#6b788b;line-height:1.4}.source-confirmation-card input{width:18px;height:18px;flex:0 0 auto}.source-confirmation-actions{padding:14px 0 0}
+      @media(max-width:960px){.system-doc-grid,.source-confirmation-grid{grid-template-columns:1fr}.system-section-list>div{grid-template-columns:1fr}.system-section-list small{grid-column:1}}
     `;
     document.head.appendChild(style);
   }
