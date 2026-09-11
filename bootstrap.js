@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260911-0853';
+  const LOCAL_BUILD = '20260911-0925';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -72,6 +72,10 @@
     // Generador institucional DNF y configuración de portada.
     await loadScript('documents/dnf/pdf.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/dnf/cover.js?v=' + encodeURIComponent(activeBuild));
+
+    // Vista previa y PDF independientes por sección, alimentados por el mismo período activo.
+    await loadScript('core/preview/section-engine.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('ui/document-sections.js?v=' + encodeURIComponent(activeBuild));
 
     // Diagnóstico y vistas universales del sistema.
     await loadScript('core/diagnostics/index.js?v=' + encodeURIComponent(activeBuild));
