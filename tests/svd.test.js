@@ -10,6 +10,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const index = read('index.html');
 const bootstrap = read('bootstrap.js');
 const shell = read('ui/svd-shell.js');
+const sections = read('ui/document-sections.js');
 
 assert(!index.includes('<aside class="sidebar">'), 'SVD 2.0 no debe mantener un menú lateral visible');
 assert(index.includes('id="legacyNav" hidden'), 'La navegación heredada solo puede existir oculta por compatibilidad interna');
@@ -25,4 +26,17 @@ assert(shell.includes('.status-badge.blocked,.status-badge.pending{background:#f
 assert(shell.includes('overflow-x:auto'), 'Documentos y pestañas deben poder desplazarse horizontalmente en pantallas reducidas');
 assert(shell.includes("regularChildren.forEach(node => setVisible(node, selected === 'info'))"), 'Solo el contenido de la pestaña activa debe permanecer visible');
 
-console.log('SVD 2.0 visual shell checks passed.');
+assert(!sections.includes('documentStatus('), 'La interfaz documental no debe consultar la validación heredada documentStatus');
+assert(sections.includes('docformacionValidation.documentReadiness'), 'El estado visible debe provenir de la validación canónica');
+assert(sections.includes('section-direct-missing'), 'Una sección pendiente debe mostrar directamente qué falta');
+assert(sections.includes('data-correction-view'), 'Los pendientes deben ofrecer una acción directa para corregirlos');
+
+assert(shell.includes("item.ready === false ? '<i class=\"svd-tab-dot pending\""), 'Las pestañas pendientes deben mostrar una señal amarilla');
+assert(!shell.includes('svd-tab-dot ready'), 'Las pestañas completas no deben llenar la navegación de puntos verdes');
+assert(shell.includes('--svd-topbar-height'), 'La navegación sticky debe depender de la altura real de la cabecera');
+assert(shell.includes('ResizeObserver'), 'La altura sticky debe actualizarse cuando cambie la cabecera');
+assert(shell.includes('.period-count,.period-status-btn,.period-create-btn{display:none!important}'), 'La barra superior debe ocultar controles secundarios del período');
+assert(shell.includes('data-svd-period="openPeriodStatus"'), 'La gestión de estado del período debe seguir accesible desde Más');
+assert(shell.includes('data-svd-period="openPeriodCreator"'), 'Crear período debe seguir accesible desde Más');
+
+console.log('SVD 2.0 visual shell and audit fixes passed.');
