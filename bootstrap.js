@@ -71,16 +71,15 @@
     await loadScript('documents/calculations.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/validation.js?v=' + encodeURIComponent(activeBuild));
 
-    // Generador institucional completo vigente.
-    await loadScript('documents/dnf/pdf.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('documents/dnf/cover.js?v=' + encodeURIComponent(activeBuild));
-
     // Core PDF reusable: componentes y motor sin reglas de Formación.
     await loadScript('core/pdf/components.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('core/pdf/engine.js?v=' + encodeURIComponent(activeBuild));
 
-    // Las reglas y textos de cada documento permanecen fuera del Core.
+    // Los textos y reglas pertenecen a los documentos, no al Core.
     await loadScript('documents/section-renderers.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('documents/pdf.js?v=' + encodeURIComponent(activeBuild));
+
+    // Vista previa y PDF independientes por sección.
     await loadScript('core/preview/section-engine.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/document-sections.js?v=' + encodeURIComponent(activeBuild));
 
