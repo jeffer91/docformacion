@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260911-0925';
+  const LOCAL_BUILD = '20260911-1045';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -48,36 +48,43 @@
       await loadScript('web-adapter.js?v=' + encodeURIComponent(activeBuild));
     }
 
-    // Núcleo base de la aplicación.
+    // Aplicación base y contratos documentales.
     await loadScript('app.js?v=' + encodeURIComponent(activeBuild));
-
-    // Contratos documentales y modelo único de datos por período.
     await loadScript('documents/manifest.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('core/data/model.js?v=' + encodeURIComponent(activeBuild));
 
-    // Período como contexto global de la información.
+    // Core de datos y cálculos puros.
+    await loadScript('core/calculations/base.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('core/data/model.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('documents/context.js?v=' + encodeURIComponent(activeBuild));
+
+    // El período es el contexto global obligatorio.
     await loadScript('core/periods/manager.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('core/periods/migrate-existing-data.js?v=' + encodeURIComponent(activeBuild));
 
-    // Flujo DNF vigente: Carreras -> DNF -> Plan -> Informe.
+    // Flujos de importación y trazabilidad DNF -> Plan -> Informe.
     await loadScript('documents/dnf/workflow.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/dnf/template-view.js?v=' + encodeURIComponent(activeBuild));
-
-    // Indicador de progreso reutilizado por los tres documentos.
     await loadScript('core/preview/pdf-progress.js?v=' + encodeURIComponent(activeBuild));
-
-    // Flujo documental canónico y trazabilidad DNF -> Plan -> Informe.
     await loadScript('documents/workflow.js?v=' + encodeURIComponent(activeBuild));
 
-    // Generador institucional DNF y configuración de portada.
+    // Cálculos y validaciones documentales comparten una sola fuente de datos.
+    await loadScript('documents/calculations.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('documents/validation.js?v=' + encodeURIComponent(activeBuild));
+
+    // Generador institucional completo vigente.
     await loadScript('documents/dnf/pdf.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/dnf/cover.js?v=' + encodeURIComponent(activeBuild));
 
-    // Vista previa y PDF independientes por sección, alimentados por el mismo período activo.
+    // Core PDF reusable: componentes y motor sin reglas de Formación.
+    await loadScript('core/pdf/components.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('core/pdf/engine.js?v=' + encodeURIComponent(activeBuild));
+
+    // Las reglas y textos de cada documento permanecen fuera del Core.
+    await loadScript('documents/section-renderers.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('core/preview/section-engine.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/document-sections.js?v=' + encodeURIComponent(activeBuild));
 
-    // Diagnóstico y vistas universales del sistema.
+    // Diagnóstico y vistas universales.
     await loadScript('core/diagnostics/index.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/system-views.js?v=' + encodeURIComponent(activeBuild));
   }
