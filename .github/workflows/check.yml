@@ -1,4 +1,4 @@
-name: Syntax check
+name: Syntax and architecture check
 
 on:
   push:
@@ -16,5 +16,5 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Check JavaScript syntax
-        run: npm run check
+      - name: Check runtime and architecture
+        run: npm run ci

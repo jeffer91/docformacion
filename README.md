@@ -12,84 +12,117 @@ El **período activo es el contexto global**. Los datos se registran una sola ve
 
 Flujo principal:
 
-`PERÍODO -> DATOS -> DNF -> PLAN -> INFORME -> PDF`
+`PERÍODO -> DATOS -> DNF -> PLAN -> INFORME -> SECCIONES/PDF`
 
-## Arquitectura
+El identificador canónico del período usa el formato:
 
-La aplicación inició una migración incremental hacia la Guía Maestra de Aplicaciones Documentales. El runtime activo ya se organiza por responsabilidades:
+`YYYY-MM_YYYY-MM`
+
+Ejemplo: `2026-04_2026-09`.
+
+## Arquitectura activa
 
 ```text
 core/
+  calculations/
   data/
   diagnostics/
+  pdf/
+    components.js
+    engine.js
   periods/
   preview/
 documents/
   dnf/
   manifest.js
+  context.js
+  calculations.js
+  validation.js
+  section-renderers.js
+  pdf.js
   workflow.js
 ui/
+  document-sections.js
   system-views.js
 legacy/
   patches/
+tests/
 ```
 
-### Reglas
+### Responsabilidades
 
-- `documents/manifest.js` declara documentos y secciones.
-- `core/data/model.js` expone el modelo único del período sin duplicar información.
-- `core/periods/` administra el contexto temporal y la migración de datos existentes.
-- `core/diagnostics/` identifica estado, pendientes y origen registrado de los datos.
-- `documents/dnf/` contiene el flujo y generador activo de la DNF.
-- `documents/workflow.js` conserva la trazabilidad DNF -> Plan -> Informe.
-- `legacy/patches/` contiene archivos históricos que **no forman parte del runtime activo** y quedan aislados mientras se valida la equivalencia antes de su eliminación definitiva.
+- `core/data/model.js`: acceso canónico a los datos del período.
+- `core/calculations/base.js`: cálculos genéricos reutilizables.
+- `core/pdf/`: componentes y motor PDF sin reglas propias de Formación.
+- `documents/context.js`: contexto institucional y valores de plantilla.
+- `documents/calculations.js`: cálculos propios de DNF, Plan e Informe.
+- `documents/validation.js`: reglas canónicas de completitud de documentos y secciones.
+- `documents/section-renderers.js`: textos y reglas propias de cada documento.
+- `documents/pdf.js`: PDF completo construido con los mismos renderizadores usados por las secciones.
+- `core/preview/section-engine.js`: orquestación genérica para vista previa/PDF individual.
+- `core/diagnostics/`: diagnóstico de período, datos, documentos, secciones, orígenes y versiones.
 
-## Datos compartidos
+## Períodos
 
-La base del período reutiliza carreras, docentes, coordinaciones y autoridades. Los datos propios de cada documento permanecen en su ámbito.
+El gestor de períodos mantiene snapshots separados y estados de ciclo de vida:
+
+- **Activo:** edición normal.
+- **Cerrado:** consulta/PDF y edición protegida con confirmación por sesión.
+- **Archivado:** solo consulta y generación de documentos.
+
+Al cerrar o archivar un período se registra la versión del build y del manifiesto documental utilizada.
+
+Sin período activo, las áreas de datos/documentos quedan bloqueadas hasta crear o seleccionar uno.
+
+## Fuente única y validación
+
+La aplicación no debe asumir silenciosamente datos faltantes. En particular:
+
+- una carrera sin estado explícito no se considera Activa;
+- una necesidad sin prioridad no se convierte automáticamente en Media;
+- una sección del Plan solo puede mostrarse como completa si todas las filas requeridas del Plan son válidas;
+- una sección del Informe solo puede mostrarse como completa si el seguimiento requerido es válido.
+
+La vista previa por sección, el PDF por sección y el PDF completo utilizan el mismo modelo, cálculos, validaciones y renderizadores.
 
 ## Excel
 
 Excel funciona como fuente de entrada:
 
-`EXCEL -> IMPORTADOR -> VALIDACIÓN -> MODELO DEL PERÍODO -> DOCUMENTOS/PDF`
+`EXCEL -> IMPORTADOR -> VALIDACIÓN -> NORMALIZACIÓN -> MODELO DEL PERÍODO -> DOCUMENTOS/PDF`
 
-El PDF no debe leer hojas ni columnas directamente después de la importación.
-
-## Firebase
-
-La integración con Repaso-Fire es de solo lectura. Los datos externos solo completan campos permitidos y no deben mezclar Capacitación con Formación Docente.
-
-## Códigos documentales
-
-- DNF: `UGPA-RGI1-01-PRO-31-AAAA-MM`
-- Plan: `UGPA-RGI2-01-PRO-31-AAAA-MM`
-- Informe: `UGPA-RGI3-01-PRO-31-AAAA-MM`
+El PDF no lee directamente hojas ni columnas una vez finalizada la importación.
 
 ## Diagnóstico
 
-La interfaz incluye las vistas **Configuración** y **Diagnóstico**. Diagnóstico muestra:
+La vista **Diagnóstico** muestra:
 
-- período y `periodId`;
-- conteos de datos compartidos;
-- estado de DNF, Plan e Informe;
-- pendientes críticos;
-- origen registrado de las cargas;
-- secciones declaradas por documento.
+- período, `periodId` y estado;
+- conteos de carreras, docentes, coordinaciones, necesidades, Plan y seguimiento;
+- estado canónico de DNF, Plan e Informe;
+- estado de cada sección;
+- origen registrado de los datos;
+- disponibilidad del Core PDF;
+- build y versión del manifiesto;
+- versiones congeladas cuando el período fue cerrado/archivado.
 
-## Migración pendiente
+## Verificación automática
 
-La siguiente fase es convertir el generador PDF en un motor plenamente seccionado para que cada sección pueda previsualizarse y descargarse de forma independiente. Hasta completar y validar esa equivalencia, los generadores actuales permanecen funcionales.
+```bash
+npm run ci
+```
+
+Ejecuta:
+
+1. comprobación de sintaxis del runtime activo;
+2. pruebas de arquitectura;
+3. pruebas de validación canónica para DNF, Plan e Informe.
+
+Entre otras reglas, CI verifica que el `periodId` no vuelva al formato con doble guion bajo, que el Core PDF no contenga textos propios de Formación y que no se asignen prioridades por defecto a necesidades incompletas.
 
 ## Ejecución
 
 ```bash
 npm install
 npm start
-```
-
-Verificación de sintaxis del runtime activo:
-
-```bash
-npm run check
 ```
