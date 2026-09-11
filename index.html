@@ -2,15 +2,15 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: file:; style-src 'self' 'unsafe-inline'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net https://repaso-fire-d8ceb-default-rtdb.firebaseio.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: file:; style-src 'self' 'unsafe-inline'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net https://repaso-fire-d8ceb-default-rtdb.firebaseio.com; frame-src 'self' blob:;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>DocFormación ITSQMET</title>
-  <link rel="icon" href="favicon.svg?v=20260911-0853" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="favicon.svg?v=20260911-0853" />
-  <link rel="stylesheet" href="styles.css?v=20260911-0853" />
+  <link rel="icon" href="favicon.svg?v=20260911-0925" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="favicon.svg?v=20260911-0925" />
+  <link rel="stylesheet" href="styles.css?v=20260911-0925" />
 </head>
 <body>
   <div class="app-shell">
@@ -46,7 +46,7 @@
         <button id="btnImport" class="primary full" hidden>Importar Excel global</button>
         <button id="btnFirebase" class="secondary full" hidden>Actualizar desde Firebase</button>
         <div class="firebase-readonly-note" hidden>Solo lectura · Formación Docente</div>
-        <div class="firebase-readonly-note" id="buildVersion">Build 20260911-0853</div>
+        <div class="firebase-readonly-note" id="buildVersion">Build 20260911-0925</div>
       </div>
     </aside>
 
@@ -117,6 +117,6 @@
 
   <div id="toast" class="toast"></div>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="bootstrap.js?v=20260911-0853"></script>
+  <script src="bootstrap.js?v=20260911-0925"></script>
 </body>
 </html>

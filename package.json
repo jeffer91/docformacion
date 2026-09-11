@@ -1,12 +1,12 @@
 {
   "name": "docformacion",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Gestión y generación PDF del proceso de Formación Docente - ITSQMET",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "check": "node --check main.js && node --check preload.js && node --check bootstrap.js && node --check web-adapter.js && node --check app.js && node --check documents/manifest.js && node --check core/data/model.js && node --check core/periods/manager.js && node --check core/periods/migrate-existing-data.js && node --check documents/dnf/workflow.js && node --check documents/dnf/template-view.js && node --check documents/workflow.js && node --check core/preview/pdf-progress.js && node --check documents/dnf/pdf.js && node --check documents/dnf/cover.js && node --check core/diagnostics/index.js && node --check ui/system-views.js"
+    "check": "node --check main.js && node --check preload.js && node --check bootstrap.js && node --check web-adapter.js && node --check app.js && node --check documents/manifest.js && node --check core/data/model.js && node --check core/periods/manager.js && node --check core/periods/migrate-existing-data.js && node --check documents/dnf/workflow.js && node --check documents/dnf/template-view.js && node --check documents/workflow.js && node --check core/preview/pdf-progress.js && node --check documents/dnf/pdf.js && node --check documents/dnf/cover.js && node --check core/preview/section-engine.js && node --check ui/document-sections.js && node --check core/diagnostics/index.js && node --check ui/system-views.js"
   },
   "dependencies": {
     "xlsx": "^0.18.5"

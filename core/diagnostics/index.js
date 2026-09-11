@@ -40,12 +40,23 @@
 
   function sectionState(type) {
     const manifest = window.DOCFORMACION_MANIFEST?.documents?.[type];
-    const status = statusFor(type);
-    return (manifest?.sections || []).map(section => ({
-      ...section,
-      status: status.ready ? 'ready' : 'dependent',
-      note: status.ready ? 'Datos mínimos del documento completos' : 'Depende de pendientes del documento'
-    }));
+    const engine = window.docformacionSectionPdf;
+    const overall = statusFor(type);
+    return (manifest?.sections || []).map(section => {
+      if (engine?.sectionReadiness) {
+        const readiness = engine.sectionReadiness(type, section);
+        return {
+          ...section,
+          status: readiness.ready ? 'ready' : 'draft',
+          note: readiness.ready ? 'Datos requeridos disponibles' : 'Pendiente: ' + readiness.missing.join(', ')
+        };
+      }
+      return {
+        ...section,
+        status: overall.ready ? 'ready' : 'dependent',
+        note: overall.ready ? 'Datos mínimos del documento completos' : 'Depende de pendientes del documento'
+      };
+    });
   }
 
   function collect() {
@@ -72,6 +83,10 @@
         informe: { ...informe, sections:sectionState('informe') }
       },
       origins: origins(),
+      sectionPreview: {
+        enabled: !!window.docformacionSectionPdf,
+        mode: 'PDF individual + vista previa por sección'
+      },
       build: window.DOCFORMACION_BUILD || 'local'
     };
   }

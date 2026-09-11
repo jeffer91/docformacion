@@ -81,7 +81,8 @@
         <h3>Secciones declaradas</h3>
         ${docs.map(([type, title]) => {
           const sections = report.documents[type]?.sections || [];
-          return `<details class="system-section-group"><summary>${html(title)} · ${sections.length} secciones</summary>
+          const ready = sections.filter(section => section.status === 'ready').length;
+          return `<details class="system-section-group"><summary>${html(title)} · ${ready}/${sections.length} secciones completas</summary>
             <div class="system-section-list">${sections.map(s => `<div><strong>${html(s.id)}</strong><span>${html(s.title)}</span><small>${html(s.note)}</small></div>`).join('')}</div>
           </details>`;
         }).join('')}
@@ -89,7 +90,7 @@
 
       <div class="system-panel system-note">
         <strong>Motor documental</strong>
-        <p>La aplicación ya trabaja con manifiestos de documentos, modelo único por período y diagnóstico. La previsualización/PDF individual por sección queda identificada como la siguiente migración del generador PDF.</p>
+        <p>La aplicación trabaja con manifiestos, modelo único por período y diagnóstico por sección. La vista previa y la descarga PDF individual ya están habilitadas para DNF, Plan e Informe; el PDF completo se mantiene como acción de cierre institucional.</p>
       </div>`;
 
     $$('.system-go').forEach(button => button.onclick = () => setView(button.dataset.view));
@@ -111,6 +112,7 @@
             <tr><th>Build</th><td>${html(window.DOCFORMACION_BUILD || 'local')}</td></tr>
             <tr><th>periodId</th><td>${html(model.periodId || 'Sin período activo')}</td></tr>
             <tr><th>Documentos declarados</th><td>${Object.keys(manifest.documents || {}).length}</td></tr>
+            <tr><th>Vista previa por sección</th><td>${window.docformacionSectionPdf ? 'Activa' : 'No disponible'}</td></tr>
             <tr><th>Firebase</th><td>${html(firebase.mode || 'read-only')} · ${html(firebase.source || 'Repaso-Fire')}</td></tr>
             <tr><th>Líneas genéricas</th><td>${(state?.settings?.genericLines || []).length}</td></tr>
             <tr><th>Meta institucional</th><td>${html(state?.period?.targetPercent ?? '')}%</td></tr>
