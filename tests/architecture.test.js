@@ -11,6 +11,8 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 function testArchitecture() {
   const manager = read('core/periods/manager.js');
   const sectionEngine = read('core/preview/section-engine.js');
+  const documentElements = read('core/preview/document-elements.js');
+  const documentSectionsUi = read('ui/document-sections.js');
   const pdfEngine = read('core/pdf/engine.js');
   const pdfComponents = read('core/pdf/components.js');
   const fullPdf = read('documents/pdf.js');
@@ -36,6 +38,12 @@ function testArchitecture() {
   assert(fullPdf.includes('firstPageFooter: false'), 'El PDF completo no debe insertar pie en la portada');
   assert(context.includes('sourceConfirmations'), 'El contexto documental debe exponer confirmación versionada de fuentes');
 
+  assert(documentElements.includes("id: 'cover'"), 'Debe existir un apartado documental de Portada');
+  assert(documentElements.includes("id: 'header'"), 'Debe existir un apartado documental de Cabecera');
+  assert(documentSectionsUi.includes('docformacionValidation.documentReadiness'), 'La interfaz documental debe usar la validación canónica del documento');
+  assert(documentSectionsUi.includes('Elementos del documento'), 'La interfaz debe mostrar Portada y Cabecera separados de las secciones de contenido');
+  assert(documentSectionsUi.includes('normalizePeriodSelectorLabels'), 'La interfaz debe evitar duplicar el estado en el selector del período');
+
   [
     'core/calculations/base.js',
     'documents/context.js',
@@ -46,9 +54,11 @@ function testArchitecture() {
     'core/pdf/engine.js',
     'documents/section-renderers.js',
     'documents/pdf.js',
+    'core/preview/document-elements.js',
     'core/preview/section-engine.js'
   ].forEach(file => assert(bootstrap.includes(file), 'bootstrap.js debe cargar ' + file));
 
+  assert(!bootstrap.includes('core/periods/migrate-existing-data.js'), 'La migración histórica no debe formar parte del runtime activo');
   assert(!bootstrap.includes("'documents/workflow.js?v='"), 'El workflow monolítico histórico no debe formar parte del runtime activo');
   assert(!bootstrap.includes('documents/dnf/pdf.js'), 'El generador DNF histórico no debe formar parte del runtime activo');
   assert(!bootstrap.includes('documents/dnf/cover.js'), 'La portada histórica no debe formar parte del runtime activo');
@@ -216,4 +226,4 @@ function testPdfCoverIsolation() {
 testArchitecture();
 testCanonicalValidation();
 testPdfCoverIsolation();
-console.log('Architecture, canonical validation and PDF cover checks passed.');
+console.log('Architecture, canonical validation, document elements and PDF cover checks passed.');
