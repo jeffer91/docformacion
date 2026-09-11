@@ -7,7 +7,10 @@
 
   window.DOCFORMACION_MANIFEST = Object.freeze({
     appId: 'formacion',
+    version: '1.1.0',
     title: 'DocFormación',
+    organization: 'ITSQMET · UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS',
+    author: 'ITSQMET',
     documents: {
       dnf: {
         id: 'formacion-deteccion',
