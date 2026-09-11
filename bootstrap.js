@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260911-1045';
+  const LOCAL_BUILD = '20260911-1115';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -48,7 +48,7 @@
       await loadScript('web-adapter.js?v=' + encodeURIComponent(activeBuild));
     }
 
-    // Aplicación base y contratos documentales.
+    // Aplicación base y contrato de documentos.
     await loadScript('app.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/manifest.js?v=' + encodeURIComponent(activeBuild));
 
@@ -61,15 +61,19 @@
     await loadScript('core/periods/manager.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('core/periods/migrate-existing-data.js?v=' + encodeURIComponent(activeBuild));
 
-    // Flujos de importación y trazabilidad DNF -> Plan -> Informe.
+    // DNF: importación validada de Carreras y Necesidades.
     await loadScript('documents/dnf/workflow.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/dnf/template-view.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('core/preview/pdf-progress.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('documents/workflow.js?v=' + encodeURIComponent(activeBuild));
 
-    // Cálculos y validaciones documentales comparten una sola fuente de datos.
+    // Progreso PDF compartido.
+    await loadScript('core/preview/pdf-progress.js?v=' + encodeURIComponent(activeBuild));
+
+    // Cálculos y validaciones documentales sobre una sola fuente de datos.
     await loadScript('documents/calculations.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/validation.js?v=' + encodeURIComponent(activeBuild));
+
+    // Plan e Informe: flujo canónico sin autoridades ni motor PDF duplicados.
+    await loadScript('documents/workflow-canonical.js?v=' + encodeURIComponent(activeBuild));
 
     // Core PDF reusable: componentes y motor sin reglas de Formación.
     await loadScript('core/pdf/components.js?v=' + encodeURIComponent(activeBuild));
