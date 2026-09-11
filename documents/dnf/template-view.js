@@ -1,6 +1,9 @@
 (() => {
   'use strict';
 
+  let observer = null;
+  let scheduled = false;
+
   function addViewButtons(root) {
     if (!root) return;
     root.querySelectorAll('.excel-toolbar').forEach(toolbar => {
@@ -21,33 +24,22 @@
     });
   }
 
-  if (typeof renderDocumentView === 'function') {
-    const previous = renderDocumentView;
-    renderDocumentView = function renderDocumentViewWithTemplateView(type) {
-      const result = previous(type);
-      if (type === 'dnf') addViewButtons(document.getElementById('content'));
-      return result;
-    };
-  }
-
-  if (typeof renderCareers === 'function') {
-    const previous = renderCareers;
-    renderCareers = function renderCareersWithTemplateView() {
-      const result = previous();
+  function schedule() {
+    if (scheduled) return;
+    scheduled = true;
+    queueMicrotask(() => {
+      scheduled = false;
       addViewButtons(document.getElementById('content'));
-      return result;
-    };
+    });
   }
 
-  if (typeof renderDNF === 'function') {
-    const previous = renderDNF;
-    renderDNF = function renderDNFWithTemplateView() {
-      const result = previous();
-      addViewButtons(document.getElementById('content'));
-      return result;
-    };
+  function start() {
+    const content = document.getElementById('content');
+    if (!content || observer) return;
+    observer = new MutationObserver(schedule);
+    observer.observe(content, { childList:true, subtree:true });
+    schedule();
   }
 
-  addViewButtons(document.getElementById('content'));
-  window.__DOCFORMACION_DNF_TEMPLATE_VIEW_FIX = true;
+  start();
 })();
