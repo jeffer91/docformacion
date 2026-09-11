@@ -25,6 +25,45 @@
     });
   }
 
+  function canonicalContext() {
+    return window.docformacionDocumentContext?.build?.() || null;
+  }
+
+  function canonicalDocumentStatus(type) {
+    const ctx = canonicalContext();
+    if (!ctx || !window.docformacionValidation?.documentReadiness) return null;
+    return window.docformacionValidation.documentReadiness(type, ctx);
+  }
+
+  function correctionTarget(text = '') {
+    const value = String(text).toLowerCase();
+    if (/base legal|bibliograf/.test(value)) return { view:'configuracion', label:'Revisar configuración' };
+    if (/período|periodo|versión documental|elaborado por|revisado por|aprobado por|cargo de/.test(value)) return { view:'periodo', label:'Revisar datos del período' };
+    if (/carrera|coordinacion|coordinación|necesidad|prioridad|líneas genéricas|lineas genericas/.test(value)) return { view:'carreras', label:'Revisar datos' };
+    if (/docente/.test(value)) return { view:'docentes', label:'Revisar docentes' };
+    return { view:'diagnostico', label:'Revisar diagnóstico' };
+  }
+
+  function missingText(values = []) {
+    const items = [...new Set((values || []).filter(Boolean).map(value => String(value).trim()))];
+    if (!items.length) return '';
+    if (items.length === 1) return 'Falta: ' + items[0] + '.';
+    return 'Faltan: ' + items.join(', ') + '.';
+  }
+
+  function correctionButton(values = [], className = 'secondary correction-action') {
+    const first = (values || []).find(Boolean);
+    if (!first) return '';
+    const target = correctionTarget(first);
+    return `<button type="button" class="${className}" data-correction-view="${html(target.view)}">${html(target.label)}</button>`;
+  }
+
+  function bindCorrectionButtons(root) {
+    root.querySelectorAll('[data-correction-view]').forEach(button => {
+      button.onclick = () => setView(button.dataset.correctionView);
+    });
+  }
+
   function ensureDialog() {
     if (document.getElementById('sectionPreviewDialog')) return;
     const dialog = document.createElement('dialog');
@@ -48,15 +87,14 @@
       if (dialog.open) dialog.close();
       const frame = document.getElementById('sectionPreviewFrame');
       if (frame) frame.removeAttribute('src');
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        previewUrl = '';
-      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = '';
       dialog.dataset.type = '';
       dialog.dataset.section = '';
       dialog.dataset.element = '';
       dialog.dataset.kind = '';
     };
+
     document.getElementById('closeSectionPreview').onclick = close;
     document.getElementById('closeSectionPreviewBottom').onclick = close;
     dialog.addEventListener('cancel', event => {
@@ -91,20 +129,17 @@
     const style = document.createElement('style');
     style.id = 'documentSectionsStyles';
     style.textContent = `
-      .canonical-doc-status{margin-top:0}
-      .canonical-missing-list{margin:10px 0 0;padding-left:20px;color:#7a5419;font-size:12px;line-height:1.55}.canonical-doc-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-wrap:wrap}
-      .document-elements{margin-top:20px;border:1px solid #dfe5ef;border-radius:14px;background:#fff;overflow:hidden}.document-elements-head{padding:18px;border-bottom:1px solid #e7ecf3;background:#fbfcfe}.document-elements-head h3{margin:0 0 5px;font-size:17px;color:#172033}.document-elements-head p{margin:0;color:#6b788b;font-size:12px;line-height:1.45}
-      .document-element-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:16px}.document-element-card{border:1px solid #e1e7ef;border-radius:12px;padding:15px;display:flex;flex-direction:column;gap:10px}.document-element-title{display:flex;align-items:center;justify-content:space-between;gap:10px}.document-element-title h4{margin:0;font-size:14px;color:#1d2736}.document-element-card p{margin:0;color:#6b788b;font-size:11px;line-height:1.5}.document-element-meta{font-size:10px;color:#8a5b1e}.document-element-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
-      .section-workspace{margin-top:20px;border:1px solid #dfe5ef;border-radius:14px;background:#fff;overflow:hidden}
-      .section-workspace-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:18px;border-bottom:1px solid #e7ecf3;background:#fbfcfe}
-      .section-workspace-head h3{margin:0 0 5px;font-size:17px;color:#172033}.section-workspace-head p{margin:0;color:#6b788b;font-size:12px;line-height:1.45}
-      .section-progress{min-width:180px;text-align:right}.section-progress strong{display:block;font-size:13px;color:#173b67}.section-progress-bar{height:7px;border-radius:999px;background:#e8edf4;overflow:hidden;margin-top:7px}.section-progress-bar span{display:block;height:100%;background:#173b67}
-      .section-list{display:grid}.document-section{padding:15px 18px;border-top:1px solid #eef1f5}.document-section:first-child{border-top:0}.document-section-main{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center}
-      .document-section-copy{display:flex;gap:12px;min-width:0}.section-number{width:32px;height:32px;border-radius:9px;background:#eef3f8;color:#173b67;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}.document-section-copy h4{margin:0 0 4px;font-size:14px;color:#1d2736}.document-section-copy p{margin:0;font-size:11px;color:#788598}
-      .section-state{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800;margin-left:7px}.section-state.ready{background:#e9f6ef;color:#2d6a49}.section-state.draft{background:#fff4dd;color:#865b15}
-      .section-actions{display:flex;gap:8px;align-items:center}.section-actions button{white-space:nowrap}.section-details{margin:10px 0 0 44px}.section-details summary{cursor:pointer;color:#64748a;font-size:11px;font-weight:800}.section-contract{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:9px}.section-contract>div{background:#f8fafc;border:1px solid #e6ebf2;border-radius:8px;padding:9px}.section-contract strong{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:#7a8799;margin-bottom:4px}.section-contract span{font-size:11px;color:#344154;line-height:1.4}.section-missing{margin-top:8px;font-size:10px;color:#8a5b1e}
+      .canonical-doc-status{margin-top:0}.canonical-doc-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px;flex-wrap:wrap}
+      .canonical-missing-list{margin:8px 0 0;padding-left:18px;color:#6f541c;font-size:11px;line-height:1.5}.canonical-direct-missing{margin-top:9px;padding:10px 12px;border-radius:9px;background:#fff8e8;color:#72551c;font-size:11px;line-height:1.45}
+      .document-elements{margin-top:18px;border:1px solid #dfe5ef;border-radius:13px;background:#fff;overflow:hidden}.document-elements-head{padding:16px;border-bottom:1px solid #e7ecf3;background:#fbfcfe}.document-elements-head h3{margin:0 0 4px;font-size:15px;color:#172033}.document-elements-head p{margin:0;color:#6b788b;font-size:11px;line-height:1.4}
+      .document-element-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px}.document-element-card{border:1px solid #e1e7ef;border-radius:11px;padding:14px;display:flex;flex-direction:column;gap:9px}.document-element-title{display:flex;align-items:center;justify-content:space-between;gap:10px}.document-element-title h4{margin:0;font-size:13px;color:#1d2736}.document-element-card p{margin:0;color:#6b788b;font-size:11px;line-height:1.45}.document-element-meta{font-size:11px;color:#72551c;background:#fff8e8;border-radius:8px;padding:9px 10px}.document-element-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+      .section-workspace{margin-top:18px;border:1px solid #dfe5ef;border-radius:13px;background:#fff;overflow:hidden}.section-workspace-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:16px;border-bottom:1px solid #e7ecf3;background:#fbfcfe}.section-workspace-head h3{margin:0 0 4px;font-size:15px;color:#172033}.section-workspace-head p{margin:0;color:#6b788b;font-size:11px;line-height:1.4}
+      .section-progress{min-width:180px;text-align:right}.section-progress strong{display:block;font-size:12px;color:#173b67}.section-progress-bar{height:6px;border-radius:999px;background:#e8edf4;overflow:hidden;margin-top:6px}.section-progress-bar span{display:block;height:100%;background:#173b67}
+      .section-list{display:grid}.document-section{padding:15px 17px;border-top:1px solid #eef1f5}.document-section:first-child{border-top:0}.document-section-main{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}.document-section-copy{display:flex;gap:11px;min-width:0}.section-number{width:30px;height:30px;border-radius:8px;background:#eef3f8;color:#173b67;font-weight:900;font-size:11px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}.document-section-copy h4{margin:0 0 3px;font-size:13px;color:#1d2736}.document-section-copy p{margin:0;font-size:10px;color:#788598}
+      .section-state{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:9px;font-weight:800;margin-left:7px}.section-state.ready{background:#e9f6ef;color:#2d6a49}.section-state.draft{background:#fff4dd;color:#865b15}.section-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.section-actions button{white-space:nowrap}.section-direct-missing{margin:11px 0 0 41px;padding:10px 12px;border-radius:9px;background:#fff8e8;color:#72551c;font-size:11px;line-height:1.45;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .section-details{margin:10px 0 0 41px}.section-details summary{cursor:pointer;color:#64748a;font-size:10px;font-weight:800}.section-contract{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:9px}.section-contract>div{background:#f8fafc;border:1px solid #e6ebf2;border-radius:8px;padding:9px}.section-contract strong{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:#7a8799;margin-bottom:4px}.section-contract span{font-size:10px;color:#344154;line-height:1.4}
       .section-preview-dialog{width:min(1100px,96vw);height:min(860px,94vh);padding:0;border:0;border-radius:14px;overflow:hidden}.section-preview-dialog::backdrop{background:rgba(15,23,42,.58)}.section-preview-shell{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:#fff}.section-preview-head{padding:16px 18px;border-bottom:1px solid #e4e9f0}.section-preview-head h2{margin:0 0 4px}.section-preview-head p{margin:0;color:#6f7d90}.section-preview-frame-wrap{min-height:0;background:#eef1f5;padding:10px}.section-preview-frame-wrap iframe{width:100%;height:100%;border:0;border-radius:8px;background:#fff}.section-preview-shell>.dialog-actions{padding:12px 16px;border-top:1px solid #e4e9f0;background:#fff}
-      @media(max-width:820px){.document-element-grid{grid-template-columns:1fr}.section-workspace-head{flex-direction:column}.section-progress{width:100%;text-align:left}.document-section-main{grid-template-columns:1fr}.section-actions{margin-left:44px;flex-wrap:wrap}.section-contract{grid-template-columns:1fr}.section-details{margin-left:44px}}
+      @media(max-width:820px){.document-element-grid{grid-template-columns:1fr}.section-workspace-head{flex-direction:column}.section-progress{width:100%;text-align:left}.document-section-main{grid-template-columns:1fr}.section-actions,.section-direct-missing{margin-left:41px}.section-contract{grid-template-columns:1fr}.section-details{margin-left:41px}}
     `;
     document.head.appendChild(style);
   }
@@ -202,26 +237,22 @@
     root.querySelectorAll('.download-section').forEach(button => button.onclick = () => downloadSection(button));
     root.querySelectorAll('.preview-doc-element').forEach(button => button.onclick = () => previewElement(button));
     root.querySelectorAll('.download-doc-element').forEach(button => button.onclick = () => downloadElement(button));
-  }
-
-  function canonicalDocumentStatus(type) {
-    const ctx = window.docformacionDocumentContext?.build?.();
-    if (!ctx || !window.docformacionValidation?.documentReadiness) return null;
-    return window.docformacionValidation.documentReadiness(type, ctx);
+    bindCorrectionButtons(root);
   }
 
   function syncCanonicalDocumentStatus(type) {
     const card = document.querySelector('.single-document');
     const status = canonicalDocumentStatus(type);
     if (!card || !status) return;
-    if (card.dataset.canonicalStatus === JSON.stringify(status)) return;
-    card.dataset.canonicalStatus = JSON.stringify(status);
+    const key = JSON.stringify({ ready:status.ready, missing:status.missing });
+    if (card.dataset.canonicalStatus === key) return;
+    card.dataset.canonicalStatus = key;
     card.classList.add('canonical-doc-status');
 
     if (status.ready) {
       card.innerHTML = `
         <div class="status-head"><div class="missing-heading">Documento completo</div><span class="status-badge ready">Listo</span></div>
-        <div class="ready-message">La validación canónica confirma que todas las condiciones del documento están completas.</div>
+        <div class="ready-message">Todo está completo para generar el documento.</div>
         <div class="canonical-doc-actions"><button class="primary" id="generateCurrent">Generar PDF</button></div>`;
       const button = card.querySelector('#generateCurrent');
       if (button) button.onclick = () => window.docformacionDocumentPdf?.generate?.(type);
@@ -229,52 +260,38 @@
     }
 
     const missing = Array.isArray(status.missing) ? status.missing : [];
-    const sourcePending = missing.some(item => /base legal|bibliograf/i.test(String(item)));
-    const oldStatus = typeof documentStatus === 'function' ? documentStatus(type) : null;
-    const oldDetails = oldStatus && !oldStatus.ready && typeof renderIssues === 'function'
-      ? renderIssues(type, oldStatus.issues || [])
-      : '';
-
     card.innerHTML = `
-      <div class="status-head"><div class="missing-heading">Documento pendiente</div><span class="status-badge blocked">Pendiente</span></div>
-      <div class="issue-count">${missing.length} condición(es) pendiente(s) según la validación canónica</div>
-      ${oldDetails || `<ul class="canonical-missing-list">${missing.map(item => `<li>${html(item)}</li>`).join('')}</ul>`}
+      <div class="status-head"><div class="missing-heading">Documento pendiente</div><span class="status-badge pending">Pendiente</span></div>
+      <div class="canonical-direct-missing">${html(missingText(missing) || 'Hay información pendiente por completar.')}</div>
       <div class="canonical-doc-actions">
-        ${sourcePending ? '<button class="secondary" id="canonicalGoConfig">Ir a Configuración</button>' : ''}
-        <button class="secondary" id="canonicalGoDiagnostic">Revisar Diagnóstico</button>
+        ${correctionButton(missing)}
+        <button class="secondary" data-correction-view="diagnostico">Revisar diagnóstico</button>
       </div>`;
-
-    if (oldDetails && typeof bindCorrectionActions === 'function') bindCorrectionActions(type, card);
-    const config = card.querySelector('#canonicalGoConfig');
-    if (config) config.onclick = () => setView('configuracion');
-    const diagnostic = card.querySelector('#canonicalGoDiagnostic');
-    if (diagnostic) diagnostic.onclick = () => setView('diagnostico');
+    bindCorrectionButtons(card);
   }
 
   function appendDocumentElements(type) {
     const api = window.docformacionDocumentElements;
     const content = document.getElementById('content');
-    if (!api || !content || currentDocumentType() !== type) return;
-    if (document.getElementById('documentElementsPanel')) return;
+    if (!api || !content || currentDocumentType() !== type || document.getElementById('documentElementsPanel')) return;
     const items = api.list();
     const panel = document.createElement('div');
     panel.id = 'documentElementsPanel';
     panel.className = 'document-elements';
     panel.innerHTML = `
-      <div class="document-elements-head">
-        <h3>Elementos del documento</h3>
-        <p>Portada y cabecera se revisan por separado porque forman parte del diseño institucional y no del contenido numerado.</p>
-      </div>
+      <div class="document-elements-head"><h3>Elementos del documento</h3><p>Portada y cabecera se revisan por separado.</p></div>
       <div class="document-element-grid">
         ${items.map(item => {
-          const state = api.readiness(type, item.id);
+          const itemState = api.readiness(type, item.id);
+          const missing = itemState.missing || [];
           return `<div class="document-element-card" data-element-id="${html(item.id)}">
-            <div class="document-element-title"><h4>${html(item.title)}</h4><span class="section-state ${state.ready ? 'ready' : 'draft'}">${state.ready ? 'Completa' : 'Borrador'}</span></div>
+            <div class="document-element-title"><h4>${html(item.title)}</h4><span class="section-state ${itemState.ready ? 'ready' : 'draft'}">${itemState.ready ? 'Completa' : 'Pendiente'}</span></div>
             <p>${html(item.description)}</p>
-            ${state.missing?.length ? `<div class="document-element-meta">Pendiente: ${html(state.missing.join(', '))}</div>` : ''}
+            ${missing.length ? `<div class="document-element-meta">${html(missingText(missing))}</div>` : ''}
             <div class="document-element-actions">
+              ${missing.length ? correctionButton(missing) : ''}
               <button class="secondary preview-doc-element" data-type="${html(type)}" data-element="${html(item.id)}" ${!periodReady() ? 'disabled' : ''}>Vista previa</button>
-              <button class="secondary download-doc-element" data-type="${html(type)}" data-element="${html(item.id)}" ${!periodReady() ? 'disabled' : ''}>PDF de ${html(item.title.toLowerCase())}</button>
+              <button class="secondary download-doc-element" data-type="${html(type)}" data-element="${html(item.id)}" ${!periodReady() ? 'disabled' : ''}>PDF</button>
             </div>
           </div>`;
         }).join('')}
@@ -286,8 +303,7 @@
   function appendWorkspace(type) {
     const engine = window.docformacionSectionPdf;
     const content = document.getElementById('content');
-    if (!engine || !content || currentDocumentType() !== type) return;
-    if (document.getElementById('sectionWorkspace')) return;
+    if (!engine || !content || currentDocumentType() !== type || document.getElementById('sectionWorkspace')) return;
     const sections = listSections(type);
     if (!sections.length) return;
 
@@ -299,8 +315,8 @@
     wrapper.className = 'section-workspace';
     wrapper.innerHTML = `
       <div class="section-workspace-head">
-        <div><h3>Secciones de contenido</h3><p>La vista previa y el PDF individual usan exactamente el mismo modelo, validaciones, cálculos y renderizadores que el PDF completo.</p></div>
-        <div class="section-progress"><strong>${complete} de ${sections.length} secciones completas</strong><div class="section-progress-bar"><span style="width:${percent}%"></span></div></div>
+        <div><h3>Secciones de contenido</h3><p>Selecciona una sección para revisarla o generar su PDF.</p></div>
+        <div class="section-progress"><strong>${complete} de ${sections.length} completas</strong><div class="section-progress-bar"><span style="width:${percent}%"></span></div></div>
       </div>
       <div class="section-list">
         ${states.map((item,index) => {
@@ -308,10 +324,14 @@
           const missing = item.missing || [];
           return `<div class="document-section" data-section-id="${html(section.id)}">
             <div class="document-section-main">
-              <div class="document-section-copy"><div class="section-number">${String(index + 1).padStart(2,'0')}</div><div><h4>${html(section.title)}<span class="section-state ${item.ready ? 'ready' : 'draft'}">${item.ready ? 'Completa' : 'Borrador'}</span></h4><p>${html(section.id)}</p></div></div>
-              <div class="section-actions"><button class="secondary preview-section" data-type="${html(type)}" data-section="${html(section.id)}" ${!periodReady() ? 'disabled' : ''}>Vista previa</button><button class="secondary download-section" data-type="${html(type)}" data-section="${html(section.id)}" ${!periodReady() ? 'disabled' : ''}>PDF de sección</button></div>
+              <div class="document-section-copy"><div class="section-number">${String(index + 1).padStart(2,'0')}</div><div><h4>${html(section.title)}<span class="section-state ${item.ready ? 'ready' : 'draft'}">${item.ready ? 'Completa' : 'Pendiente'}</span></h4><p>${html(section.id)}</p></div></div>
+              <div class="section-actions">
+                <button class="secondary preview-section" data-type="${html(type)}" data-section="${html(section.id)}" ${!periodReady() ? 'disabled' : ''}>Vista previa</button>
+                <button class="secondary download-section" data-type="${html(type)}" data-section="${html(section.id)}" ${!periodReady() ? 'disabled' : ''}>PDF</button>
+              </div>
             </div>
-            <details class="section-details"><summary>Datos, cálculos y componentes</summary><div class="section-contract"><div><strong>Datos</strong><span>${html((section.data || []).join(', ') || '—')}</span></div><div><strong>Cálculos</strong><span>${html((section.calculations || []).join(', ') || '—')}</span></div><div><strong>Componentes</strong><span>${html((section.components || []).join(', ') || '—')}</span></div></div>${missing.length ? `<div class="section-missing">Pendiente: ${html(missing.join(', '))}</div>` : ''}</details>
+            ${missing.length ? `<div class="section-direct-missing"><span>${html(missingText(missing))}</span>${correctionButton(missing)}</div>` : ''}
+            <details class="section-details"><summary>Más detalles</summary><div class="section-contract"><div><strong>Datos</strong><span>${html((section.data || []).join(', ') || '—')}</span></div><div><strong>Cálculos</strong><span>${html((section.calculations || []).join(', ') || '—')}</span></div><div><strong>Componentes</strong><span>${html((section.components || []).join(', ') || '—')}</span></div></div></details>
           </div>`;
         }).join('')}
       </div>`;
@@ -319,29 +339,30 @@
     bindActions(wrapper);
   }
 
+  function enhance() {
+    normalizePeriodSelectorLabels();
+    const type = currentDocumentType();
+    if (!type) return;
+    syncCanonicalDocumentStatus(type);
+    appendDocumentElements(type);
+    appendWorkspace(type);
+  }
+
   function scheduleEnhance() {
     if (scheduled) return;
     scheduled = true;
     queueMicrotask(() => {
       scheduled = false;
-      normalizePeriodSelectorLabels();
-      const type = currentDocumentType();
-      if (!type) return;
-      syncCanonicalDocumentStatus(type);
-      appendDocumentElements(type);
-      appendWorkspace(type);
+      enhance();
     });
-  }
-
-  function startObserver() {
-    const content = document.getElementById('content');
-    if (!content || observer) return;
-    observer = new MutationObserver(scheduleEnhance);
-    observer.observe(content, { childList:true, subtree:false });
-    scheduleEnhance();
   }
 
   injectStyles();
   ensureDialog();
-  startObserver();
+  const content = document.getElementById('content');
+  if (content) {
+    observer = new MutationObserver(scheduleEnhance);
+    observer.observe(content, { childList:true, subtree:true });
+  }
+  scheduleEnhance();
 })();
