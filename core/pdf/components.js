@@ -4,7 +4,59 @@
   const clean = value => String(value ?? '').trim();
 
   function create(doc, layout, ensure, newPage) {
-    const { left, bodyW, pageH, bottom } = layout;
+    const { left, bodyW, pageH, bottom, pageW } = layout;
+
+    function cover(meta = {}) {
+      const title = clean(meta.title);
+      const period = clean(meta.period);
+      const code = clean(meta.code);
+      const organization = clean(meta.organization);
+      const version = clean(meta.version);
+      const signatures = Array.isArray(meta.signatures) ? meta.signatures : [];
+
+      doc.setDrawColor(75);
+      doc.setLineWidth(.25);
+      doc.rect(15, 12, pageW - 30, 28);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(35);
+      if (organization) doc.text(organization, pageW / 2, 20, { align:'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      if (code) doc.text('Código: ' + code, pageW / 2, 28, { align:'center' });
+      if (version) doc.text('Versión: ' + version, pageW / 2, 34, { align:'center' });
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      const titleLines = doc.splitTextToSize(title, pageW - 50);
+      doc.text(titleLines, pageW / 2, 112, { align:'center', lineHeightFactor:1.15 });
+      doc.setFontSize(13);
+      if (period) doc.text(period, pageW / 2, 112 + titleLines.length * 8 + 10, { align:'center' });
+
+      if (signatures.length) {
+        const x = 15;
+        const tableW = pageW - 30;
+        const colW = tableW / signatures.length;
+        const y = pageH - 62;
+        const h = 42;
+        doc.setDrawColor(90);
+        doc.rect(x, y, tableW, h);
+        for (let index = 1; index < signatures.length; index++) doc.line(x + colW * index, y, x + colW * index, y + h);
+        doc.line(x, y + 19, x + tableW, y + 19);
+        doc.line(x, y + 29, x + tableW, y + 29);
+        signatures.forEach((entry, index) => {
+          const cx = x + colW * index;
+          doc.setFont('helvetica','bold');
+          doc.setFontSize(7);
+          doc.text(clean(entry.label), cx + 3, y + 5);
+          doc.setFont('helvetica','normal');
+          doc.setFontSize(6.7);
+          doc.text('FIRMA / QR DIGITAL', cx + colW / 2, y + 13, { align:'center' });
+          doc.text(doc.splitTextToSize('NOMBRE: ' + clean(entry.name), colW - 6), cx + 3, y + 25);
+          doc.text(doc.splitTextToSize('CARGO: ' + clean(entry.role), colW - 6), cx + 3, y + 34, { lineHeightFactor:1.05 });
+        });
+      }
+    }
 
     function heading(text, level = 1) {
       const size = level === 1 ? 14 : level === 2 ? 11 : 9.5;
@@ -129,7 +181,7 @@
       paragraph(text, { size: 7.7, muted: true });
     }
 
-    return Object.freeze({ heading, paragraph, bullet, table, metricTable, barChart, note });
+    return Object.freeze({ cover, heading, paragraph, bullet, table, metricTable, barChart, note });
   }
 
   window.docformacionPdfComponents = Object.freeze({ create });
