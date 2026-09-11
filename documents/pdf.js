@@ -59,6 +59,8 @@
       title: ctx.documentTitle(type),
       subject: ctx.documentTitle(type) + ' · ' + ctx.period.label,
       author: clean(modules.manifest.author || modules.manifest.organization || 'ITSQMET'),
+      initialHeader: false,
+      firstPageFooter: false,
       header: () => ({
         organization: clean(modules.manifest.organization || modules.manifest.title),
         title: ctx.documentTitle(type),
