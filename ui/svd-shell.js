@@ -101,7 +101,7 @@
     }).join('');
     panel.querySelectorAll('[data-svd-document]').forEach(button => {
       button.onclick = () => {
-        const item = DOCS.find(doc => doc.type === button.dataset.svdDocument;
+        const item = DOCS.find(doc => doc.type === button.dataset.svdDocument);
         if (item) setView(item.view);
       };
     });
