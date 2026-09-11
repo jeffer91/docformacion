@@ -1,18 +1,29 @@
 (() => {
   'use strict';
 
-  if(typeof renderDocumentView!=='function')return;
-  const previousRenderDocumentView=renderDocumentView;
-  let previewUrl='';
+  let previewUrl = '';
+  let observer = null;
+  let scheduled = false;
+  const html = value => typeof esc === 'function' ? esc(value) : String(value ?? '');
 
-  const html=value=>typeof esc==='function'?esc(value):String(value??'');
+  function currentDocumentType() {
+    if (typeof currentView === 'undefined') return '';
+    if (currentView === 'doc-dnf') return 'dnf';
+    if (currentView === 'doc-plan') return 'plan';
+    if (currentView === 'doc-informe') return 'informe';
+    return '';
+  }
 
-  function ensureDialog(){
-    if(document.getElementById('sectionPreviewDialog'))return;
-    const dialog=document.createElement('dialog');
-    dialog.id='sectionPreviewDialog';
-    dialog.className='section-preview-dialog';
-    dialog.innerHTML=`
+  function periodReady() {
+    return !!String(state?.period?.start ?? '').trim() && !!String(state?.period?.end ?? '').trim();
+  }
+
+  function ensureDialog() {
+    if (document.getElementById('sectionPreviewDialog')) return;
+    const dialog = document.createElement('dialog');
+    dialog.id = 'sectionPreviewDialog';
+    dialog.className = 'section-preview-dialog';
+    dialog.innerHTML = `
       <div class="section-preview-shell">
         <div class="dialog-header section-preview-head">
           <div><h2 id="sectionPreviewTitle">Vista previa de sección</h2><p id="sectionPreviewMeta"></p></div>
@@ -25,32 +36,49 @@
         </div>
       </div>`;
     document.body.appendChild(dialog);
-    const close=()=>{
-      dialog.close();
-      const frame=document.getElementById('sectionPreviewFrame');
-      if(frame)frame.removeAttribute('src');
-      if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl='';}
-      dialog.dataset.type='';dialog.dataset.section='';
+
+    const close = () => {
+      if (dialog.open) dialog.close();
+      const frame = document.getElementById('sectionPreviewFrame');
+      if (frame) frame.removeAttribute('src');
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        previewUrl = '';
+      }
+      dialog.dataset.type = '';
+      dialog.dataset.section = '';
     };
-    document.getElementById('closeSectionPreview').onclick=close;
-    document.getElementById('closeSectionPreviewBottom').onclick=close;
-    dialog.addEventListener('cancel',event=>{event.preventDefault();close();});
-    document.getElementById('downloadPreviewSection').onclick=async()=>{
-      const type=dialog.dataset.type,sectionId=dialog.dataset.section;
-      if(!type||!sectionId)return;
-      const button=document.getElementById('downloadPreviewSection'),old=button.textContent;
-      button.disabled=true;button.textContent='Generando…';
-      try{await window.docformacionSectionPdf.build(type,sectionId,{download:true});if(typeof toast==='function')toast('PDF de sección descargado');}
-      catch(error){if(typeof toast==='function')toast('No se pudo generar la sección: '+(error?.message||error));}
-      finally{button.disabled=false;button.textContent=old;}
+    document.getElementById('closeSectionPreview').onclick = close;
+    document.getElementById('closeSectionPreviewBottom').onclick = close;
+    dialog.addEventListener('cancel', event => {
+      event.preventDefault();
+      close();
+    });
+    document.getElementById('downloadPreviewSection').onclick = async () => {
+      const type = dialog.dataset.type;
+      const sectionId = dialog.dataset.section;
+      if (!type || !sectionId) return;
+      const button = document.getElementById('downloadPreviewSection');
+      const old = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Generando…';
+      try {
+        await window.docformacionSectionPdf.build(type, sectionId, { download:true });
+        if (typeof toast === 'function') toast('PDF de sección descargado');
+      } catch (error) {
+        if (typeof toast === 'function') toast('No se pudo generar la sección: ' + (error?.message || error));
+      } finally {
+        button.disabled = false;
+        button.textContent = old;
+      }
     };
   }
 
-  function injectStyles(){
-    if(document.getElementById('documentSectionsStyles'))return;
-    const style=document.createElement('style');
-    style.id='documentSectionsStyles';
-    style.textContent=`
+  function injectStyles() {
+    if (document.getElementById('documentSectionsStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'documentSectionsStyles';
+    style.textContent = `
       .section-workspace{margin-top:20px;border:1px solid #dfe5ef;border-radius:14px;background:#fff;overflow:hidden}
       .section-workspace-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:18px;border-bottom:1px solid #e7ecf3;background:#fbfcfe}
       .section-workspace-head h3{margin:0 0 5px;font-size:17px;color:#172033}.section-workspace-head p{margin:0;color:#6b788b;font-size:12px;line-height:1.45}
@@ -65,39 +93,87 @@
     document.head.appendChild(style);
   }
 
-  function listSections(type){return window.DOCFORMACION_MANIFEST?.documents?.[type]?.sections||[];}
+  function listSections(type) {
+    return window.DOCFORMACION_MANIFEST?.documents?.[type]?.sections || [];
+  }
 
-  function appendWorkspace(type){
-    const engine=window.docformacionSectionPdf;if(!engine)return;
-    const content=document.getElementById('content');if(!content)return;
-    const sections=listSections(type);if(!sections.length)return;
-    const existing=document.getElementById('sectionWorkspace');if(existing)existing.remove();
-    const states=sections.map(section=>({section,...engine.sectionReadiness(type,section)}));
-    const complete=states.filter(item=>item.ready).length,percent=sections.length?Math.round(complete*100/sections.length):0;
-    const wrapper=document.createElement('div');wrapper.id='sectionWorkspace';wrapper.className='section-workspace';
-    wrapper.innerHTML=`
+  async function previewSection(button) {
+    ensureDialog();
+    const type = button.dataset.type;
+    const sectionId = button.dataset.section;
+    const old = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Generando…';
+    try {
+      const result = await window.docformacionSectionPdf.build(type, sectionId, { download:false });
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(result.blob);
+      const dialog = document.getElementById('sectionPreviewDialog');
+      dialog.dataset.type = type;
+      dialog.dataset.section = sectionId;
+      document.getElementById('sectionPreviewTitle').textContent = result.section.title;
+      document.getElementById('sectionPreviewMeta').textContent = result.section.id + ' · ' + (result.readiness.ready ? 'Sección completa' : 'Vista borrador') + ' · ' + result.pages + ' página(s)';
+      document.getElementById('sectionPreviewFrame').src = previewUrl;
+      dialog.showModal();
+    } catch (error) {
+      if (typeof toast === 'function') toast('No se pudo abrir la vista previa: ' + (error?.message || error));
+    } finally {
+      button.disabled = false;
+      button.textContent = old;
+    }
+  }
+
+  async function downloadSection(button) {
+    const type = button.dataset.type;
+    const sectionId = button.dataset.section;
+    const old = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Generando…';
+    try {
+      await window.docformacionSectionPdf.build(type, sectionId, { download:true });
+      if (typeof toast === 'function') toast('PDF de sección generado');
+    } catch (error) {
+      if (typeof toast === 'function') toast('No se pudo generar el PDF: ' + (error?.message || error));
+    } finally {
+      button.disabled = false;
+      button.textContent = old;
+    }
+  }
+
+  function bindActions(root) {
+    root.querySelectorAll('.preview-section').forEach(button => button.onclick = () => previewSection(button));
+    root.querySelectorAll('.download-section').forEach(button => button.onclick = () => downloadSection(button));
+  }
+
+  function appendWorkspace(type) {
+    const engine = window.docformacionSectionPdf;
+    const content = document.getElementById('content');
+    if (!engine || !content || currentDocumentType() !== type) return;
+    if (document.getElementById('sectionWorkspace')) return;
+    const sections = listSections(type);
+    if (!sections.length) return;
+
+    const states = sections.map(section => ({ section, ...engine.sectionReadiness(type, section) }));
+    const complete = states.filter(item => item.ready).length;
+    const percent = sections.length ? Math.round(complete * 100 / sections.length) : 0;
+    const wrapper = document.createElement('div');
+    wrapper.id = 'sectionWorkspace';
+    wrapper.className = 'section-workspace';
+    wrapper.innerHTML = `
       <div class="section-workspace-head">
-        <div><h3>Secciones del documento</h3><p>Revisa cada sección de forma independiente. La vista previa y el PDF de sección usan los datos del período activo; si faltan datos, se genera una vista marcada como borrador.</p></div>
+        <div><h3>Secciones del documento</h3><p>La vista previa y el PDF individual usan exactamente el mismo modelo, validaciones, cálculos y renderizadores que el PDF completo.</p></div>
         <div class="section-progress"><strong>${complete} de ${sections.length} secciones completas</strong><div class="section-progress-bar"><span style="width:${percent}%"></span></div></div>
       </div>
       <div class="section-list">
-        ${states.map((item,index)=>{
-          const section=item.section,missing=item.missing||[];
+        ${states.map((item,index) => {
+          const section = item.section;
+          const missing = item.missing || [];
           return `<div class="document-section" data-section-id="${html(section.id)}">
             <div class="document-section-main">
-              <div class="document-section-copy"><div class="section-number">${String(index+1).padStart(2,'0')}</div><div><h4>${html(section.title)}<span class="section-state ${item.ready?'ready':'draft'}">${item.ready?'Completa':'Borrador'}</span></h4><p>${html(section.id)}</p></div></div>
-              <div class="section-actions">
-                <button class="secondary preview-section" data-type="${html(type)}" data-section="${html(section.id)}" ${!periodReady()?'disabled':''}>Vista previa</button>
-                <button class="secondary download-section" data-type="${html(type)}" data-section="${html(section.id)}" ${!periodReady()?'disabled':''}>PDF de sección</button>
-              </div>
+              <div class="document-section-copy"><div class="section-number">${String(index + 1).padStart(2,'0')}</div><div><h4>${html(section.title)}<span class="section-state ${item.ready ? 'ready' : 'draft'}">${item.ready ? 'Completa' : 'Borrador'}</span></h4><p>${html(section.id)}</p></div></div>
+              <div class="section-actions"><button class="secondary preview-section" data-type="${html(type)}" data-section="${html(section.id)}" ${!periodReady() ? 'disabled' : ''}>Vista previa</button><button class="secondary download-section" data-type="${html(type)}" data-section="${html(section.id)}" ${!periodReady() ? 'disabled' : ''}>PDF de sección</button></div>
             </div>
-            <details class="section-details"><summary>Datos, cálculos y componentes</summary>
-              <div class="section-contract">
-                <div><strong>Datos</strong><span>${html((section.data||[]).join(', ')||'—')}</span></div>
-                <div><strong>Cálculos</strong><span>${html((section.calculations||[]).join(', ')||'—')}</span></div>
-                <div><strong>Componentes</strong><span>${html((section.components||[]).join(', ')||'—')}</span></div>
-              </div>${missing.length?`<div class="section-missing">Pendiente: ${html(missing.join(', '))}</div>`:''}
-            </details>
+            <details class="section-details"><summary>Datos, cálculos y componentes</summary><div class="section-contract"><div><strong>Datos</strong><span>${html((section.data || []).join(', ') || '—')}</span></div><div><strong>Cálculos</strong><span>${html((section.calculations || []).join(', ') || '—')}</span></div><div><strong>Componentes</strong><span>${html((section.components || []).join(', ') || '—')}</span></div></div>${missing.length ? `<div class="section-missing">Pendiente: ${html(missing.join(', '))}</div>` : ''}</details>
           </div>`;
         }).join('')}
       </div>`;
@@ -105,41 +181,25 @@
     bindActions(wrapper);
   }
 
-  function periodReady(){return !!cleanPeriod(state?.period?.start)&&!!cleanPeriod(state?.period?.end);}
-  function cleanPeriod(value){return String(value??'').trim();}
-
-  function bindActions(root){
-    root.querySelectorAll('.preview-section').forEach(button=>button.onclick=()=>previewSection(button));
-    root.querySelectorAll('.download-section').forEach(button=>button.onclick=()=>downloadSection(button));
+  function scheduleEnhance() {
+    if (scheduled) return;
+    scheduled = true;
+    queueMicrotask(() => {
+      scheduled = false;
+      const type = currentDocumentType();
+      if (type) appendWorkspace(type);
+    });
   }
 
-  async function previewSection(button){
-    ensureDialog();const type=button.dataset.type,sectionId=button.dataset.section,old=button.textContent;
-    button.disabled=true;button.textContent='Generando…';
-    try{
-      const result=await window.docformacionSectionPdf.build(type,sectionId,{download:false});
-      if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=URL.createObjectURL(result.blob);
-      const dialog=document.getElementById('sectionPreviewDialog');dialog.dataset.type=type;dialog.dataset.section=sectionId;
-      document.getElementById('sectionPreviewTitle').textContent=result.section.title;
-      document.getElementById('sectionPreviewMeta').textContent=result.section.id+' · '+(result.readiness.ready?'Sección completa':'Vista borrador')+' · '+result.pages+' página(s)';
-      document.getElementById('sectionPreviewFrame').src=previewUrl;dialog.showModal();
-    }catch(error){if(typeof toast==='function')toast('No se pudo abrir la vista previa: '+(error?.message||error));}
-    finally{button.disabled=false;button.textContent=old;}
+  function startObserver() {
+    const content = document.getElementById('content');
+    if (!content || observer) return;
+    observer = new MutationObserver(scheduleEnhance);
+    observer.observe(content, { childList:true, subtree:false });
+    scheduleEnhance();
   }
 
-  async function downloadSection(button){
-    const type=button.dataset.type,sectionId=button.dataset.section,old=button.textContent;
-    button.disabled=true;button.textContent='Generando…';
-    try{await window.docformacionSectionPdf.build(type,sectionId,{download:true});if(typeof toast==='function')toast('PDF de sección generado');}
-    catch(error){if(typeof toast==='function')toast('No se pudo generar el PDF: '+(error?.message||error));}
-    finally{button.disabled=false;button.textContent=old;}
-  }
-
-  renderDocumentView=function sectionAwareDocumentView(type){
-    const result=previousRenderDocumentView(type);
-    injectStyles();ensureDialog();appendWorkspace(type);
-    return result;
-  };
-
-  injectStyles();ensureDialog();
+  injectStyles();
+  ensureDialog();
+  startObserver();
 })();
