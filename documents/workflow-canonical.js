@@ -5,46 +5,52 @@
   const SUPPORTS = ['Sin apoyo económico','Económico','Convenio / beca','Gestión interna'];
   const FOLLOW_STATUSES = ['No iniciado','En proceso','Finalizado','No ejecutado'];
   const clean = value => String(value ?? '').trim();
-  const key = value => clean(value)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ');
+  const key = value => clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ');
 
   function workflow() {
     state.workflowV3 = state.workflowV3 && typeof state.workflowV3 === 'object' ? state.workflowV3 : {};
-    const w = state.workflowV3;
-    if (!Object.prototype.hasOwnProperty.call(w, 'version')) w.version = 4;
-    if (!Object.prototype.hasOwnProperty.call(w, 'planImported')) w.planImported = false;
-    if (!Object.prototype.hasOwnProperty.call(w, 'planFileName')) w.planFileName = '';
-    if (!Object.prototype.hasOwnProperty.call(w, 'planImportedAt')) w.planImportedAt = '';
-    if (!Object.prototype.hasOwnProperty.call(w, 'planSourceFingerprint')) w.planSourceFingerprint = '';
-    if (!Object.prototype.hasOwnProperty.call(w, 'reportImported')) w.reportImported = false;
-    if (!Object.prototype.hasOwnProperty.call(w, 'reportFileName')) w.reportFileName = '';
-    if (!Object.prototype.hasOwnProperty.call(w, 'reportImportedAt')) w.reportImportedAt = '';
-    if (!Object.prototype.hasOwnProperty.call(w, 'reportSourceFingerprint')) w.reportSourceFingerprint = '';
-    return w;
+    const value = state.workflowV3;
+    const defaults = {
+      version:4,
+      planImported:false,
+      planFileName:'',
+      planImportedAt:'',
+      planSourceFingerprint:'',
+      reportImported:false,
+      reportFileName:'',
+      reportImportedAt:'',
+      reportSourceFingerprint:''
+    };
+    Object.entries(defaults).forEach(([name, fallback]) => {
+      if (!Object.prototype.hasOwnProperty.call(value, name)) value[name] = fallback;
+    });
+    value.version = 4;
+    return value;
   }
 
   function needsFingerprint(rows = window.docformacionModel?.needs?.() || []) {
     return rows.map(row => [row.code,row.career,row.need,row.priority].map(clean).join('|'))
-      .sort((a,b) => a.localeCompare(b, 'es'))
-      .join('||');
+      .sort((a,b) => a.localeCompare(b, 'es')).join('||');
   }
 
   function planFingerprint(rows = window.docformacionModel?.planRows?.() || []) {
     return rows.map(row => [
-      row.dnfCode,row.career,row.needText,row.priority,row.action,row.modality,
-      row.plannedStart,row.plannedEnd,row.indicator,Number(row.targetPercent || 0),
-      row.evidence,row.responsibleRole,row.supportType,Number(row.supportAmount || 0),row.observations
+      row.dnfCode,row.career,row.needText,row.priority,row.action,row.modality,row.plannedStart,row.plannedEnd,
+      row.indicator,Number(row.targetPercent || 0),row.evidence,row.responsibleRole,row.supportType,
+      Number(row.supportAmount || 0),row.observations
     ].map(clean).join('|')).sort((a,b) => a.localeCompare(b, 'es')).join('||');
   }
 
   function syncPlanRows() {
     const needs = window.docformacionModel?.needs?.() || [];
-    const existing = Array.isArray(state.needPlan) ? state.needPlan : [];
-    const byCode = new Map(existing.filter(row => clean(row?.dnfCode || row?.needKey || row?.code)).map(row => [clean(row.dnfCode || row.needKey || row.code), row]));
+    const existing = Array.isArray(state.needPlan) ? state.needPlan : (Array.isArray(state.plan) ? state.plan : []);
+    // Durante una migración o antes de confirmar la DNF no se destruyen datos históricos.
+    if (!needs.length) return existing;
+
+    const byCode = new Map(existing.filter(row => clean(row?.dnfCode || row?.needKey || row?.code))
+      .map(row => [clean(row.dnfCode || row.needKey || row.code), row]));
     const byText = new Map(existing.map(row => [key(row?.career) + '|' + key(row?.needText || row?.need), row]));
+
     state.needPlan = needs.map(source => {
       const old = byCode.get(source.code) || byText.get(key(source.career) + '|' + key(source.need)) || {};
       return {
@@ -71,8 +77,11 @@
 
   function syncReportRows() {
     const plan = syncPlanRows();
-    const existing = Array.isArray(state.needFollowup) ? state.needFollowup : [];
-    const byCode = new Map(existing.filter(row => clean(row?.dnfCode || row?.needKey)).map(row => [clean(row.dnfCode || row.needKey), row]));
+    const existing = Array.isArray(state.needFollowup) ? state.needFollowup : (Array.isArray(state.followup) ? state.followup : []);
+    if (!plan.length) return existing;
+
+    const byCode = new Map(existing.filter(row => clean(row?.dnfCode || row?.needKey))
+      .map(row => [clean(row.dnfCode || row.needKey), row]));
     state.needFollowup = plan.map(source => {
       const old = byCode.get(source.dnfCode) || {};
       return {
@@ -93,8 +102,7 @@
   }
 
   function periodSlug() {
-    const id = window.docformacionModel?.periodId || '';
-    return id || 'periodo';
+    return window.docformacionModel?.periodId || 'periodo';
   }
 
   function simpleSheet(name, headers, descriptions, rows, widths) {
@@ -108,8 +116,7 @@
       const rows = syncPlanRows();
       return {
         filename:(includeData ? 'UGPA_Datos_Actuales_Plan_' : 'UGPA_Plantilla_Plan_') + periodSlug() + '.xlsx',
-        sheets:[simpleSheet(
-          'PLAN',
+        sheets:[simpleSheet('PLAN',
           ['CODIGO_DNF','CARRERA','NECESIDAD','PRIORIDAD','ACCION_FORMACION','MODALIDAD','INICIO_PLANIFICADO','FIN_PLANIFICADO','INDICADOR','META_PORCENTAJE','MEDIO_VERIFICACION','RESPONSABLE_INSTITUCIONAL','TIPO_APOYO','MONTO_APOYO','OBSERVACIONES'],
           ['Código heredado de la DNF. No modificar.','Carrera heredada de la DNF. No modificar.','Necesidad heredada de la DNF. No modificar.','Prioridad heredada de la DNF. No modificar.','Acción institucional que atenderá la necesidad.','Presencial, Virtual o Híbrida.','Mes/año AAAA-MM.','Mes/año AAAA-MM.','Indicador de cumplimiento.','Meta entre 1 y 100.','Documento o evidencia de verificación.','Unidad, área o cargo institucional responsable.','Sin apoyo económico, Económico, Convenio / beca o Gestión interna.','Monto numérico solo si TIPO_APOYO es Económico.','Observación opcional.'],
           rows.map(row => [row.dnfCode,row.career,row.needText,row.priority,includeData ? row.action : '',includeData ? row.modality : '',includeData ? row.plannedStart : '',includeData ? row.plannedEnd : '',includeData ? row.indicator : '',includeData ? (row.targetPercent || '') : '',includeData ? row.evidence : '',includeData ? row.responsibleRole : '',includeData ? row.supportType : '',includeData ? (row.supportAmount || '') : '',includeData ? row.observations : '']),
@@ -122,8 +129,7 @@
       const rows = syncReportRows();
       return {
         filename:(includeData ? 'UGPA_Datos_Actuales_Informe_' : 'UGPA_Plantilla_Informe_') + periodSlug() + '.xlsx',
-        sheets:[simpleSheet(
-          'INFORME',
+        sheets:[simpleSheet('INFORME',
           ['CODIGO_DNF','CARRERA','NECESIDAD','ACCION_FORMACION','ESTADO','FECHA_INICIO_REAL','AVANCE_PORCENTAJE','EVIDENCIA','ARCHIVO_EVIDENCIA','RESULTADO_OBSERVACION'],
           ['Código heredado de DNF y Plan. No modificar.','Carrera heredada. No modificar.','Necesidad heredada. No modificar.','Acción del Plan. No modificar.','No iniciado, En proceso, Finalizado o No ejecutado.','Fecha AAAA-MM-DD cuando exista inicio.','Valor entre 0 y 100. Finalizado debe ser 100.','Nombre de la evidencia cuando la acción está En proceso o Finalizada.','Nombre o referencia del archivo de evidencia.','Resultado, observación o motivo de no ejecución.'],
           rows.map(row => [row.dnfCode,row.career,row.needText,row.action,includeData ? row.status : '',includeData ? row.realStart : '',includeData ? Number(row.progress || 0) : '',includeData ? row.evidenceTitle : '',includeData ? row.evidencePath : '',includeData ? row.observation : '']),
@@ -163,6 +169,7 @@
       const expectedRow = expectedByCode.get(code);
       let reason = '';
       let safe = null;
+
       if (!code) reason = 'Falta CODIGO_DNF';
       else if (!expectedRow) reason = 'CODIGO_DNF no pertenece al período activo';
       else if (seen.has(code)) reason = 'CODIGO_DNF duplicado';
@@ -216,9 +223,8 @@
         };
       }
 
-      if (reason) {
-        preview.push({ id:'canonical-row-' + index, sheet:target, row:raw, status:'Error', valid:false, optional:false, reason });
-      } else {
+      if (reason) preview.push({ id:'canonical-row-' + index, sheet:target, row:raw, status:'Error', valid:false, optional:false, reason });
+      else {
         seen.add(code);
         safeRows.push(safe);
         preview.push({ id:'canonical-row-' + index, sheet:target, row:safe, status:'Aplicar', valid:true, optional:false, reason:'Registro válido' });
@@ -231,28 +237,14 @@
     if (bad) errors.push('La plantilla contiene ' + bad + ' fila(s) con errores. No se aplicará parcialmente.');
     if (!safeRows.length && !errors.length) errors.push('No se encontraron filas válidas.');
 
+    const validRows = preview.filter(row => row.valid).length;
     return {
       context:{ label:isPlan ? 'Plan de Formación' : 'Informe de Cumplimiento', scope:isPlan ? 'plan' : 'informe', kind:'' },
-      filePath:result?.filePath || 'Archivo Excel',
-      detected,
-      allowed:[target],
-      compatibleSheets:detected.includes(target) ? [target] : [],
-      incompatibleSheets:detected.filter(name => name !== target),
-      totalRows:preview.length,
-      validRows:preview.filter(row => row.valid).length,
-      optionalRows:0,
-      ignoredRows:0,
-      errorRows:bad,
-      matchedRows:preview.filter(row => row.valid).length,
-      expectedCount:expected.length,
-      statusCounts:{ Aplicar:preview.filter(row => row.valid).length, Actualizar:0, 'Actualizar opcional':0, 'Ya completo':0, 'Sin cambios':0, Omitir:0, Error:bad },
-      errors,
-      warnings:[],
-      safeSheets:errors.length ? {} : { [target]:safeRows },
-      optionalById:{},
-      preview:preview.slice(0, 80),
-      mismatch:false,
-      detectedDestination:null
+      filePath:result?.filePath || 'Archivo Excel',detected,allowed:[target],
+      compatibleSheets:detected.includes(target) ? [target] : [],incompatibleSheets:detected.filter(name => name !== target),
+      totalRows:preview.length,validRows,optionalRows:0,ignoredRows:0,errorRows:bad,matchedRows:validRows,expectedCount:expected.length,
+      statusCounts:{ Aplicar:validRows,Actualizar:0,'Actualizar opcional':0,'Ya completo':0,'Sin cambios':0,Omitir:0,Error:bad },
+      errors,warnings:[],safeSheets:errors.length ? {} : { [target]:safeRows },optionalById:{},preview:preview.slice(0, 80),mismatch:false,detectedDestination:null
     };
   };
 
@@ -278,16 +270,15 @@
         row.observations = clean(raw.OBSERVACIONES);
       });
       state.needPlan = rows;
-      const w = workflow();
-      w.version = 4;
-      w.planImported = true;
-      w.planFileName = window.__DOCFORMACION_TEMPLATE_IMPORT_FILE || 'Plantilla Plan';
-      w.planImportedAt = new Date().toISOString();
-      w.planSourceFingerprint = needsFingerprint();
-      w.reportImported = false;
-      w.reportFileName = '';
-      w.reportImportedAt = '';
-      w.reportSourceFingerprint = '';
+      const value = workflow();
+      value.planImported = true;
+      value.planFileName = window.__DOCFORMACION_TEMPLATE_IMPORT_FILE || 'Plantilla Plan';
+      value.planImportedAt = new Date().toISOString();
+      value.planSourceFingerprint = needsFingerprint();
+      value.reportImported = false;
+      value.reportFileName = '';
+      value.reportImportedAt = '';
+      value.reportSourceFingerprint = '';
       state.needFollowup = [];
       return;
     }
@@ -306,12 +297,11 @@
         row.observation = clean(raw.RESULTADO_OBSERVACION);
       });
       state.needFollowup = rows;
-      const w = workflow();
-      w.version = 4;
-      w.reportImported = true;
-      w.reportFileName = window.__DOCFORMACION_TEMPLATE_IMPORT_FILE || 'Plantilla Informe';
-      w.reportImportedAt = new Date().toISOString();
-      w.reportSourceFingerprint = planFingerprint(rows.length ? state.needPlan : []);
+      const value = workflow();
+      value.reportImported = true;
+      value.reportFileName = window.__DOCFORMACION_TEMPLATE_IMPORT_FILE || 'Plantilla Informe';
+      value.reportImportedAt = new Date().toISOString();
+      value.reportSourceFingerprint = planFingerprint(syncPlanRows());
       return;
     }
     return previousApplyExcel(sheets);
@@ -339,11 +329,7 @@
     if (type === 'plan') syncPlanRows();
     if (type === 'informe') syncReportRows();
     const result = window.docformacionValidation?.documentReadiness?.(type) || { ready:false, missing:['Validación no disponible'] };
-    const issues = (result.missing || []).map(text => ({
-      kind:type === 'plan' ? 'plan-template' : 'report-template',
-      text,
-      view:type === 'plan' ? 'planificacion' : 'seguimiento'
-    }));
+    const issues = (result.missing || []).map(text => ({ kind:type === 'plan' ? 'plan-template' : 'report-template', text, view:type === 'plan' ? 'planificacion' : 'seguimiento' }));
     return { ready:!!result.ready, issues, warnings:[], missing:result.missing || [] };
   };
 
@@ -355,24 +341,22 @@
       ? window.docformacionValidation?.documentReadiness?.('dnf')?.ready
       : window.docformacionValidation?.documentReadiness?.('plan')?.ready;
     const status = documentStatus(type);
-    const w = workflow();
+    const value = workflow();
     const scope = type === 'plan' ? 'plan' : 'informe';
     const title = type === 'plan' ? 'Plan de Formación Docente' : 'Informe de Cumplimiento';
     const view = type === 'plan' ? 'planificacion' : 'seguimiento';
-    const file = type === 'plan' ? w.planFileName : w.reportFileName;
+    const file = type === 'plan' ? value.planFileName : value.reportFileName;
+
     document.getElementById('content').innerHTML = `
       <div class="section-title"><div><h2>${esc(title)}</h2><p>La información variable se valida desde Excel y conserva la trazabilidad por CODIGO_DNF.</p></div></div>
       <div class="card canonical-template-card">
         <div class="dnf-template-card-head"><div><strong>Plantilla del período</strong><span>${file ? 'Cargada' : 'Pendiente'}</span></div><span class="status-badge ${status.ready ? 'ready' : 'blocked'}">${status.ready ? 'Lista' : 'Pendiente'}</span></div>
-        <p>${rows.length} registro(s) vinculados por CODIGO_DNF.</p>
-        ${file ? '<div class="small muted">Último archivo: ' + esc(file) + '</div>' : ''}
+        <p>${rows.length} registro(s) vinculados por CODIGO_DNF.</p>${file ? '<div class="small muted">Último archivo: ' + esc(file) + '</div>' : ''}
         ${templateButtons(scope, !!dependencyReady, rows.length > 0, view)}
       </div>
       <div class="status-card simple-doc-card single-document" style="margin-top:18px">
         <div class="status-head"><div class="missing-heading">${status.ready ? 'Documento completo' : 'Falta completar'}</div><span class="status-badge ${status.ready ? 'ready' : 'blocked'}">${status.ready ? 'Listo' : 'Pendiente'}</span></div>
-        ${status.ready
-          ? '<div class="ready-message">Toda la información necesaria está completa y validada para el período activo.</div><div class="doc-actions"><button class="primary" id="generateCurrent">Generar PDF</button></div>'
-          : '<div class="issue-list">' + status.issues.map(issue => '<div class="issue-line"><div class="issue-line-text"><strong>' + esc(issue.text) + '</strong></div></div>').join('') + '</div>'}
+        ${status.ready ? '<div class="ready-message">Toda la información necesaria está completa y validada para el período activo.</div><div class="doc-actions"><button class="primary" id="generateCurrent">Generar PDF</button></div>' : '<div class="issue-list">' + status.issues.map(issue => '<div class="issue-line"><div class="issue-line-text"><strong>' + esc(issue.text) + '</strong></div></div>').join('') + '</div>'}
       </div>`;
     bindButtons(document.getElementById('content'));
     const generate = document.getElementById('generateCurrent');
@@ -385,7 +369,7 @@
     document.getElementById('content').innerHTML = `
       ${status.ready ? '<div class="alert-strip success"><div><strong>Plan listo</strong>Datos validados mediante plantilla Excel.</div></div>' : '<div class="alert-strip warning"><div><strong>Plan pendiente</strong>Completa o reemplaza la plantilla Excel del Plan.</div></div>'}
       <div class="section-title"><div><h2>Planificación por necesidades</h2><p>Vista de consulta. Las correcciones se realizan en Excel y se vuelven a subir.</p></div></div>
-      <div class="card">${templateButtons('plan', window.docformacionValidation?.documentReadiness?.('dnf')?.ready, rows.length > 0, '')}</div>
+      <div class="card">${templateButtons('plan', !!window.docformacionValidation?.documentReadiness?.('dnf')?.ready, rows.length > 0, '')}</div>
       <div class="table-wrap" style="margin-top:16px">${rows.length ? '<table class="table"><thead><tr><th>Código DNF</th><th>Carrera</th><th>Necesidad</th><th>Prioridad</th><th>Acción</th><th>Modalidad</th><th>Cronograma</th><th>Indicador / Meta</th><th>Responsable / Apoyo</th></tr></thead><tbody>' + rows.map(row => '<tr><td><strong>' + esc(row.dnfCode) + '</strong></td><td>' + esc(row.career) + '</td><td>' + esc(row.needText) + '</td><td>' + esc(row.priority) + '</td><td>' + esc(row.action || '—') + '</td><td>' + esc(row.modality || '—') + '</td><td>' + esc((row.plannedStart || '—') + ' → ' + (row.plannedEnd || '—')) + '</td><td>' + esc(row.indicator || '—') + (row.targetPercent ? ' · ' + esc(row.targetPercent) + '%' : '') + '</td><td>' + esc(row.responsibleRole || '—') + '<br>' + esc(row.supportType || '—') + '</td></tr>').join('') + '</tbody></table>' : '<div class="empty">No existen necesidades DNF para planificar.</div>'}</div>`;
     bindButtons(document.getElementById('content'));
   };
@@ -396,7 +380,7 @@
     document.getElementById('content').innerHTML = `
       ${status.ready ? '<div class="alert-strip success"><div><strong>Informe listo</strong>Seguimiento validado mediante plantilla Excel.</div></div>' : '<div class="alert-strip warning"><div><strong>Informe pendiente</strong>Completa o reemplaza la plantilla Excel del Informe.</div></div>'}
       <div class="section-title"><div><h2>Seguimiento por necesidad</h2><p>Vista de consulta. Las correcciones se realizan en Excel y se vuelven a subir.</p></div></div>
-      <div class="card">${templateButtons('informe', window.docformacionValidation?.documentReadiness?.('plan')?.ready, rows.length > 0, '')}</div>
+      <div class="card">${templateButtons('informe', !!window.docformacionValidation?.documentReadiness?.('plan')?.ready, rows.length > 0, '')}</div>
       <div class="table-wrap" style="margin-top:16px">${rows.length ? '<table class="table"><thead><tr><th>Código DNF</th><th>Carrera</th><th>Acción</th><th>Estado</th><th>Inicio real</th><th>Avance</th><th>Evidencia</th><th>Resultado / observación</th></tr></thead><tbody>' + rows.map(row => '<tr><td><strong>' + esc(row.dnfCode) + '</strong></td><td>' + esc(row.career) + '</td><td>' + esc(row.action || '—') + '</td><td>' + esc(row.status || '—') + '</td><td>' + esc(row.realStart || '—') + '</td><td>' + esc(Number(row.progress || 0)) + '%</td><td>' + esc(row.evidenceTitle || '—') + (row.evidencePath ? '<br><span class="small muted">' + esc(row.evidencePath) + '</span>' : '') + '</td><td>' + esc(row.observation || '—') + '</td></tr>').join('') + '</tbody></table>' : '<div class="empty">No existen acciones del Plan para dar seguimiento.</div>'}</div>`;
     bindButtons(document.getElementById('content'));
   };
@@ -410,13 +394,6 @@
   }
 
   injectStyles();
-  syncPlanRows();
-  syncReportRows();
-  window.docformacionWorkflow = Object.freeze({
-    syncPlanRows,
-    syncReportRows,
-    needsFingerprint,
-    planFingerprint,
-    state:workflow
-  });
+  workflow();
+  window.docformacionWorkflow = Object.freeze({ syncPlanRows, syncReportRows, needsFingerprint, planFingerprint, state:workflow });
 })();
