@@ -19,6 +19,7 @@
     const values = {
       manifest: window.DOCFORMACION_MANIFEST,
       context: window.docformacionDocumentContext,
+      validation: window.docformacionValidation,
       pdf: window.docformacionPdfCore
     };
     const missing = Object.entries(values).filter(([, value]) => !value).map(([name]) => name);
@@ -33,24 +34,7 @@
   function readiness(type, elementId, ctxArg) {
     const modules = dependencies();
     const ctx = ctxArg || modules.context.build();
-    const missing = [];
-    if (!ctx?.period?.active) missing.push('período activo');
-    if (!clean(ctx?.documentTitle?.(type))) missing.push('título del documento');
-    if (!clean(ctx?.documentCode?.(type))) missing.push('código documental');
-
-    if (elementId === 'cover') {
-      const authorities = ctx?.authorities || {};
-      [
-        ['elaborado por', authorities.preparedBy],
-        ['cargo de elaboración', authorities.preparedRole],
-        ['revisado por', authorities.reviewedBy],
-        ['cargo de revisión', authorities.reviewedRole],
-        ['aprobado por', authorities.approvedBy],
-        ['cargo de aprobación', authorities.approvedRole]
-      ].forEach(([label, value]) => { if (!clean(value)) missing.push(label); });
-    }
-
-    return { ready: missing.length === 0, missing: [...new Set(missing)] };
+    return modules.validation.elementReadiness(type, elementId, ctx);
   }
 
   function safeFilePart(value) {
