@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260910-1645';
+  const LOCAL_BUILD = '20260911-0853';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -48,27 +48,32 @@
       await loadScript('web-adapter.js?v=' + encodeURIComponent(activeBuild));
     }
 
-    // Núcleo de la aplicación y persistencia por período.
+    // Núcleo base de la aplicación.
     await loadScript('app.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('period-manager-fix.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('period-existing-data-migration-fix.js?v=' + encodeURIComponent(activeBuild));
 
-    // Flujo DNF vigente: Carreras primero y DNF después, ambas mediante plantillas separadas.
-    await loadScript('dnf-template-workflow-v2.js?v=' + encodeURIComponent(activeBuild));
-    await loadScript('dnf-template-view-fix.js?v=' + encodeURIComponent(activeBuild));
+    // Contratos documentales y modelo único de datos por período.
+    await loadScript('documents/manifest.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('core/data/model.js?v=' + encodeURIComponent(activeBuild));
 
-    // Indicador de progreso reutilizado por los tres documentos.
-    await loadScript('pdf-progress-ui-fix.js?v=' + encodeURIComponent(activeBuild));
+    // Período como contexto global obligatorio de la información.
+    await loadScript('core/periods/manager.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('core/periods/migrate-existing-data.js?v=' + encodeURIComponent(activeBuild));
 
-    // Núcleo canónico: unifica DNF → Plan → Informe, plantillas y trazabilidad.
-    await loadScript('workflow-canonical-v3.js?v=' + encodeURIComponent(activeBuild));
+    // Flujo DNF vigente: Carreras -> DNF -> Plan -> Informe.
+    await loadScript('documents/dnf/workflow.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('documents/dnf/template-view.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('documents/workflow.js?v=' + encodeURIComponent(activeBuild));
 
-    // Generador institucional completo de la DNF: conserva el núcleo canónico,
-    // pero recupera la profundidad académica, análisis y anexos visuales.
-    await loadScript('dnf-rich-document-v4.js?v=' + encodeURIComponent(activeBuild));
+    // Infraestructura compartida de progreso PDF.
+    await loadScript('core/preview/pdf-progress.js?v=' + encodeURIComponent(activeBuild));
 
-    // Ajustes finales de portada DNF.
-    await loadScript('dnf-cover-cleanup-v5.js?v=' + encodeURIComponent(activeBuild));
+    // Generador institucional DNF y configuración de portada.
+    await loadScript('documents/dnf/pdf.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('documents/dnf/cover.js?v=' + encodeURIComponent(activeBuild));
+
+    // Diagnóstico y vistas universales del sistema.
+    await loadScript('core/diagnostics/index.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('ui/system-views.js?v=' + encodeURIComponent(activeBuild));
   }
 
   start().catch(error => {
