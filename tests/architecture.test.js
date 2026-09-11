@@ -13,6 +13,8 @@ function testArchitecture() {
   const sectionEngine = read('core/preview/section-engine.js');
   const documentElements = read('core/preview/document-elements.js');
   const documentSectionsUi = read('ui/document-sections.js');
+  const canonicalStatusUi = read('ui/canonical-status.js');
+  const validation = read('documents/validation.js');
   const pdfEngine = read('core/pdf/engine.js');
   const pdfComponents = read('core/pdf/components.js');
   const fullPdf = read('documents/pdf.js');
@@ -40,6 +42,12 @@ function testArchitecture() {
 
   assert(documentElements.includes("id: 'cover'"), 'Debe existir un apartado documental de Portada');
   assert(documentElements.includes("id: 'header'"), 'Debe existir un apartado documental de Cabecera');
+  assert(documentElements.includes('validation.elementReadiness'), 'Portada y Cabecera deben usar la validación canónica');
+  assert(validation.includes('elements.every(item => item.ready)'), 'Documento listo debe exigir Portada y Cabecera listas');
+  assert(validation.includes('sections.every(item => item.ready)'), 'Documento listo debe exigir todas las secciones listas');
+  assert(canonicalStatusUi.includes('docformacionValidation?.documentReadiness'), 'Inicio debe usar documentReadiness como fuente única');
+  assert(!canonicalStatusUi.includes('documentStatus('), 'Inicio no debe decidir el estado con documentStatus antiguo');
+  assert(canonicalStatusUi.includes('Carga válida'), 'Las plantillas cargadas deben indicar Carga válida y no Documento listo');
   assert(documentSectionsUi.includes('docformacionValidation.documentReadiness'), 'La interfaz documental debe usar la validación canónica del documento');
   assert(documentSectionsUi.includes('Elementos del documento'), 'La interfaz debe mostrar Portada y Cabecera separados de las secciones de contenido');
   assert(documentSectionsUi.includes('normalizePeriodSelectorLabels'), 'La interfaz debe evitar duplicar el estado en el selector del período');
@@ -49,6 +57,7 @@ function testArchitecture() {
     'documents/context.js',
     'documents/calculations.js',
     'documents/validation.js',
+    'ui/canonical-status.js',
     'documents/workflow-canonical.js',
     'core/pdf/components.js',
     'core/pdf/engine.js',
@@ -138,8 +147,20 @@ function testCanonicalValidation() {
   assert.strictEqual(
     sandbox.docformacionValidation.documentReadiness('dnf').ready,
     true,
-    'DNF debe quedar lista con catálogo, necesidad, prioridad y fuentes institucionales confirmadas'
+    'DNF debe quedar lista con Portada, Cabecera y todas sus secciones completas'
   );
+
+  sandbox.state.settings.genericLines = [];
+  let dnfState = sandbox.docformacionValidation.documentReadiness('dnf');
+  assert.strictEqual(dnfState.ready, false, 'Una sección obligatoria incompleta debe bloquear el documento completo');
+  assert(dnfState.missing.includes('líneas genéricas'), 'El documento debe exponer el dato faltante de la sección incompleta');
+  sandbox.state.settings.genericLines = ['Educación Superior'];
+
+  sandbox.state.period.preparedBy = '';
+  dnfState = sandbox.docformacionValidation.documentReadiness('dnf');
+  assert.strictEqual(dnfState.ready, false, 'Una Portada incompleta debe bloquear el documento completo');
+  assert(dnfState.missing.includes('elaborado por'), 'El documento debe exponer el pendiente de Portada');
+  sandbox.state.period.preparedBy = 'Responsable';
 
   sandbox.state.needPlan = [{
     dnfCode:'DNF-01-01', career:'Enfermería', needText:'Necesidad A', priority:'Alta',
