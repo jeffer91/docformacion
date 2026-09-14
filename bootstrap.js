@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260914-1135';
+  const LOCAL_BUILD = '20260914-1235';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -86,6 +86,10 @@
 
     // Los textos y reglas pertenecen a los documentos, no al Core.
     await loadScript('documents/section-renderers.js?v=' + encodeURIComponent(activeBuild));
+
+    // El Plan se trabaja en tres matrices pequeñas: Matriz, Indicadores y Recursos.
+    await loadScript('documents/plan/matrices.js?v=' + encodeURIComponent(activeBuild));
+
     await loadScript('documents/pdf.js?v=' + encodeURIComponent(activeBuild));
 
     // Vista previa de elementos institucionales y secciones de contenido.
