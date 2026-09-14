@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260914-1555';
+  const LOCAL_BUILD = '20260914-1600';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -89,6 +89,9 @@
 
     // La metodología del diagnóstico se carga en una plantilla independiente y sustenta la DNF.
     await loadScript('documents/dnf/methodology.js?v=' + encodeURIComponent(activeBuild));
+
+    // La prioridad usa criterios institucionales fijos y exige justificación por cada necesidad en la misma plantilla DNF.
+    await loadScript('documents/dnf/priority-justification.js?v=' + encodeURIComponent(activeBuild));
 
     // El Plan solo solicita una matriz: formación proyectada. Duraciones, indicador, meta, responsable y recursos son automáticos.
     await loadScript('documents/plan/matrices.js?v=' + encodeURIComponent(activeBuild));
