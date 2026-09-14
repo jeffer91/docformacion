@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260914-0935';
+  const LOCAL_BUILD = '20260914-1135';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -23,32 +23,6 @@
     });
   }
 
-  function preloadInstitutionLogo(build) {
-    return new Promise(resolve => {
-      const image = new Image();
-      image.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = image.naturalWidth || image.width;
-          canvas.height = image.naturalHeight || image.height;
-          const context = canvas.getContext('2d');
-          context.drawImage(image, 0, 0);
-          window.DOCFORMACION_LOGO_DATA_URL = canvas.toDataURL('image/jpeg', 0.95);
-          window.DOCFORMACION_LOGO_FORMAT = 'JPEG';
-          window.DOCFORMACION_LOGO_ASPECT_RATIO = canvas.width / canvas.height;
-        } catch (error) {
-          console.warn('[DocFormación] No se pudo preparar el logo institucional para PDF:', error);
-        }
-        resolve();
-      };
-      image.onerror = () => {
-        console.warn('[DocFormación] No se pudo cargar assets/itsqmet-logo.jpg');
-        resolve();
-      };
-      image.src = 'assets/itsqmet-logo.jpg?v=' + encodeURIComponent(build);
-    });
-  }
-
   async function resolveBuild() {
     if (!isHttp) return LOCAL_BUILD;
     try {
@@ -69,7 +43,10 @@
     window.DOCFORMACION_BUILD = activeBuild;
     setBuildLabel(activeBuild);
     setStylesheetBuild(activeBuild);
-    await preloadInstitutionLogo(activeBuild);
+
+    // Recurso institucional persistente. Se carga antes que cualquier PDF.
+    await loadScript('core/pdf/institution-assets.js?v=' + encodeURIComponent(activeBuild));
+    await window.docformacionInstitutionAssets?.ensureLogo?.();
 
     if (!window.docformacion) {
       await loadScript('web-adapter.js?v=' + encodeURIComponent(activeBuild));

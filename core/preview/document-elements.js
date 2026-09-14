@@ -65,6 +65,7 @@
 
   async function build(type, elementId, options = {}) {
     const modules = dependencies();
+    await window.docformacionInstitutionAssets?.ensureLogo?.();
     const element = getElement(elementId);
     if (!element) throw new Error('Elemento documental no reconocido: ' + elementId + '.');
     const ctx = modules.context.build();

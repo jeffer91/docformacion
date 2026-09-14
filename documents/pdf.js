@@ -44,6 +44,7 @@
 
   async function build(type, options = {}) {
     const modules = dependencies();
+    await window.docformacionInstitutionAssets?.ensureLogo?.();
     const ctx = modules.context.build();
     const document = modules.manifest.documents?.[type];
     if (!document) throw new Error('Documento no declarado: ' + type + '.');
