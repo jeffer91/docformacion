@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260914-0840';
+  const LOCAL_BUILD = '20260914-0930';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -75,7 +75,8 @@
     // Plan e Informe: flujo canónico sin autoridades ni motor PDF duplicados.
     await loadScript('documents/workflow-canonical.js?v=' + encodeURIComponent(activeBuild));
 
-    // Core PDF reusable: componentes y motor sin reglas de Formación.
+    // Core PDF reusable. El encabezado RGI maestro se comparte entre portada y páginas interiores.
+    await loadScript('core/pdf/rgi-header.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('core/pdf/components.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('core/pdf/engine.js?v=' + encodeURIComponent(activeBuild));
 

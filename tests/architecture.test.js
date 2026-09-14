@@ -15,6 +15,7 @@ function testArchitecture() {
   const documentSectionsUi = read('ui/document-sections.js');
   const canonicalStatusUi = read('ui/canonical-status.js');
   const validation = read('documents/validation.js');
+  const rgiHeader = read('core/pdf/rgi-header.js');
   const pdfEngine = read('core/pdf/engine.js');
   const pdfComponents = read('core/pdf/components.js');
   const fullPdf = read('documents/pdf.js');
@@ -29,10 +30,17 @@ function testArchitecture() {
     assert(!sectionEngine.includes(signature), 'El Core de vista previa no debe contener reglas de documentos: ' + signature);
   });
 
-  const corePdf = pdfEngine + '\n' + pdfComponents;
+  const corePdf = rgiHeader + '\n' + pdfEngine + '\n' + pdfComponents;
   ['Detección de Necesidades de Formación', 'Plan de Formación Docente', 'Informe de Cumplimiento'].forEach(text => {
     assert(!corePdf.includes(text), 'El Core PDF no debe contener texto institucional de Formación: ' + text);
   });
+
+  assert(rgiHeader.includes('width * 0.25'), 'El encabezado RGI debe conservar columnas laterales del 25%');
+  assert(rgiHeader.includes('width * 0.50'), 'El encabezado RGI debe conservar columna central del 50%');
+  assert(rgiHeader.includes('const row1 = 8'), 'El encabezado RGI debe tener una primera fila compacta');
+  assert(rgiHeader.includes('const row2 = 20'), 'El encabezado RGI debe tener una segunda fila amplia');
+  assert(pdfEngine.includes('docformacionRgiHeader.draw'), 'Las páginas interiores deben usar el encabezado RGI maestro');
+  assert(pdfComponents.includes('docformacionRgiHeader.draw'), 'La portada debe reutilizar el mismo encabezado RGI maestro');
 
   assert(pdfEngine.includes('options.initialHeader !== false'), 'El Core PDF debe permitir una primera página sin encabezado');
   assert(pdfEngine.includes('options.firstPageFooter === false'), 'El Core PDF debe permitir una primera página sin pie');
@@ -59,6 +67,7 @@ function testArchitecture() {
     'documents/validation.js',
     'ui/canonical-status.js',
     'documents/workflow-canonical.js',
+    'core/pdf/rgi-header.js',
     'core/pdf/components.js',
     'core/pdf/engine.js',
     'documents/section-renderers.js',
@@ -67,6 +76,7 @@ function testArchitecture() {
     'core/preview/section-engine.js'
   ].forEach(file => assert(bootstrap.includes(file), 'bootstrap.js debe cargar ' + file));
 
+  assert(bootstrap.indexOf('core/pdf/rgi-header.js') < bootstrap.indexOf('core/pdf/components.js'), 'El encabezado RGI debe cargarse antes de los componentes PDF');
   assert(!bootstrap.includes('core/periods/migrate-existing-data.js'), 'La migración histórica no debe formar parte del runtime activo');
   assert(!bootstrap.includes("'documents/workflow.js?v='"), 'El workflow monolítico histórico no debe formar parte del runtime activo');
   assert(!bootstrap.includes('documents/dnf/pdf.js'), 'El generador DNF histórico no debe formar parte del runtime activo');
@@ -221,7 +231,12 @@ function testPdfCoverIsolation() {
     console,
     window: {
       jspdf:{ jsPDF:FakePdf },
-      docformacionPdfComponents:{ create(){ return {}; } }
+      docformacionPdfComponents:{ create(){ return {}; } },
+      docformacionRgiHeader:{
+        draw(doc, _pageW, meta) {
+          if (meta?.organization) doc.text(meta.organization, 0, 0);
+        }
+      }
     }
   };
   sandbox.window.window = sandbox.window;
@@ -247,4 +262,4 @@ function testPdfCoverIsolation() {
 testArchitecture();
 testCanonicalValidation();
 testPdfCoverIsolation();
-console.log('Architecture, canonical validation, document elements and PDF cover checks passed.');
+console.log('Architecture, canonical validation, RGI header, document elements and PDF cover checks passed.');

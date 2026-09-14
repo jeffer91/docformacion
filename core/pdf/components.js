@@ -9,25 +9,13 @@
     function cover(meta = {}) {
       const title = clean(meta.title);
       const period = clean(meta.period);
-      const code = clean(meta.code);
-      const organization = clean(meta.organization);
-      const version = clean(meta.version);
       const signatures = Array.isArray(meta.signatures) ? meta.signatures : [];
 
-      doc.setDrawColor(75);
-      doc.setLineWidth(.25);
-      doc.rect(15, 12, pageW - 30, 28);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(35);
-      if (organization) doc.text(organization, pageW / 2, 20, { align:'center' });
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      if (code) doc.text('Código: ' + code, pageW / 2, 28, { align:'center' });
-      if (version) doc.text('Versión: ' + version, pageW / 2, 34, { align:'center' });
+      window.docformacionRgiHeader.draw(doc, pageW, meta);
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(18);
+      doc.setTextColor(35);
       const titleLines = doc.splitTextToSize(title, pageW - 50);
       doc.text(titleLines, pageW / 2, 112, { align:'center', lineHeightFactor:1.15 });
       doc.setFontSize(13);
