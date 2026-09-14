@@ -76,24 +76,36 @@
     const source = Array.isArray(state?.needPlan)
       ? state.needPlan
       : (Array.isArray(state?.plan) ? state.plan : []);
-    return source.map(row => ({
-      dnfCode: clean(row?.dnfCode || row?.needKey || row?.code),
-      career: clean(row?.career),
-      needText: clean(row?.needText || row?.need),
-      priority: clean(row?.priority),
-      action: clean(row?.action || row?.program),
-      modality: clean(row?.modality),
-      plannedStart: clean(row?.plannedStart),
-      plannedEnd: clean(row?.plannedEnd),
-      indicator: clean(row?.indicator),
-      targetPercent: Number(row?.targetPercent || 0),
-      evidence: clean(row?.evidence),
-      responsibleRole: clean(row?.responsibleRole),
-      supportType: clean(row?.supportType),
-      supportAmount: Number(row?.supportAmount || 0),
-      observations: clean(row?.observations),
-      source: Array.isArray(state?.needPlan) ? 'state.needPlan' : 'state.plan'
-    })).filter(row => row.dnfCode || row.action || row.needText);
+    const policy = window.docformacionPlanPolicy;
+    return source.map(row => {
+      const formationLevel = clean(row?.formationLevel || row?.level);
+      const projectedProgram = clean(row?.projectedProgram || row?.programTitle);
+      const durationYears = Number(row?.durationYears || policy?.durationForLevel?.(formationLevel) || 0);
+      return {
+        dnfCode: clean(row?.dnfCode || row?.needKey || row?.code),
+        career: clean(row?.career),
+        needText: clean(row?.needText || row?.need),
+        priority: clean(row?.priority),
+        action: clean(row?.action || row?.program),
+        formationLevel,
+        projectedProgram,
+        durationYears,
+        validityCriterion: clean(row?.validityCriterion || policy?.validityCriterion),
+        indicator: clean(row?.indicator || policy?.indicator),
+        targetPercent: Number(row?.targetPercent || policy?.targetPercent || 0),
+        evidence: clean(row?.evidence || policy?.evidence),
+        responsibleRole: clean(row?.responsibleRole || policy?.responsibleRole),
+        supportType: clean(row?.supportType || policy?.supportType),
+        supportAmountLabel: clean(row?.supportAmountLabel || policy?.supportAmountLabel),
+        supportAmount: Number(row?.supportAmount || 0),
+        // Campos heredados: se conservan para no romper historiales previos, pero ya no son requisitos del Plan.
+        modality: clean(row?.modality),
+        plannedStart: clean(row?.plannedStart),
+        plannedEnd: clean(row?.plannedEnd),
+        observations: clean(row?.observations),
+        source: Array.isArray(state?.needPlan) ? 'state.needPlan' : 'state.plan'
+      };
+    }).filter(row => row.dnfCode || row.action || row.needText);
   }
 
   function canonicalReportRows() {

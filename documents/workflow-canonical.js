@@ -1,17 +1,93 @@
 (() => {
   'use strict';
 
-  const MODALITIES = ['Presencial','Virtual','Híbrida'];
-  const SUPPORTS = ['Sin apoyo económico','Económico','Convenio / beca','Gestión interna'];
   const FOLLOW_STATUSES = ['No iniciado','En proceso','Finalizado','No ejecutado'];
   const clean = value => String(value ?? '').trim();
   const key = value => clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ');
+
+  const LEVEL_DURATIONS = Object.freeze({
+    'Tecnología Superior':2.5,
+    'Tecnología Universitaria':2.5,
+    'Ingeniería':5.5,
+    'Licenciatura':5.5,
+    'Ingeniería / Licenciatura':5.5,
+    'Maestría':2.5,
+    'Doctorado':4
+  });
+  const INDICATOR = 'Porcentaje de docentes priorizados que acceden a programas de formación académica reconocidos u homologables en Ecuador.';
+  const TARGET_PERCENT = 10;
+  const EVIDENCE = 'Matrícula, certificado o documento oficial de respaldo de la formación académica.';
+  const RESPONSIBLE_ROLE = 'Coordinador de Gestión de Procesos Académicos';
+  const SUPPORT_TYPE = 'Financiamiento total del costo de la formación';
+  const SUPPORT_AMOUNT_LABEL = 'Según costo institucional aprobado';
+  const VALIDITY_CRITERION = 'Formación reconocida u homologable en Ecuador';
+
+  function normalizeFormationLevel(value) {
+    const raw = clean(value);
+    if (!raw) return '';
+    const normalized = key(raw);
+    const aliases = new Map([
+      ['tecnologia superior','Tecnología Superior'],
+      ['tecnologias superiores','Tecnología Superior'],
+      ['tecnologia universitaria','Tecnología Universitaria'],
+      ['tecnologias universitarias','Tecnología Universitaria'],
+      ['ingenieria','Ingeniería'],
+      ['ingenierias','Ingeniería'],
+      ['licenciatura','Licenciatura'],
+      ['licenciaturas','Licenciatura'],
+      ['ingenieria / licenciatura','Ingeniería / Licenciatura'],
+      ['ingenieria/licenciatura','Ingeniería / Licenciatura'],
+      ['maestria','Maestría'],
+      ['maestrias','Maestría'],
+      ['doctorado','Doctorado'],
+      ['doctorados','Doctorado']
+    ]);
+    return aliases.get(normalized) || Object.keys(LEVEL_DURATIONS).find(item => key(item) === normalized) || '';
+  }
+
+  function durationForLevel(level) {
+    const normalized = normalizeFormationLevel(level);
+    return Number(LEVEL_DURATIONS[normalized] || 0);
+  }
+
+  function applyInstitutionalDefaults(row = {}) {
+    const formationLevel = normalizeFormationLevel(row.formationLevel || row.level);
+    return {
+      ...row,
+      formationLevel,
+      projectedProgram:clean(row.projectedProgram || row.programTitle),
+      durationYears:durationForLevel(formationLevel),
+      validityCriterion:VALIDITY_CRITERION,
+      indicator:INDICATOR,
+      targetPercent:TARGET_PERCENT,
+      evidence:EVIDENCE,
+      responsibleRole:RESPONSIBLE_ROLE,
+      supportType:SUPPORT_TYPE,
+      supportAmountLabel:SUPPORT_AMOUNT_LABEL,
+      supportAmount:0,
+      observations:''
+    };
+  }
+
+  window.docformacionPlanPolicy = Object.freeze({
+    levels:Object.freeze({...LEVEL_DURATIONS}),
+    normalizeLevel:normalizeFormationLevel,
+    durationForLevel,
+    applyDefaults:applyInstitutionalDefaults,
+    indicator:INDICATOR,
+    targetPercent:TARGET_PERCENT,
+    evidence:EVIDENCE,
+    responsibleRole:RESPONSIBLE_ROLE,
+    supportType:SUPPORT_TYPE,
+    supportAmountLabel:SUPPORT_AMOUNT_LABEL,
+    validityCriterion:VALIDITY_CRITERION
+  });
 
   function workflow() {
     state.workflowV3 = state.workflowV3 && typeof state.workflowV3 === 'object' ? state.workflowV3 : {};
     const value = state.workflowV3;
     const defaults = {
-      version:4,
+      version:5,
       planImported:false,
       planFileName:'',
       planImportedAt:'',
@@ -24,7 +100,7 @@
     Object.entries(defaults).forEach(([name, fallback]) => {
       if (!Object.prototype.hasOwnProperty.call(value, name)) value[name] = fallback;
     });
-    value.version = 4;
+    value.version = 5;
     return value;
   }
 
@@ -35,17 +111,15 @@
 
   function planFingerprint(rows = window.docformacionModel?.planRows?.() || []) {
     return rows.map(row => [
-      row.dnfCode,row.career,row.needText,row.priority,row.action,row.modality,row.plannedStart,row.plannedEnd,
-      row.indicator,Number(row.targetPercent || 0),row.evidence,row.responsibleRole,row.supportType,
-      Number(row.supportAmount || 0),row.observations
+      row.dnfCode,row.career,row.needText,row.priority,row.action,row.formationLevel,
+      row.projectedProgram,Number(row.durationYears || 0),VALIDITY_CRITERION
     ].map(clean).join('|')).sort((a,b) => a.localeCompare(b, 'es')).join('||');
   }
 
   function syncPlanRows() {
     const needs = window.docformacionModel?.needs?.() || [];
     const existing = Array.isArray(state.needPlan) ? state.needPlan : (Array.isArray(state.plan) ? state.plan : []);
-    // Durante una migración o antes de confirmar la DNF no se destruyen datos históricos.
-    if (!needs.length) return existing;
+    if (!needs.length) return existing.map(applyInstitutionalDefaults);
 
     const byCode = new Map(existing.filter(row => clean(row?.dnfCode || row?.needKey || row?.code))
       .map(row => [clean(row.dnfCode || row.needKey || row.code), row]));
@@ -53,24 +127,20 @@
 
     state.needPlan = needs.map(source => {
       const old = byCode.get(source.code) || byText.get(key(source.career) + '|' + key(source.need)) || {};
-      return {
+      return applyInstitutionalDefaults({
         dnfCode:source.code,
         needKey:source.code,
         career:source.career,
         needText:source.need,
         priority:source.priority,
-        action:clean(old.action),
+        action:clean(old.action || old.program),
+        formationLevel:clean(old.formationLevel || old.level),
+        projectedProgram:clean(old.projectedProgram || old.programTitle),
+        // Compatibilidad histórica: estos campos se conservan, pero ya no se solicitan ni validan.
         modality:clean(old.modality),
         plannedStart:clean(old.plannedStart),
-        plannedEnd:clean(old.plannedEnd),
-        indicator:clean(old.indicator),
-        targetPercent:Number(old.targetPercent || 0),
-        evidence:clean(old.evidence),
-        responsibleRole:clean(old.responsibleRole),
-        supportType:clean(old.supportType),
-        supportAmount:Number(old.supportAmount || 0),
-        observations:clean(old.observations)
-      };
+        plannedEnd:clean(old.plannedEnd)
+      });
     });
     return state.needPlan;
   }
@@ -112,19 +182,6 @@
   const previousExcelTemplatePayload = excelTemplatePayload;
   excelTemplatePayload = function canonicalWorkflowTemplate(scope, includeData) {
     includeData = !!includeData;
-    if (scope === 'plan') {
-      const rows = syncPlanRows();
-      return {
-        filename:(includeData ? 'UGPA_Datos_Actuales_Plan_' : 'UGPA_Plantilla_Plan_') + periodSlug() + '.xlsx',
-        sheets:[simpleSheet('PLAN',
-          ['CODIGO_DNF','CARRERA','NECESIDAD','PRIORIDAD','ACCION_FORMACION','MODALIDAD','INICIO_PLANIFICADO','FIN_PLANIFICADO','INDICADOR','META_PORCENTAJE','MEDIO_VERIFICACION','RESPONSABLE_INSTITUCIONAL','TIPO_APOYO','MONTO_APOYO','OBSERVACIONES'],
-          ['Código heredado de la DNF. No modificar.','Carrera heredada de la DNF. No modificar.','Necesidad heredada de la DNF. No modificar.','Prioridad heredada de la DNF. No modificar.','Acción institucional que atenderá la necesidad.','Presencial, Virtual o Híbrida.','Mes/año AAAA-MM.','Mes/año AAAA-MM.','Indicador de cumplimiento.','Meta entre 1 y 100.','Documento o evidencia de verificación.','Unidad, área o cargo institucional responsable.','Sin apoyo económico, Económico, Convenio / beca o Gestión interna.','Monto numérico solo si TIPO_APOYO es Económico.','Observación opcional.'],
-          rows.map(row => [row.dnfCode,row.career,row.needText,row.priority,includeData ? row.action : '',includeData ? row.modality : '',includeData ? row.plannedStart : '',includeData ? row.plannedEnd : '',includeData ? row.indicator : '',includeData ? (row.targetPercent || '') : '',includeData ? row.evidence : '',includeData ? row.responsibleRole : '',includeData ? row.supportType : '',includeData ? (row.supportAmount || '') : '',includeData ? row.observations : '']),
-          [18,34,58,14,58,16,18,18,42,16,46,38,24,18,42]
-        )]
-      };
-    }
-
     if (scope === 'informe' || scope === 'seguimiento') {
       const rows = syncReportRows();
       return {
@@ -142,13 +199,10 @@
 
   const previousAnalyzeExcelImport = analyzeExcelImport;
   analyzeExcelImport = function canonicalWorkflowAnalyze(scope, result, type = '', kind = '') {
-    if (kind || !['plan','informe','seguimiento'].includes(scope)) return previousAnalyzeExcelImport(scope, result, type, kind);
-    const isPlan = scope === 'plan';
-    const target = isPlan ? 'PLAN' : 'INFORME';
-    const expected = isPlan ? syncPlanRows() : syncReportRows();
-    const sourceReady = isPlan
-      ? window.docformacionValidation?.documentReadiness?.('dnf')?.ready
-      : window.docformacionValidation?.documentReadiness?.('plan')?.ready;
+    if (kind || !['informe','seguimiento'].includes(scope)) return previousAnalyzeExcelImport(scope, result, type, kind);
+    const target = 'INFORME';
+    const expected = syncReportRows();
+    const sourceReady = window.docformacionValidation?.documentReadiness?.('plan')?.ready;
     const sheets = result?.sheets || {};
     const detected = Object.keys(sheets).filter(name => Array.isArray(sheets[name]) && sheets[name].length);
     const imported = Array.isArray(sheets[target]) ? sheets[target] : [];
@@ -158,7 +212,7 @@
     const safeRows = [];
     const errors = [];
 
-    if (!sourceReady) errors.push(isPlan ? 'Primero debe estar completa la DNF del período.' : 'Primero debe estar completo el Plan de Formación del período.');
+    if (!sourceReady) errors.push('Primero debe estar completo el Plan de Formación del período.');
     if (!detected.includes(target)) errors.push('La plantilla debe contener la hoja ' + target + '.');
     const extras = detected.filter(name => name !== target);
     if (extras.length) errors.push('Esta carga es independiente. Retira las otras hojas: ' + extras.join(', ') + '.');
@@ -175,37 +229,9 @@
       else if (seen.has(code)) reason = 'CODIGO_DNF duplicado';
       else if (key(raw.CARRERA) !== key(expectedRow.career)) reason = 'CARRERA no coincide con la trazabilidad del código';
       else if (key(raw.NECESIDAD) !== key(expectedRow.needText)) reason = 'NECESIDAD no coincide con la trazabilidad del código';
-      else if (isPlan && key(raw.PRIORIDAD) !== key(expectedRow.priority)) reason = 'PRIORIDAD no coincide con la DNF';
-      else if (!isPlan && key(raw.ACCION_FORMACION) !== key(expectedRow.action)) reason = 'ACCION_FORMACION no coincide con el Plan';
+      else if (key(raw.ACCION_FORMACION) !== key(expectedRow.action)) reason = 'ACCION_FORMACION no coincide con el Plan';
 
-      if (!reason && isPlan) {
-        const modality = MODALITIES.find(value => key(value) === key(raw.MODALIDAD)) || '';
-        const support = SUPPORTS.find(value => key(value) === key(raw.TIPO_APOYO)) || '';
-        const start = clean(raw.INICIO_PLANIFICADO);
-        const end = clean(raw.FIN_PLANIFICADO);
-        const meta = Number(String(raw.META_PORCENTAJE ?? '').replace(',', '.'));
-        const amount = Number(String(raw.MONTO_APOYO ?? '').replace(',', '.'));
-        if (!clean(raw.ACCION_FORMACION)) reason = 'Falta ACCION_FORMACION';
-        else if (!modality) reason = 'MODALIDAD debe ser Presencial, Virtual o Híbrida';
-        else if (!/^\d{4}-\d{2}$/.test(start)) reason = 'INICIO_PLANIFICADO debe usar AAAA-MM';
-        else if (!/^\d{4}-\d{2}$/.test(end)) reason = 'FIN_PLANIFICADO debe usar AAAA-MM';
-        else if (end < start) reason = 'FIN_PLANIFICADO no puede ser anterior al inicio';
-        else if (!clean(raw.INDICADOR)) reason = 'Falta INDICADOR';
-        else if (!(meta > 0 && meta <= 100)) reason = 'META_PORCENTAJE debe estar entre 1 y 100';
-        else if (!clean(raw.MEDIO_VERIFICACION)) reason = 'Falta MEDIO_VERIFICACION';
-        else if (!clean(raw.RESPONSABLE_INSTITUCIONAL)) reason = 'Falta RESPONSABLE_INSTITUCIONAL';
-        else if (!support) reason = 'TIPO_APOYO no es válido';
-        else if (support === 'Económico' && !(amount > 0)) reason = 'MONTO_APOYO debe ser mayor a 0 cuando el apoyo es Económico';
-        else safe = {
-          CODIGO_DNF:expectedRow.dnfCode,CARRERA:expectedRow.career,NECESIDAD:expectedRow.needText,PRIORIDAD:expectedRow.priority,
-          ACCION_FORMACION:clean(raw.ACCION_FORMACION),MODALIDAD:modality,INICIO_PLANIFICADO:start,FIN_PLANIFICADO:end,
-          INDICADOR:clean(raw.INDICADOR),META_PORCENTAJE:meta,MEDIO_VERIFICACION:clean(raw.MEDIO_VERIFICACION),
-          RESPONSABLE_INSTITUCIONAL:clean(raw.RESPONSABLE_INSTITUCIONAL),TIPO_APOYO:support,
-          MONTO_APOYO:support === 'Económico' ? amount : 0,OBSERVACIONES:clean(raw.OBSERVACIONES)
-        };
-      }
-
-      if (!reason && !isPlan) {
+      if (!reason) {
         const status = FOLLOW_STATUSES.find(value => key(value) === key(raw.ESTADO)) || '';
         const realStart = clean(raw.FECHA_INICIO_REAL);
         const progress = Number(String(raw.AVANCE_PORCENTAJE ?? '').replace(',', '.'));
@@ -239,7 +265,7 @@
 
     const validRows = preview.filter(row => row.valid).length;
     return {
-      context:{ label:isPlan ? 'Plan de Formación' : 'Informe de Cumplimiento', scope:isPlan ? 'plan' : 'informe', kind:'' },
+      context:{ label:'Informe de Cumplimiento', scope:'informe', kind:'' },
       filePath:result?.filePath || 'Archivo Excel',detected,allowed:[target],
       compatibleSheets:detected.includes(target) ? [target] : [],incompatibleSheets:detected.filter(name => name !== target),
       totalRows:preview.length,validRows,optionalRows:0,ignoredRows:0,errorRows:bad,matchedRows:validRows,expectedCount:expected.length,
@@ -251,38 +277,6 @@
   const previousApplyExcel = applyExcel;
   applyExcel = function canonicalWorkflowApply(sheets) {
     const scope = window.__DOCFORMACION_TEMPLATE_IMPORT_SCOPE;
-    if (scope === 'plan' && Array.isArray(sheets?.PLAN)) {
-      const rows = syncPlanRows();
-      const byCode = new Map(rows.map(row => [clean(row.dnfCode).toUpperCase(), row]));
-      sheets.PLAN.forEach(raw => {
-        const row = byCode.get(clean(raw.CODIGO_DNF).toUpperCase());
-        if (!row) return;
-        row.action = clean(raw.ACCION_FORMACION);
-        row.modality = clean(raw.MODALIDAD);
-        row.plannedStart = clean(raw.INICIO_PLANIFICADO);
-        row.plannedEnd = clean(raw.FIN_PLANIFICADO);
-        row.indicator = clean(raw.INDICADOR);
-        row.targetPercent = Number(raw.META_PORCENTAJE || 0);
-        row.evidence = clean(raw.MEDIO_VERIFICACION);
-        row.responsibleRole = clean(raw.RESPONSABLE_INSTITUCIONAL);
-        row.supportType = clean(raw.TIPO_APOYO);
-        row.supportAmount = Number(raw.MONTO_APOYO || 0);
-        row.observations = clean(raw.OBSERVACIONES);
-      });
-      state.needPlan = rows;
-      const value = workflow();
-      value.planImported = true;
-      value.planFileName = window.__DOCFORMACION_TEMPLATE_IMPORT_FILE || 'Plantilla Plan';
-      value.planImportedAt = new Date().toISOString();
-      value.planSourceFingerprint = needsFingerprint();
-      value.reportImported = false;
-      value.reportFileName = '';
-      value.reportImportedAt = '';
-      value.reportSourceFingerprint = '';
-      state.needFollowup = [];
-      return;
-    }
-
     if ((scope === 'informe' || scope === 'seguimiento') && Array.isArray(sheets?.INFORME)) {
       const rows = syncReportRows();
       const byCode = new Map(rows.map(row => [clean(row.dnfCode).toUpperCase(), row]));
@@ -350,7 +344,7 @@
     document.getElementById('content').innerHTML = `
       <div class="section-title"><div><h2>${esc(title)}</h2><p>La información variable se valida desde Excel y conserva la trazabilidad por CODIGO_DNF.</p></div></div>
       <div class="card canonical-template-card">
-        <div class="dnf-template-card-head"><div><strong>Plantilla del período</strong><span>${file ? 'Cargada' : 'Pendiente'}</span></div><span class="status-badge ${status.ready ? 'ready' : 'blocked'}">${status.ready ? 'Lista' : 'Pendiente'}</span></div>
+        <div class="dnf-template-card-head"><div><strong>${type === 'plan' ? 'Formación proyectada' : 'Plantilla del período'}</strong><span>${file ? 'Cargada' : 'Pendiente'}</span></div><span class="status-badge ${status.ready ? 'ready' : 'blocked'}">${status.ready ? 'Lista' : 'Pendiente'}</span></div>
         <p>${rows.length} registro(s) vinculados por CODIGO_DNF.</p>${file ? '<div class="small muted">Último archivo: ' + esc(file) + '</div>' : ''}
         ${templateButtons(scope, !!dependencyReady, rows.length > 0, view)}
       </div>
@@ -367,10 +361,10 @@
     const rows = syncPlanRows();
     const status = documentStatus('plan');
     document.getElementById('content').innerHTML = `
-      ${status.ready ? '<div class="alert-strip success"><div><strong>Plan listo</strong>Datos validados mediante plantilla Excel.</div></div>' : '<div class="alert-strip warning"><div><strong>Plan pendiente</strong>Completa o reemplaza la plantilla Excel del Plan.</div></div>'}
-      <div class="section-title"><div><h2>Planificación por necesidades</h2><p>Vista de consulta. Las correcciones se realizan en Excel y se vuelven a subir.</p></div></div>
+      ${status.ready ? '<div class="alert-strip success"><div><strong>Plan listo</strong>Formación proyectada validada.</div></div>' : '<div class="alert-strip warning"><div><strong>Plan pendiente</strong>Completa o reemplaza la matriz de formación proyectada.</div></div>'}
+      <div class="section-title"><div><h2>Formación proyectada</h2><p>La carrera, necesidad y prioridad se heredan de la DNF. Solo se define la formación proyectada.</p></div></div>
       <div class="card">${templateButtons('plan', !!window.docformacionValidation?.documentReadiness?.('dnf')?.ready, rows.length > 0, '')}</div>
-      <div class="table-wrap" style="margin-top:16px">${rows.length ? '<table class="table"><thead><tr><th>Código DNF</th><th>Carrera</th><th>Necesidad</th><th>Prioridad</th><th>Acción</th><th>Modalidad</th><th>Cronograma</th><th>Indicador / Meta</th><th>Responsable / Apoyo</th></tr></thead><tbody>' + rows.map(row => '<tr><td><strong>' + esc(row.dnfCode) + '</strong></td><td>' + esc(row.career) + '</td><td>' + esc(row.needText) + '</td><td>' + esc(row.priority) + '</td><td>' + esc(row.action || '—') + '</td><td>' + esc(row.modality || '—') + '</td><td>' + esc((row.plannedStart || '—') + ' → ' + (row.plannedEnd || '—')) + '</td><td>' + esc(row.indicator || '—') + (row.targetPercent ? ' · ' + esc(row.targetPercent) + '%' : '') + '</td><td>' + esc(row.responsibleRole || '—') + '<br>' + esc(row.supportType || '—') + '</td></tr>').join('') + '</tbody></table>' : '<div class="empty">No existen necesidades DNF para planificar.</div>'}</div>`;
+      <div class="table-wrap" style="margin-top:16px">${rows.length ? '<table class="table"><thead><tr><th>Código DNF</th><th>Carrera</th><th>Necesidad</th><th>Prioridad</th><th>Acción</th><th>Nivel</th><th>Programa / título</th><th>Duración</th></tr></thead><tbody>' + rows.map(row => '<tr><td><strong>' + esc(row.dnfCode) + '</strong></td><td>' + esc(row.career) + '</td><td>' + esc(row.needText) + '</td><td>' + esc(row.priority) + '</td><td>' + esc(row.action || '—') + '</td><td>' + esc(row.formationLevel || '—') + '</td><td>' + esc(row.projectedProgram || '—') + '</td><td>' + (row.durationYears ? esc(String(row.durationYears).replace('.', ',')) + ' años' : '—') + '</td></tr>').join('') + '</tbody></table>' : '<div class="empty">No existen necesidades DNF para planificar.</div>'}</div>`;
     bindButtons(document.getElementById('content'));
   };
 

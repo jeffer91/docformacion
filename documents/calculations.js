@@ -24,9 +24,12 @@
     const calc = base();
     return {
       byPriority: calc.counts(ctx.plan, row => row.priority),
-      byModality: calc.counts(ctx.plan, row => row.modality),
+      byLevel: calc.counts(ctx.plan, row => row.formationLevel),
       careers: new Set(ctx.plan.map(row => key(row.career)).filter(Boolean)).size,
-      economicSupport: calc.sum(ctx.plan.filter(row => row.supportType === 'Económico'), row => row.supportAmount)
+      averageDuration: calc.average(ctx.plan.filter(row => Number(row.durationYears) > 0), row => row.durationYears),
+      // Alias heredados para componentes antiguos que todavía puedan consultarlos.
+      byModality:{},
+      economicSupport:0
     };
   }
 

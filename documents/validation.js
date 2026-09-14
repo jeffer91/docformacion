@@ -2,8 +2,6 @@
   'use strict';
 
   const PRIORITIES = ['Alta','Media','Baja'];
-  const MODALITIES = ['Presencial','Virtual','Híbrida'];
-  const SUPPORTS = ['Sin apoyo económico','Económico','Convenio / beca','Gestión interna'];
   const FOLLOW_STATUSES = ['No iniciado','En proceso','Finalizado','No ejecutado'];
   const DOCUMENT_ELEMENTS = ['cover','header'];
   const clean = value => String(value ?? '').trim();
@@ -21,59 +19,58 @@
 
   function planFingerprint(rows) {
     return (rows || []).map(row => [
-      row.dnfCode,row.career,row.needText,row.priority,row.action,row.modality,
-      row.plannedStart,row.plannedEnd,row.indicator,Number(row.targetPercent || 0),
-      row.evidence,row.responsibleRole,row.supportType,Number(row.supportAmount || 0),row.observations
+      row.dnfCode,row.career,row.needText,row.priority,row.action,row.formationLevel,
+      row.projectedProgram,Number(row.durationYears || 0),row.validityCriterion
     ].map(clean).join('|')).sort((a,b) => a.localeCompare(b, 'es')).join('||');
   }
 
-  function planMatrixRowMissing(row, kind) {
+  function planMatrixRowMissing(row, kind = 'matrix') {
+    if (kind !== 'matrix') return [];
     const missing = [];
-    if (kind === 'matrix') {
-      if (!clean(row.action)) missing.push('acción');
-      if (!MODALITIES.includes(clean(row.modality))) missing.push('modalidad');
-      if (!/^\d{4}-\d{2}$/.test(clean(row.plannedStart))) missing.push('inicio');
-      if (!/^\d{4}-\d{2}$/.test(clean(row.plannedEnd))) missing.push('fin');
-      if (clean(row.plannedEnd) && clean(row.plannedStart) && clean(row.plannedEnd) < clean(row.plannedStart)) missing.push('fin posterior al inicio');
-    }
-    if (kind === 'indicators') {
-      if (!clean(row.indicator)) missing.push('indicador');
-      if (!(Number(row.targetPercent) > 0 && Number(row.targetPercent) <= 100)) missing.push('meta');
-      if (!clean(row.evidence)) missing.push('medio de verificación');
-      if (!clean(row.responsibleRole)) missing.push('responsable institucional');
-    }
-    if (kind === 'resources') {
-      if (!SUPPORTS.includes(clean(row.supportType))) missing.push('tipo de apoyo');
-      if (row.supportType === 'Económico' && !(Number(row.supportAmount) > 0)) missing.push('monto');
+    if (!clean(row.action)) missing.push('acción / formación proyectada');
+    const normalizedLevel = window.docformacionPlanPolicy?.normalizeLevel?.(row.formationLevel) || clean(row.formationLevel);
+    if (!normalizedLevel) missing.push('nivel de formación');
+    if (!clean(row.projectedProgram)) missing.push('programa o título proyectado');
+    if (normalizedLevel && !(Number(window.docformacionPlanPolicy?.durationForLevel?.(normalizedLevel) || row.durationYears) > 0)) {
+      missing.push('duración automática válida');
     }
     return missing;
   }
 
   function planRowMissing(row) {
-    return [...new Set([
-      ...planMatrixRowMissing(row, 'matrix'),
-      ...planMatrixRowMissing(row, 'indicators'),
-      ...planMatrixRowMissing(row, 'resources')
-    ])];
+    return planMatrixRowMissing(row, 'matrix');
   }
 
   function planMatrixState(ctx, kind) {
     const rows = ctx?.plan || [];
     const labels = {
-      matrix:'Matriz del Plan',
-      indicators:'Indicadores',
-      resources:'Recursos'
+      matrix:'Formación proyectada',
+      indicators:'Indicadores institucionales',
+      resources:'Recursos institucionales'
     };
-    const invalid = rows.filter(row => planMatrixRowMissing(row, kind).length);
+    if (kind !== 'matrix') {
+      return {
+        kind,
+        label:labels[kind] || kind,
+        ready:true,
+        automatic:true,
+        total:rows.length,
+        complete:rows.length,
+        invalidRows:0,
+        missing:[]
+      };
+    }
+    const invalid = rows.filter(row => planMatrixRowMissing(row, 'matrix').length);
     const total = rows.length;
     const complete = Math.max(0, total - invalid.length);
     const missing = [];
-    if (!total) missing.push((labels[kind] || 'Matriz') + ' sin registros');
-    else if (invalid.length) missing.push((labels[kind] || 'Matriz') + ' incompleta (' + invalid.length + ' de ' + total + ')');
+    if (!total) missing.push('formación proyectada sin registros');
+    else if (invalid.length) missing.push('formación proyectada incompleta (' + invalid.length + ' de ' + total + ')');
     return {
       kind,
-      label:labels[kind] || kind,
+      label:labels[kind],
       ready:total > 0 && invalid.length === 0,
+      automatic:false,
       total,
       complete,
       invalidRows:invalid.length,
@@ -135,20 +132,22 @@
     const dnfState = dnf(ctx);
     const missing = dnfState.ready ? [] : ['DNF completa'];
     const workflow = state?.workflowV3 || {};
-    if (workflow.planImported !== true) missing.push('carga del Plan confirmada');
-    if (!ctx.plan.length) missing.push('acciones del Plan');
+    if (workflow.planImported !== true) missing.push('matriz de formación proyectada confirmada');
+    if (!ctx.plan.length) missing.push('acciones de formación proyectadas');
     if (workflow.planImported === true && workflow.planSourceFingerprint !== needsFingerprint(ctx.needs)) {
       missing.push('Plan actualizado respecto de la DNF vigente');
     }
     const matrix = planMatrixState(ctx, 'matrix');
-    const indicators = planMatrixState(ctx, 'indicators');
-    const resources = planMatrixState(ctx, 'resources');
-    [matrix, indicators, resources].forEach(item => item.missing.forEach(value => missing.push(value)));
+    matrix.missing.forEach(value => missing.push(value));
     return {
-      ready: missing.length === 0,
+      ready:missing.length === 0,
       missing:[...new Set(missing)],
-      invalidRows:new Set(ctx.plan.filter(row => planRowMissing(row).length).map(row => row.dnfCode)).size,
-      matrices:{ matrix, indicators, resources }
+      invalidRows:matrix.invalidRows,
+      matrices:{
+        matrix,
+        indicators:planMatrixState(ctx, 'indicators'),
+        resources:planMatrixState(ctx, 'resources')
+      }
     };
   }
 
@@ -172,8 +171,6 @@
     const planState = plan(ctx);
     const reportState = report(ctx);
     const matrix = planMatrixState(ctx, 'matrix');
-    const indicators = planMatrixState(ctx, 'indicators');
-    const resources = planMatrixState(ctx, 'resources');
     const activeKeys = new Set(ctx.careers.map(row => key(row.name)));
     const coordKeys = new Set(ctx.coordinations.map(row => key(row.carrera)));
     const legalConfirmed = !!ctx?.sourceConfirmations?.legal?.confirmed;
@@ -196,9 +193,9 @@
         ready: ctx.bibliography.length > 0 && bibliographyConfirmed,
         label: bibliographyConfirmed ? 'bibliografía' : 'bibliografía institucional pendiente de confirmación'
       },
-      planMatriz: { ready:matrix.ready, label:matrix.missing.join(', ') || 'Matriz del Plan' },
-      planIndicadores: { ready:indicators.ready, label:indicators.missing.join(', ') || 'Indicadores' },
-      planRecursos: { ready:resources.ready, label:resources.missing.join(', ') || 'Recursos' },
+      planMatriz: { ready:matrix.ready, label:matrix.missing.join(', ') || 'formación proyectada' },
+      planIndicadores: { ready:true, label:'indicadores institucionales automáticos' },
+      planRecursos: { ready:true, label:'recursos institucionales automáticos' },
       plan: { ready: planState.ready, label: planState.missing.join(', ') || 'Plan' },
       seguimiento: { ready: reportState.ready, label: reportState.missing.join(', ') || 'seguimiento' }
     };

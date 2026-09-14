@@ -7,7 +7,7 @@
 
   window.DOCFORMACION_MANIFEST = Object.freeze({
     appId: 'formacion',
-    version: '1.2.0',
+    version: '1.3.0',
     title: 'DocFormación',
     organization: 'ITSQMET · UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS',
     author: 'ITSQMET',
@@ -36,12 +36,12 @@
         sections: [
           section('PLAN-01-introduccion', 'Introducción', ['periodo', 'necesidades'], [], ['titulo', 'parrafo']),
           section('PLAN-02-objetivo', 'Objetivo General', ['periodo'], [], ['titulo', 'parrafo']),
-          section('PLAN-03-diagnostico', 'Diagnóstico y trazabilidad', ['necesidades', 'planMatriz', 'planRecursos'], ['accionesPorPrioridad', 'accionesPorModalidad'], ['tabla', 'indicador']),
+          section('PLAN-03-diagnostico', 'Diagnóstico y trazabilidad', ['necesidades', 'planMatriz'], ['accionesPorPrioridad'], ['tabla', 'indicador']),
           section('PLAN-04-matriz', 'Matriz del Plan', ['planMatriz'], [], ['tabla']),
-          section('PLAN-05-indicadores', 'Indicadores y verificación', ['planIndicadores'], [], ['tabla']),
-          section('PLAN-06-recursos', 'Recursos y apoyos', ['planRecursos'], ['recursosPlanificados'], ['tabla']),
+          section('PLAN-05-indicadores', 'Indicadores y verificación', ['periodo'], [], ['tabla']),
+          section('PLAN-06-recursos', 'Recursos y apoyos', ['periodo'], [], ['tabla']),
           section('PLAN-07-seguimiento', 'Seguimiento previsto', ['planMatriz'], [], ['parrafo']),
-          section('PLAN-08-conclusiones', 'Conclusiones', ['planMatriz', 'planIndicadores', 'planRecursos'], ['accionesPorPrioridad'], ['lista'])
+          section('PLAN-08-conclusiones', 'Conclusiones', ['planMatriz'], ['accionesPorPrioridad'], ['lista'])
         ]
       },
       informe: {
