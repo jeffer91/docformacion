@@ -36,6 +36,14 @@
     });
   }
 
+  function logoSource(meta = {}) {
+    return {
+      dataUrl: clean(meta.logoDataUrl || window.DOCFORMACION_LOGO_DATA_URL),
+      format: clean(meta.logoFormat || window.DOCFORMACION_LOGO_FORMAT || 'JPEG'),
+      ratio: Number(meta.logoAspectRatio || window.DOCFORMACION_LOGO_ASPECT_RATIO || (240 / 95))
+    };
+  }
+
   function draw(doc, pageW, meta = {}) {
     const x = 15;
     const y = 15;
@@ -52,6 +60,7 @@
     const title = clean(meta.title);
     const period = clean(meta.period);
     const code = clean(meta.code);
+    const logo = logoSource(meta);
 
     doc.setFillColor(255, 255, 255);
     doc.rect(x, y, width, height, 'F');
@@ -63,12 +72,24 @@
     doc.line(x + colA + colB, y, x + colA + colB, y + height);
     doc.line(x + colA, y + row1, x + colA + colB, y + row1);
 
-    if (meta.logoDataUrl && typeof doc.addImage === 'function') {
+    if (logo.dataUrl && typeof doc.addImage === 'function') {
       const maxW = Math.min(38, colA - 7);
       const maxH = Math.min(18, height - 7);
-      const logoW = Math.min(Number(meta.logoWidth || maxW), maxW);
-      const logoH = Math.min(Number(meta.logoHeight || maxH), maxH);
-      doc.addImage(meta.logoDataUrl, meta.logoFormat || 'PNG', x + (colA - logoW) / 2, y + (height - logoH) / 2, logoW, logoH);
+      const ratio = Number.isFinite(logo.ratio) && logo.ratio > 0 ? logo.ratio : (240 / 95);
+      let logoW = maxW;
+      let logoH = logoW / ratio;
+      if (logoH > maxH) {
+        logoH = maxH;
+        logoW = logoH * ratio;
+      }
+      doc.addImage(
+        logo.dataUrl,
+        logo.format || 'JPEG',
+        x + (colA - logoW) / 2,
+        y + (height - logoH) / 2,
+        logoW,
+        logoH
+      );
     } else {
       centerLines(doc, institution, x, y, colA, height, { size:11, bold:true, paddingX:7, lineHeight:4.5 });
     }
@@ -115,5 +136,5 @@
     return Object.freeze({ x, y, width, height, bottom:y + height, columns:[colA,colB,colC], rows:[row1,row2] });
   }
 
-  window.docformacionRgiHeader = Object.freeze({ draw, identity });
+  window.docformacionRgiHeader = Object.freeze({ draw, identity, logoSource });
 })();

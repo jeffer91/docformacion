@@ -8,7 +8,7 @@ const vm = require('vm');
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'core/pdf/rgi-header.js'), 'utf8');
 
-const calls = { rect:[], line:[], text:[] };
+const calls = { rect:[], line:[], text:[], image:[] };
 const fakeDoc = {
   setFillColor() {},
   setDrawColor() {},
@@ -19,7 +19,8 @@ const fakeDoc = {
   rect(...args) { calls.rect.push(args); },
   line(...args) { calls.line.push(args); },
   splitTextToSize(value) { return String(value).split('\n'); },
-  text(value, x, y, options) { calls.text.push({ value, x, y, options }); }
+  text(value, x, y, options) { calls.text.push({ value, x, y, options }); },
+  addImage(...args) { calls.image.push(args); }
 };
 
 const sandbox = { window:{} };
@@ -59,4 +60,20 @@ assert(text.includes('Detección de Necesidades de Formación'), 'B2 debe conten
 assert(text.includes('Octubre 2025 - Septiembre 2026'), 'B2 debe contener el período');
 assert(text.includes('UGPA-RGI1-01-PRO-31-2025-10'), 'C1+C2 debe contener el código documental');
 
-console.log('RGI header geometry and content checks passed.');
+sandbox.window.DOCFORMACION_LOGO_DATA_URL = 'data:image/jpeg;base64,AAAA';
+sandbox.window.DOCFORMACION_LOGO_FORMAT = 'JPEG';
+sandbox.window.DOCFORMACION_LOGO_ASPECT_RATIO = 240 / 95;
+api.draw(fakeDoc, 210, {
+  organization:'ITSQMET · UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS',
+  title:'Detección de Necesidades de Formación',
+  period:'Octubre 2025 - Septiembre 2026',
+  code:'UGPA-RGI1-01-PRO-31-2025-10'
+});
+
+assert.strictEqual(calls.image.length, 1, 'La cabecera debe usar el logo institucional guardado cuando esté precargado');
+const [dataUrl, format, , , width, height] = calls.image[0];
+assert.strictEqual(dataUrl, sandbox.window.DOCFORMACION_LOGO_DATA_URL, 'Debe usar el logo institucional precargado');
+assert.strictEqual(format, 'JPEG', 'Debe respetar el formato del logo guardado');
+assert(Math.abs((width / height) - (240 / 95)) < 0.01, 'El logo debe conservar su relación de aspecto');
+
+console.log('RGI header geometry, content and institutional logo checks passed.');
