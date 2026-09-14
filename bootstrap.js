@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260911-1700';
+  const LOCAL_BUILD = '20260914-0840';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -92,8 +92,9 @@
     await loadScript('core/diagnostics/index.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/system-views.js?v=' + encodeURIComponent(activeBuild));
 
-    // Capa visual SVD 2.0: Período → Documentos → Secciones → Contenido.
+    // Navegación SVD 2.0 y acabado visual minimalista.
     await loadScript('ui/svd-shell.js?v=' + encodeURIComponent(activeBuild));
+    await loadScript('ui/minimal-ui.js?v=' + encodeURIComponent(activeBuild));
 
     // Refresco final con todos los módulos disponibles.
     if (typeof render === 'function') render();
