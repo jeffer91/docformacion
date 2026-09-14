@@ -40,7 +40,6 @@
     return justificationMap().get(needKey(career, need)) || '';
   }
 
-  // Expone la justificación junto con cada necesidad canónica, sin duplicar otra fuente de datos.
   const previousModel = window.docformacionModel;
   if (previousModel?.needs) {
     window.docformacionModel = Object.freeze({
@@ -55,7 +54,6 @@
     });
   }
 
-  // La misma plantilla DNF incorpora una columna obligatoria; no se crea un Excel adicional.
   const previousExcelTemplatePayload = excelTemplatePayload;
   excelTemplatePayload = function dnfPriorityTemplate(scope, includeData) {
     const payload = previousExcelTemplatePayload(scope, includeData);
@@ -88,32 +86,43 @@
 
     const rawRows = Array.isArray(result?.sheets?.[SHEET]) ? result.sheets[SHEET] : [];
     const byNeed = new Map();
-    const missing = [];
-    rawRows.forEach((raw, index) => {
+    const missingKeys = new Set();
+    rawRows.forEach(raw => {
       if (!Object.values(raw || {}).some(value => clean(value))) return;
       const career = clean(raw.CARRERA ?? raw.Carrera ?? raw.carrera);
       const need = clean(raw.NECESIDAD ?? raw.NECESIDAD_DE_FORMACION ?? raw.Necesidad);
       if (!career || !need) return;
+      const lookup = needKey(career, need);
       const justification = clean(raw[HEADER] ?? raw.JUSTIFICACION ?? raw.justificacion);
-      byNeed.set(needKey(career, need), justification);
-      if (!justification) missing.push({ index:index + 2, career, need });
+      byNeed.set(lookup, justification);
+      if (!justification) missingKeys.add(lookup);
     });
 
     const preview = (analysis.preview || []).map(item => {
       const row = item.row || {};
-      const justification = byNeed.get(needKey(row.CARRERA, row.NECESIDAD)) || '';
+      const lookup = needKey(row.CARRERA, row.NECESIDAD);
+      const justification = byNeed.get(lookup) || '';
+      if (missingKeys.has(lookup)) {
+        return {
+          ...item,
+          row:{ ...row, [HEADER]:justification },
+          status:'Error',
+          valid:false,
+          reason:'Falta JUSTIFICACION_PRIORIDAD'
+        };
+      }
       return { ...item, row:{ ...row, [HEADER]:justification } };
     });
 
-    if (missing.length) {
+    if (missingKeys.size) {
       const errors = [...(analysis.errors || [])];
-      errors.push('JUSTIFICACION_PRIORIDAD es obligatoria para todas las necesidades. Faltan ' + missing.length + ' fila(s).');
+      errors.push('JUSTIFICACION_PRIORIDAD es obligatoria para todas las necesidades. Faltan ' + missingKeys.size + ' fila(s).');
       return {
         ...analysis,
         errors,
         safeSheets:{},
-        errorRows:Math.max(Number(analysis.errorRows || 0), missing.length),
-        statusCounts:{ ...(analysis.statusCounts || {}), Error:Math.max(Number(analysis.statusCounts?.Error || 0), missing.length) },
+        errorRows:Math.max(Number(analysis.errorRows || 0), missingKeys.size),
+        statusCounts:{ ...(analysis.statusCounts || {}), Error:Math.max(Number(analysis.statusCounts?.Error || 0), missingKeys.size) },
         preview
       };
     }
@@ -168,7 +177,6 @@
     };
   }
 
-  // La DNF y los documentos que dependen de ella no se consideran completos sin justificación.
   const previousValidation = window.docformacionValidation;
   if (previousValidation?.documentReadiness) {
     function dnfCore(ctx) {
@@ -257,11 +265,25 @@
   function decorateDnfInfo() {
     const cards = document.querySelectorAll('#content .dnf-template-card');
     const dnfCard = cards?.[1];
-    if (!dnfCard || dnfCard.querySelector('[data-priority-help]')) return;
+    if (!dnfCard) return;
+    const priority = priorityJustificationState();
+    if (!priority.ready && priority.total) {
+      const badge = dnfCard.querySelector('.status-badge');
+      if (badge) {
+        badge.classList.remove('ready');
+        badge.classList.add('blocked');
+        badge.textContent = 'Pendiente';
+      }
+      const headStatus = dnfCard.querySelector('.dnf-template-card-head > div > span');
+      if (headStatus) headStatus.textContent = 'Pendiente';
+    }
+    if (dnfCard.querySelector('[data-priority-help]')) return;
     const note = document.createElement('div');
     note.dataset.priorityHelp = '1';
     note.className = 'small muted';
-    note.textContent = 'Cada necesidad requiere prioridad y una justificación sustentada en el diagnóstico.';
+    note.textContent = priority.ready
+      ? 'Todas las necesidades tienen prioridad y justificación registrada.'
+      : 'Cada necesidad requiere prioridad y una justificación sustentada en el diagnóstico.';
     const toolbar = dnfCard.querySelector('.excel-toolbar');
     if (toolbar) dnfCard.insertBefore(note, toolbar);
     else dnfCard.appendChild(note);
@@ -274,7 +296,6 @@
     return result;
   };
 
-  // La vista de datos de la DNF también muestra la justificación de cada necesidad.
   const previousRenderDNF = renderDNF;
   renderDNF = function dnfPriorityDataView() {
     const result = previousRenderDNF();
@@ -301,7 +322,6 @@
     return result;
   };
 
-  // Criterios institucionales fijos + justificación variable por necesidad en el documento final.
   const previousRenderers = window.docformacionSectionRenderers;
   if (previousRenderers?.render) {
     window.docformacionSectionRenderers = Object.freeze({
