@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260914-1615';
+  const LOCAL_BUILD = '20260914-1655';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -92,6 +92,9 @@
 
     // La prioridad usa criterios institucionales fijos y exige justificación por cada necesidad en la misma plantilla DNF.
     await loadScript('documents/dnf/priority-justification.js?v=' + encodeURIComponent(activeBuild));
+
+    // La justificación queda persistida en el estado canónico y se valida después de aplicar el Excel.
+    await loadScript('documents/dnf/priority-state.js?v=' + encodeURIComponent(activeBuild));
 
     // La cobertura DNF se calcula por carreras activas con necesidades y usa No aplica cuando no existe denominador.
     await loadScript('documents/dnf/coverage.js?v=' + encodeURIComponent(activeBuild));
