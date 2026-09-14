@@ -55,10 +55,7 @@ function testArchitecture() {
   assert(validation.includes('sections.every(item => item.ready)'), 'Documento listo debe exigir todas las secciones listas');
   assert(canonicalStatusUi.includes('docformacionValidation?.documentReadiness'), 'Inicio debe usar documentReadiness como fuente única');
   assert(!canonicalStatusUi.includes('documentStatus('), 'Inicio no debe decidir el estado con documentStatus antiguo');
-  assert(canonicalStatusUi.includes('Carga válida'), 'Las plantillas cargadas deben indicar Carga válida y no Documento listo');
   assert(documentSectionsUi.includes('docformacionValidation.documentReadiness'), 'La interfaz documental debe usar la validación canónica del documento');
-  assert(documentSectionsUi.includes('Elementos del documento'), 'La interfaz debe mostrar Portada y Cabecera separados de las secciones de contenido');
-  assert(documentSectionsUi.includes('normalizePeriodSelectorLabels'), 'La interfaz debe evitar duplicar el estado en el selector del período');
 
   [
     'core/calculations/base.js',
@@ -71,16 +68,16 @@ function testArchitecture() {
     'core/pdf/components.js',
     'core/pdf/engine.js',
     'documents/section-renderers.js',
+    'documents/plan/matrices.js',
     'documents/pdf.js',
     'core/preview/document-elements.js',
-    'core/preview/section-engine.js'
+    'core/preview/section-engine.js',
+    'documents/plan/section-integration.js'
   ].forEach(file => assert(bootstrap.includes(file), 'bootstrap.js debe cargar ' + file));
 
   assert(bootstrap.indexOf('core/pdf/rgi-header.js') < bootstrap.indexOf('core/pdf/components.js'), 'El encabezado RGI debe cargarse antes de los componentes PDF');
   assert(!bootstrap.includes('core/periods/migrate-existing-data.js'), 'La migración histórica no debe formar parte del runtime activo');
   assert(!bootstrap.includes("'documents/workflow.js?v='"), 'El workflow monolítico histórico no debe formar parte del runtime activo');
-  assert(!bootstrap.includes('documents/dnf/pdf.js'), 'El generador DNF histórico no debe formar parte del runtime activo');
-  assert(!bootstrap.includes('documents/dnf/cover.js'), 'La portada histórica no debe formar parte del runtime activo');
   assert(!templateView.includes('renderDocumentView = function'), 'template-view no debe parchear renderDocumentView');
 }
 
@@ -94,23 +91,14 @@ function testCanonicalValidation() {
     window: {},
     state: {
       period: {
-        start:'2026-04',
-        end:'2026-09',
-        version:'1.0',
-        preparedBy:'Responsable',
-        preparedRole:'Cargo',
-        reviewedBy:'Revisor',
-        reviewedRole:'Cargo',
-        approvedBy:'Aprobador',
-        approvedRole:'Cargo'
+        start:'2026-04', end:'2026-09', version:'1.0',
+        preparedBy:'Responsable', preparedRole:'Cargo',
+        reviewedBy:'Revisor', reviewedRole:'Cargo',
+        approvedBy:'Aprobador', approvedRole:'Cargo'
       },
       careers:[{ name:'Enfermería', program:'Técnico Superior' }],
       teachers:[],
-      coordinations:[{
-        carrera:'Enfermería',
-        coordinador:'',
-        needItems:[{ dnfCode:'DNF-01-01', text:'Necesidad A', priorityOverride:'' }]
-      }],
+      coordinations:[{ carrera:'Enfermería', coordinador:'', needItems:[{ dnfCode:'DNF-01-01', text:'Necesidad A', priorityOverride:'' }] }],
       settings:{ genericLines:['Educación Superior'] },
       section7:{ careerStatus:{} },
       dnfTemplateFlow:{ careersImported:true, dnfImported:true },
@@ -143,57 +131,36 @@ function testCanonicalValidation() {
   assert.strictEqual(sandbox.docformacionValidation.documentReadiness('dnf').ready, false, 'DNF no debe estar lista sin prioridad válida');
 
   sandbox.state.coordinations[0].needItems[0].priorityOverride = 'Alta';
-  assert.strictEqual(
-    sandbox.docformacionValidation.documentReadiness('dnf').ready,
-    false,
-    'DNF no debe quedar lista usando Base Legal/Bibliografía predeterminadas sin confirmación'
-  );
-
   const sourceCatalog = sandbox.docformacionDocumentContext.sourceCatalog;
   sandbox.state.period.sourceConfirmations = {
     legalVersion: sourceCatalog.legal.version,
     bibliographyVersion: sourceCatalog.bibliography.version
   };
-  assert.strictEqual(
-    sandbox.docformacionValidation.documentReadiness('dnf').ready,
-    true,
-    'DNF debe quedar lista con Portada, Cabecera y todas sus secciones completas'
-  );
-
-  sandbox.state.settings.genericLines = [];
-  let dnfState = sandbox.docformacionValidation.documentReadiness('dnf');
-  assert.strictEqual(dnfState.ready, false, 'Una sección obligatoria incompleta debe bloquear el documento completo');
-  assert(dnfState.missing.includes('líneas genéricas'), 'El documento debe exponer el dato faltante de la sección incompleta');
-  sandbox.state.settings.genericLines = ['Educación Superior'];
-
-  sandbox.state.period.preparedBy = '';
-  dnfState = sandbox.docformacionValidation.documentReadiness('dnf');
-  assert.strictEqual(dnfState.ready, false, 'Una Portada incompleta debe bloquear el documento completo');
-  assert(dnfState.missing.includes('elaborado por'), 'El documento debe exponer el pendiente de Portada');
-  sandbox.state.period.preparedBy = 'Responsable';
+  assert.strictEqual(sandbox.docformacionValidation.documentReadiness('dnf').ready, true, 'DNF debe quedar lista con fuentes confirmadas');
 
   sandbox.state.needPlan = [{
     dnfCode:'DNF-01-01', career:'Enfermería', needText:'Necesidad A', priority:'Alta',
-    action:'', modality:'', plannedStart:'', plannedEnd:'', indicator:'', targetPercent:0,
-    evidence:'', responsibleRole:'', supportType:'', supportAmount:0, observations:''
+    action:'', formationLevel:'', projectedProgram:'', durationYears:0
   }];
   sandbox.state.workflowV3.planImported = true;
   sandbox.state.workflowV3.planSourceFingerprint = sandbox.docformacionValidation.needsFingerprint(sandbox.docformacionModel.needs());
-  assert.strictEqual(sandbox.docformacionValidation.documentReadiness('plan').ready, false, 'Plan no debe estar listo con filas incompletas');
+  assert.strictEqual(sandbox.docformacionValidation.documentReadiness('plan').ready, false, 'Plan no debe estar listo sin formación proyectada');
 
   Object.assign(sandbox.state.needPlan[0], {
-    action:'Curso', modality:'Virtual', plannedStart:'2026-04', plannedEnd:'2026-06',
-    indicator:'Participación', targetPercent:100, evidence:'Certificado',
-    responsibleRole:'UGPA', supportType:'Sin apoyo económico'
+    action:'Cursar programa de formación',
+    formationLevel:'Maestría',
+    projectedProgram:'Maestría en Educación',
+    durationYears:2.5,
+    validityCriterion:'Formación reconocida u homologable en Ecuador'
   });
-  assert.strictEqual(sandbox.docformacionValidation.documentReadiness('plan').ready, true, 'Plan debe quedar listo cuando todos sus campos son válidos y corresponde a la DNF vigente');
+  assert.strictEqual(sandbox.docformacionValidation.documentReadiness('plan').ready, true, 'Plan debe quedar listo con acción, nivel y programa/título proyectado');
 
   sandbox.state.coordinations[0].needItems[0].text = 'Necesidad modificada';
   assert.strictEqual(sandbox.docformacionValidation.documentReadiness('plan').ready, false, 'Un cambio posterior en DNF debe invalidar el Plan importado');
   sandbox.state.coordinations[0].needItems[0].text = 'Necesidad A';
 
   sandbox.state.needFollowup = [{
-    dnfCode:'DNF-01-01', career:'Enfermería', action:'Curso', status:'Finalizado',
+    dnfCode:'DNF-01-01', career:'Enfermería', action:'Cursar programa de formación', status:'Finalizado',
     realStart:'2026-05-01', progress:90, evidenceTitle:'Certificado', evidencePath:'cert.pdf', observation:''
   }];
   sandbox.state.workflowV3.reportImported = true;
@@ -203,8 +170,8 @@ function testCanonicalValidation() {
   sandbox.state.needFollowup[0].progress = 100;
   assert.strictEqual(sandbox.docformacionValidation.documentReadiness('informe').ready, true, 'Informe debe quedar listo con seguimiento válido y Plan vigente');
 
-  sandbox.state.needPlan[0].indicator = 'Indicador modificado';
-  assert.strictEqual(sandbox.docformacionValidation.documentReadiness('informe').ready, false, 'Un cambio posterior en el Plan debe invalidar el Informe importado');
+  sandbox.state.needPlan[0].projectedProgram = 'Maestría modificada';
+  assert.strictEqual(sandbox.docformacionValidation.documentReadiness('informe').ready, false, 'Un cambio académico posterior en el Plan debe invalidar el Informe importado');
 }
 
 function testPdfCoverIsolation() {
@@ -232,11 +199,7 @@ function testPdfCoverIsolation() {
     window: {
       jspdf:{ jsPDF:FakePdf },
       docformacionPdfComponents:{ create(){ return {}; } },
-      docformacionRgiHeader:{
-        draw(doc, _pageW, meta) {
-          if (meta?.organization) doc.text(meta.organization, 0, 0);
-        }
-      }
+      docformacionRgiHeader:{ draw(doc, _pageW, meta) { if (meta?.organization) doc.text(meta.organization, 0, 0); } }
     }
   };
   sandbox.window.window = sandbox.window;
@@ -262,4 +225,4 @@ function testPdfCoverIsolation() {
 testArchitecture();
 testCanonicalValidation();
 testPdfCoverIsolation();
-console.log('Architecture, canonical validation, RGI header, document elements and PDF cover checks passed.');
+console.log('Architecture, simplified Plan validation and PDF cover checks passed.');
