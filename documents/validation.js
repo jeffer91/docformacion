@@ -27,20 +27,58 @@
     ].map(clean).join('|')).sort((a,b) => a.localeCompare(b, 'es')).join('||');
   }
 
-  function planRowMissing(row) {
+  function planMatrixRowMissing(row, kind) {
     const missing = [];
-    if (!clean(row.action)) missing.push('acción');
-    if (!MODALITIES.includes(clean(row.modality))) missing.push('modalidad');
-    if (!/^\d{4}-\d{2}$/.test(clean(row.plannedStart))) missing.push('inicio');
-    if (!/^\d{4}-\d{2}$/.test(clean(row.plannedEnd))) missing.push('fin');
-    if (clean(row.plannedEnd) && clean(row.plannedStart) && clean(row.plannedEnd) < clean(row.plannedStart)) missing.push('fin posterior al inicio');
-    if (!clean(row.indicator)) missing.push('indicador');
-    if (!(Number(row.targetPercent) > 0 && Number(row.targetPercent) <= 100)) missing.push('meta');
-    if (!clean(row.evidence)) missing.push('medio de verificación');
-    if (!clean(row.responsibleRole)) missing.push('responsable institucional');
-    if (!SUPPORTS.includes(clean(row.supportType))) missing.push('tipo de apoyo');
-    if (row.supportType === 'Económico' && !(Number(row.supportAmount) > 0)) missing.push('monto');
+    if (kind === 'matrix') {
+      if (!clean(row.action)) missing.push('acción');
+      if (!MODALITIES.includes(clean(row.modality))) missing.push('modalidad');
+      if (!/^\d{4}-\d{2}$/.test(clean(row.plannedStart))) missing.push('inicio');
+      if (!/^\d{4}-\d{2}$/.test(clean(row.plannedEnd))) missing.push('fin');
+      if (clean(row.plannedEnd) && clean(row.plannedStart) && clean(row.plannedEnd) < clean(row.plannedStart)) missing.push('fin posterior al inicio');
+    }
+    if (kind === 'indicators') {
+      if (!clean(row.indicator)) missing.push('indicador');
+      if (!(Number(row.targetPercent) > 0 && Number(row.targetPercent) <= 100)) missing.push('meta');
+      if (!clean(row.evidence)) missing.push('medio de verificación');
+      if (!clean(row.responsibleRole)) missing.push('responsable institucional');
+    }
+    if (kind === 'resources') {
+      if (!SUPPORTS.includes(clean(row.supportType))) missing.push('tipo de apoyo');
+      if (row.supportType === 'Económico' && !(Number(row.supportAmount) > 0)) missing.push('monto');
+    }
     return missing;
+  }
+
+  function planRowMissing(row) {
+    return [...new Set([
+      ...planMatrixRowMissing(row, 'matrix'),
+      ...planMatrixRowMissing(row, 'indicators'),
+      ...planMatrixRowMissing(row, 'resources')
+    ])];
+  }
+
+  function planMatrixState(ctx, kind) {
+    const rows = ctx?.plan || [];
+    const labels = {
+      matrix:'Matriz del Plan',
+      indicators:'Indicadores',
+      resources:'Recursos'
+    };
+    const invalid = rows.filter(row => planMatrixRowMissing(row, kind).length);
+    const total = rows.length;
+    const complete = Math.max(0, total - invalid.length);
+    const missing = [];
+    if (!total) missing.push((labels[kind] || 'Matriz') + ' sin registros');
+    else if (invalid.length) missing.push((labels[kind] || 'Matriz') + ' incompleta (' + invalid.length + ' de ' + total + ')');
+    return {
+      kind,
+      label:labels[kind] || kind,
+      ready:total > 0 && invalid.length === 0,
+      total,
+      complete,
+      invalidRows:invalid.length,
+      missing
+    };
   }
 
   function reportRowMissing(row) {
@@ -97,14 +135,21 @@
     const dnfState = dnf(ctx);
     const missing = dnfState.ready ? [] : ['DNF completa'];
     const workflow = state?.workflowV3 || {};
-    if (workflow.planImported !== true) missing.push('plantilla del Plan confirmada');
+    if (workflow.planImported !== true) missing.push('carga del Plan confirmada');
     if (!ctx.plan.length) missing.push('acciones del Plan');
     if (workflow.planImported === true && workflow.planSourceFingerprint !== needsFingerprint(ctx.needs)) {
       missing.push('Plan actualizado respecto de la DNF vigente');
     }
-    const invalid = ctx.plan.filter(row => planRowMissing(row).length);
-    if (invalid.length) missing.push('campos obligatorios de todas las acciones del Plan');
-    return { ready: missing.length === 0, missing: [...new Set(missing)], invalidRows: invalid.length };
+    const matrix = planMatrixState(ctx, 'matrix');
+    const indicators = planMatrixState(ctx, 'indicators');
+    const resources = planMatrixState(ctx, 'resources');
+    [matrix, indicators, resources].forEach(item => item.missing.forEach(value => missing.push(value)));
+    return {
+      ready: missing.length === 0,
+      missing:[...new Set(missing)],
+      invalidRows:new Set(ctx.plan.filter(row => planRowMissing(row).length).map(row => row.dnfCode)).size,
+      matrices:{ matrix, indicators, resources }
+    };
   }
 
   function report(ctx) {
@@ -126,6 +171,9 @@
     const dnfState = dnfCore(ctx);
     const planState = plan(ctx);
     const reportState = report(ctx);
+    const matrix = planMatrixState(ctx, 'matrix');
+    const indicators = planMatrixState(ctx, 'indicators');
+    const resources = planMatrixState(ctx, 'resources');
     const activeKeys = new Set(ctx.careers.map(row => key(row.name)));
     const coordKeys = new Set(ctx.coordinations.map(row => key(row.carrera)));
     const legalConfirmed = !!ctx?.sourceConfirmations?.legal?.confirmed;
@@ -148,6 +196,9 @@
         ready: ctx.bibliography.length > 0 && bibliographyConfirmed,
         label: bibliographyConfirmed ? 'bibliografía' : 'bibliografía institucional pendiente de confirmación'
       },
+      planMatriz: { ready:matrix.ready, label:matrix.missing.join(', ') || 'Matriz del Plan' },
+      planIndicadores: { ready:indicators.ready, label:indicators.missing.join(', ') || 'Indicadores' },
+      planRecursos: { ready:resources.ready, label:resources.missing.join(', ') || 'Recursos' },
       plan: { ready: planState.ready, label: planState.missing.join(', ') || 'Plan' },
       seguimiento: { ready: reportState.ready, label: reportState.missing.join(', ') || 'seguimiento' }
     };
@@ -233,6 +284,8 @@
   window.docformacionValidation = Object.freeze({
     needsFingerprint,
     planFingerprint,
+    planMatrixRowMissing,
+    planMatrixState,
     planRowMissing,
     reportRowMissing,
     careerCatalog,
