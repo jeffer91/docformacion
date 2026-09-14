@@ -7,7 +7,7 @@
 
   window.DOCFORMACION_MANIFEST = Object.freeze({
     appId: 'formacion',
-    version: '1.1.0',
+    version: '1.2.0',
     title: 'DocFormación',
     organization: 'ITSQMET · UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS',
     author: 'ITSQMET',
@@ -34,14 +34,14 @@
         id: 'formacion-plan',
         title: 'Plan de Formación Docente',
         sections: [
-          section('PLAN-01-introduccion', 'Introducción', ['periodo', 'plan'], [], ['titulo', 'parrafo']),
+          section('PLAN-01-introduccion', 'Introducción', ['periodo', 'necesidades'], [], ['titulo', 'parrafo']),
           section('PLAN-02-objetivo', 'Objetivo General', ['periodo'], [], ['titulo', 'parrafo']),
-          section('PLAN-03-diagnostico', 'Diagnóstico y trazabilidad', ['plan', 'necesidades'], ['accionesPorPrioridad', 'accionesPorModalidad'], ['tabla', 'indicador']),
-          section('PLAN-04-matriz', 'Matriz del Plan', ['plan'], [], ['tabla']),
-          section('PLAN-05-indicadores', 'Indicadores y verificación', ['plan'], [], ['tabla']),
-          section('PLAN-06-recursos', 'Recursos y apoyos', ['plan'], ['recursosPlanificados'], ['tabla']),
-          section('PLAN-07-seguimiento', 'Seguimiento previsto', ['plan'], [], ['parrafo']),
-          section('PLAN-08-conclusiones', 'Conclusiones', ['plan'], ['accionesPorPrioridad'], ['lista'])
+          section('PLAN-03-diagnostico', 'Diagnóstico y trazabilidad', ['necesidades', 'planMatriz', 'planRecursos'], ['accionesPorPrioridad', 'accionesPorModalidad'], ['tabla', 'indicador']),
+          section('PLAN-04-matriz', 'Matriz del Plan', ['planMatriz'], [], ['tabla']),
+          section('PLAN-05-indicadores', 'Indicadores y verificación', ['planIndicadores'], [], ['tabla']),
+          section('PLAN-06-recursos', 'Recursos y apoyos', ['planRecursos'], ['recursosPlanificados'], ['tabla']),
+          section('PLAN-07-seguimiento', 'Seguimiento previsto', ['planMatriz'], [], ['parrafo']),
+          section('PLAN-08-conclusiones', 'Conclusiones', ['planMatriz', 'planIndicadores', 'planRecursos'], ['accionesPorPrioridad'], ['lista'])
         ]
       },
       informe: {

@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260914-1235';
+  const LOCAL_BUILD = '20260914-1320';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -87,7 +87,7 @@
     // Los textos y reglas pertenecen a los documentos, no al Core.
     await loadScript('documents/section-renderers.js?v=' + encodeURIComponent(activeBuild));
 
-    // El Plan se trabaja en tres matrices pequeñas: Matriz, Indicadores y Recursos.
+    // El Plan se trabaja en tres matrices independientes: Matriz, Indicadores y Recursos.
     await loadScript('documents/plan/matrices.js?v=' + encodeURIComponent(activeBuild));
 
     await loadScript('documents/pdf.js?v=' + encodeURIComponent(activeBuild));
@@ -96,6 +96,9 @@
     await loadScript('core/preview/document-elements.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('core/preview/section-engine.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/document-sections.js?v=' + encodeURIComponent(activeBuild));
+
+    // Integra las matrices del Plan directamente con sus pestañas SVD y con el PDF por carrera.
+    await loadScript('documents/plan/section-integration.js?v=' + encodeURIComponent(activeBuild));
 
     // Diagnóstico y vistas universales.
     await loadScript('core/diagnostics/index.js?v=' + encodeURIComponent(activeBuild));
