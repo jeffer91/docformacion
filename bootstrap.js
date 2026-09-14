@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260914-1320';
+  const LOCAL_BUILD = '20260914-1440';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -76,7 +76,7 @@
     await loadScript('documents/validation.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/canonical-status.js?v=' + encodeURIComponent(activeBuild));
 
-    // Plan e Informe: flujo canónico sin autoridades ni motor PDF duplicados.
+    // Plan e Informe: flujo canónico. El Plan define también sus criterios institucionales automáticos.
     await loadScript('documents/workflow-canonical.js?v=' + encodeURIComponent(activeBuild));
 
     // Core PDF reusable. El encabezado RGI maestro se comparte entre portada y páginas interiores.
@@ -87,7 +87,7 @@
     // Los textos y reglas pertenecen a los documentos, no al Core.
     await loadScript('documents/section-renderers.js?v=' + encodeURIComponent(activeBuild));
 
-    // El Plan se trabaja en tres matrices independientes: Matriz, Indicadores y Recursos.
+    // El Plan solo solicita una matriz: formación proyectada. Duraciones, indicador, meta, responsable y recursos son automáticos.
     await loadScript('documents/plan/matrices.js?v=' + encodeURIComponent(activeBuild));
 
     await loadScript('documents/pdf.js?v=' + encodeURIComponent(activeBuild));
@@ -97,7 +97,7 @@
     await loadScript('core/preview/section-engine.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/document-sections.js?v=' + encodeURIComponent(activeBuild));
 
-    // Integra las matrices del Plan directamente con sus pestañas SVD y con el PDF por carrera.
+    // Integra la formación proyectada y los criterios automáticos con las pestañas SVD y el PDF.
     await loadScript('documents/plan/section-integration.js?v=' + encodeURIComponent(activeBuild));
 
     // Diagnóstico y vistas universales.
