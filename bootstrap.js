@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260915-0840';
+  const LOCAL_BUILD = '20260915-1020';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -85,6 +85,9 @@
 
     // Garantiza que, tras aplicar la DNF, la justificación quede guardada y el estado visual se recalcule inmediatamente.
     await loadScript('documents/dnf/apply-refresh.js?v=' + encodeURIComponent(activeBuild));
+
+    // Confirma que la DNF quedó realmente persistida antes de cerrar el diálogo de importación.
+    await loadScript('documents/dnf/import-persistence.js?v=' + encodeURIComponent(activeBuild));
 
     await loadScript('core/diagnostics/index.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/system-views.js?v=' + encodeURIComponent(activeBuild));
