@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260914-1655';
+  const LOCAL_BUILD = '20260915-0825';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -111,6 +111,9 @@
 
     // Integra la formación proyectada y los criterios automáticos con las pestañas SVD y el PDF.
     await loadScript('documents/plan/section-integration.js?v=' + encodeURIComponent(activeBuild));
+
+    // La trazabilidad DNF → Plan → Informe es interna. Los Excel, la UI y los PDF no exponen ni solicitan CODIGO_DNF.
+    await loadScript('documents/internal-traceability.js?v=' + encodeURIComponent(activeBuild));
 
     // Diagnóstico y vistas universales.
     await loadScript('core/diagnostics/index.js?v=' + encodeURIComponent(activeBuild));
