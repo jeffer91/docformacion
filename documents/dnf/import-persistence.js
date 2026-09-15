@@ -188,4 +188,12 @@
       }
     }
   };
+
+  // app.js enlaza el botón antes de que los módulos DNF sustituyan confirmExcelAnalysis.
+  // Reenlazamos con una función delegada para que el clic siempre use la versión más
+  // reciente de confirmExcelAnalysis, incluida esta verificación de persistencia.
+  const applyButton = document.getElementById('applyExcelAnalysis');
+  if (applyButton) {
+    applyButton.onclick = () => confirmExcelAnalysis();
+  }
 })();
