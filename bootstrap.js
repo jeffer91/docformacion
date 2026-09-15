@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260915-0825';
+  const LOCAL_BUILD = '20260915-0840';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -82,6 +82,9 @@
     // La trazabilidad DNF → Plan → Informe es interna. Los Excel, la UI y los PDF no exponen ni solicitan CODIGO_DNF.
     await loadScript('documents/internal-traceability.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/internal-traceability-report.js?v=' + encodeURIComponent(activeBuild));
+
+    // Garantiza que, tras aplicar la DNF, la justificación quede guardada y el estado visual se recalcule inmediatamente.
+    await loadScript('documents/dnf/apply-refresh.js?v=' + encodeURIComponent(activeBuild));
 
     await loadScript('core/diagnostics/index.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/system-views.js?v=' + encodeURIComponent(activeBuild));
