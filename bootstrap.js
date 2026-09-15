@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260915-1130';
+  const LOCAL_BUILD = '20260915-1235';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -52,6 +52,11 @@
     }
 
     await loadScript('app.js?v=' + encodeURIComponent(activeBuild));
+
+    // Conserva los metadatos de cada necesidad (justificación, código DNF y futuros
+    // campos) cuando app.js normaliza needItems durante renders y validaciones.
+    await loadScript('documents/dnf/need-item-metadata.js?v=' + encodeURIComponent(activeBuild));
+
     await loadScript('documents/manifest.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('core/calculations/base.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('core/data/model.js?v=' + encodeURIComponent(activeBuild));
