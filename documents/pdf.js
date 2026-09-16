@@ -19,8 +19,9 @@
     return clean(value).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
   }
 
-  function filename(type, ctx) {
-    return safeFilePart(ctx.documentCode(type) + ' - ' + ctx.documentTitle(type)) + '.pdf';
+  function filename(type, ctx, draft = false) {
+    const base = safeFilePart(ctx.documentCode(type) + ' - ' + ctx.documentTitle(type));
+    return (draft ? 'BORRADOR - ' : '') + base + '.pdf';
   }
 
   function emitProgress(type, percent, phase, extra = {}) {
@@ -50,31 +51,36 @@
     if (!document) throw new Error('Documento no declarado: ' + type + '.');
     if (!ctx.period.active) throw new Error('Selecciona o crea un período antes de generar el PDF.');
 
+    const draft = options.draft === true;
     const readiness = modules.validation.documentReadiness(type, ctx);
     if (!readiness.ready && !options.allowDraft) {
-      throw new Error('El documento todavía tiene pendientes: ' + readiness.missing.join(', ') + '.');
+      throw new Error('El documento todavía tiene pendientes: ' + (readiness.missing || []).join(', ') + '.');
     }
 
-    emitProgress(type, 4, 'preparing');
+    const documentTitle = ctx.documentTitle(type);
+    const pdfTitle = draft ? 'BORRADOR · ' + documentTitle : documentTitle;
+    const subject = pdfTitle + ' · ' + ctx.period.label;
+
+    emitProgress(type, 4, 'preparing', { draft });
     const writer = modules.pdf.createWriter({
-      title: ctx.documentTitle(type),
-      subject: ctx.documentTitle(type) + ' · ' + ctx.period.label,
+      title: pdfTitle,
+      subject,
       author: clean(modules.manifest.author || modules.manifest.organization || 'ITSQMET'),
       initialHeader: false,
       firstPageFooter: false,
       header: () => ({
         organization: clean(modules.manifest.organization || modules.manifest.title),
-        title: ctx.documentTitle(type),
+        title: draft ? 'BORRADOR · ' + documentTitle : documentTitle,
         period: ctx.period.label,
         code: ctx.documentCode(type),
         section: ''
       }),
-      footer: (page, pages) => clean(modules.manifest.title) + ' · ' + ctx.period.label + ' · Página ' + page + ' de ' + pages
+      footer: (page, pages) => (draft ? 'BORRADOR · ' : '') + clean(modules.manifest.title) + ' · ' + ctx.period.label + ' · Página ' + page + ' de ' + pages
     });
 
     writer.cover({
       organization: clean(modules.manifest.organization || modules.manifest.title),
-      title: ctx.documentTitle(type),
+      title: pdfTitle,
       period: ctx.period.label,
       code: ctx.documentCode(type),
       version: clean(ctx.period.version || '1.0'),
@@ -91,26 +97,36 @@
       writer.newPage();
       writer.heading(section.title, 1);
       const sectionState = modules.validation.sectionReadiness(type, section, ctx);
-      if (!sectionState.ready) writer.note('Vista borrador: ' + sectionState.missing.join(', ') + '.');
-      modules.renderers.render(type, section, writer, ctx);
+      if (!sectionState.ready) {
+        const sectionMissing = (sectionState.missing || []).filter(Boolean);
+        writer.note('Vista borrador: ' + (sectionMissing.length ? sectionMissing.join(', ') : 'esta sección todavía tiene información pendiente') + '.');
+      }
+      try {
+        modules.renderers.render(type, section, writer, ctx);
+      } catch (error) {
+        if (!options.allowDraft) throw error;
+        console.warn('[DocFormación] Sección omitida parcialmente en borrador:', section.id, error);
+        writer.note('Contenido pendiente: esta sección no pudo completarse con la información disponible al momento.');
+      }
       emitProgress(type, Math.min(90, 10 + Math.round(((index + 1) / Math.max(1, sections.length)) * 78)), 'render', {
         section: section.id,
         sectionIndex: index + 1,
-        sectionTotal: sections.length
+        sectionTotal: sections.length,
+        draft
       });
       await new Promise(resolve => setTimeout(resolve, 0));
     }
 
-    emitProgress(type, 94, 'assembling');
+    emitProgress(type, 94, 'assembling', { draft });
     const result = writer.finish({
-      title: ctx.documentTitle(type),
-      subject: ctx.documentTitle(type) + ' · ' + ctx.period.label,
+      title: pdfTitle,
+      subject,
       author: clean(modules.manifest.author || modules.manifest.organization || 'ITSQMET')
     });
-    const name = filename(type, ctx);
+    const name = filename(type, ctx, draft);
     if (options.download !== false) downloadBlob(result.blob, name);
-    emitProgress(type, 100, 'done', { pages:result.pages, size:result.size });
-    return { ...result, filename:name, type, readiness };
+    emitProgress(type, 100, 'done', { pages:result.pages, size:result.size, draft });
+    return { ...result, filename:name, type, readiness, draft };
   }
 
   async function generate(type) {
@@ -137,7 +153,31 @@
     }
   }
 
-  window.docformacionDocumentPdf = Object.freeze({ build, generate });
+  async function generateDraft(type, sourceButton = null) {
+    const button = sourceButton || document.querySelector('[data-download-draft="' + type + '"]');
+    const old = button?.textContent || 'Descargar borrador PDF';
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Generando borrador…';
+    }
+    try {
+      const result = await build(type, { download:true, allowDraft:true, draft:true });
+      if (typeof toast === 'function') toast('Borrador PDF generado con la información disponible');
+      return result;
+    } catch (error) {
+      console.error('[DocFormación] Borrador PDF:', error);
+      emitProgress(type, 0, 'error', { message:error?.message || String(error), draft:true });
+      if (typeof toast === 'function') toast('No se pudo generar el borrador PDF: ' + (error?.message || error));
+      return null;
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = old;
+      }
+    }
+  }
+
+  window.docformacionDocumentPdf = Object.freeze({ build, generate, generateDraft });
 
   // Punto único de entrada utilizado por la interfaz existente.
   generateDocument = generate;
