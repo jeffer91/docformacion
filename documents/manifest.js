@@ -7,7 +7,7 @@
 
   window.DOCFORMACION_MANIFEST = Object.freeze({
     appId: 'formacion',
-    version: '1.3.0',
+    version: '1.4.0',
     title: 'DocFormación',
     organization: 'ITSQMET · UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS',
     author: 'ITSQMET',
@@ -19,7 +19,7 @@
           section('DNF-01-introduccion', 'Introducción', ['periodo', 'necesidades'], [], ['titulo', 'parrafo']),
           section('DNF-02-base-legal', 'Base Legal', ['baseLegal'], [], ['titulo', 'parrafo']),
           section('DNF-03-alineacion', 'Alineación Estratégica', ['periodo'], [], ['titulo', 'parrafo', 'lista']),
-          section('DNF-04-metodologia', 'Metodología y Enfoque', ['periodo', 'carreras', 'necesidades'], ['coberturaDiagnostica'], ['titulo', 'parrafo', 'lista']),
+          section('DNF-04-metodologia', 'Metodología de la Detección de Necesidades', ['periodo', 'carreras', 'necesidades', 'metodologia'], ['coberturaDiagnostica'], ['titulo', 'parrafo', 'lista', 'tabla']),
           section('DNF-05-caracterizacion', 'Caracterización del Diagnóstico', ['carreras', 'necesidades'], ['coberturaDiagnostica', 'prioridadPorNecesidad', 'convergenciaTematica'], ['tabla', 'grafico', 'indicador']),
           section('DNF-06-lineas', 'Líneas de Formación por Coordinación Académica', ['carreras', 'coordinaciones', 'necesidades', 'lineasGenericas'], ['prioridadPorNecesidad'], ['tabla', 'titulo', 'parrafo']),
           section('DNF-07-cobertura', 'Cobertura Institucional', ['carreras', 'necesidades'], ['coberturaDiagnostica'], ['tabla', 'indicador']),
