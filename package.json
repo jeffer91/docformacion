@@ -1,6 +1,6 @@
 {
   "name": "docformacion",
-  "version": "0.8.7",
+  "version": "0.9.0",
   "description": "Gestión y generación PDF del proceso de Formación Docente - ITSQMET",
   "main": "main.js",
   "scripts": {
