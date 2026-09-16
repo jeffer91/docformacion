@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260916-0830';
+  const LOCAL_BUILD = '20260916-0940';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -102,6 +102,9 @@
     await loadScript('ui/system-views.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/svd-shell.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/minimal-ui.js?v=' + encodeURIComponent(activeBuild));
+
+    // Permite descargar un PDF borrador con la información disponible aunque el documento tenga pendientes.
+    await loadScript('ui/draft-pdf.js?v=' + encodeURIComponent(activeBuild));
 
     if (typeof render === 'function') render();
   }
