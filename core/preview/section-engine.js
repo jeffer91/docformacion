@@ -43,6 +43,7 @@
 
   async function build(type, sectionId, options = {}) {
     ensureDependencies();
+    await window.docformacionInstitutionAssets?.ensureLogo?.();
     const section = getSection(type, sectionId);
     if (!section) throw new Error('La sección solicitada no existe en el manifiesto.');
 
@@ -66,7 +67,6 @@
     });
 
     writer.heading(section.title, 1);
-    writer.note('Documento: ' + ctx.documentTitle(type) + ' · Sección independiente ' + section.id + '.');
     if (!readiness.ready) {
       writer.note('Vista borrador: faltan datos requeridos: ' + readiness.missing.join(', ') + '.');
     }
