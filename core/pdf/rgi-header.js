@@ -44,13 +44,25 @@
     };
   }
 
+  function singleLineFit(doc, value, maxWidth, preferred = 7.2, minimum = 5.1) {
+    const text = clean(value);
+    let size = preferred;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(size);
+    while (size > minimum && doc.getTextWidth(text) > maxWidth) {
+      size -= 0.2;
+      doc.setFontSize(size);
+    }
+    return Math.max(minimum, size);
+  }
+
   function draw(doc, pageW, meta = {}) {
     const x = 15;
     const y = 15;
     const width = Math.min(180, pageW - 30);
-    const colA = width * 0.25;
+    const colA = width * 0.22;
     const colB = width * 0.50;
-    const colC = width * 0.25;
+    const colC = width - colA - colB;
     const row1 = 8;
     const row2 = 20;
     const height = row1 + row2;
@@ -59,7 +71,7 @@
     const unit = clean(meta.unit || parts.unit);
     const title = clean(meta.title);
     const period = clean(meta.period);
-    const code = clean(meta.code);
+    const code = clean(meta.code).replace(/\s+/g, ' ');
     const logo = logoSource(meta);
 
     doc.setFillColor(255, 255, 255);
@@ -72,30 +84,43 @@
     doc.line(x + colA + colB, y, x + colA + colB, y + height);
     doc.line(x + colA, y + row1, x + colA + colB, y + row1);
 
+    let logoDrawn = false;
     if (logo.dataUrl && typeof doc.addImage === 'function') {
-      const maxW = Math.min(38, colA - 7);
-      const maxH = Math.min(18, height - 7);
-      const ratio = Number.isFinite(logo.ratio) && logo.ratio > 0 ? logo.ratio : (240 / 95);
-      let logoW = maxW;
-      let logoH = logoW / ratio;
-      if (logoH > maxH) {
-        logoH = maxH;
-        logoW = logoH * ratio;
+      try {
+        const maxW = Math.min(33, colA - 7);
+        const maxH = Math.min(15, height - 10);
+        const ratio = Number.isFinite(logo.ratio) && logo.ratio > 0 ? logo.ratio : (240 / 95);
+        let logoW = maxW;
+        let logoH = logoW / ratio;
+        if (logoH > maxH) {
+          logoH = maxH;
+          logoW = logoH * ratio;
+        }
+        doc.addImage(
+          logo.dataUrl,
+          logo.format || 'JPEG',
+          x + (colA - logoW) / 2,
+          y + 4,
+          logoW,
+          logoH
+        );
+        logoDrawn = true;
+      } catch (error) {
+        console.warn('[DocFormación] No se pudo dibujar el logo institucional en el encabezado:', error);
       }
-      doc.addImage(
-        logo.dataUrl,
-        logo.format || 'JPEG',
-        x + (colA - logoW) / 2,
-        y + (height - logoH) / 2,
-        logoW,
-        logoH
-      );
-    } else {
-      centerLines(doc, institution, x, y, colA, height, { size:11, bold:true, paddingX:7, lineHeight:4.5 });
     }
 
+    if (!logoDrawn) {
+      centerLines(doc, institution, x, y, colA, height - 5, { size:10, bold:true, paddingX:6, lineHeight:4.2 });
+    }
+    // Identificación visible incluso si la imagen cargada es demasiado clara.
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.8);
+    doc.setTextColor(55);
+    doc.text(institution || 'ITSQMET', x + colA / 2, y + height - 2.6, { align:'center' });
+
     centerLines(doc, unit || 'UNIDAD RESPONSABLE', x + colA, y, colB, row1, {
-      size:8.5,
+      size:8.2,
       bold:true,
       paddingX:6,
       lineHeight:3.3
@@ -115,26 +140,30 @@
       let textY = centerY + (row2 - totalH) / 2 + 3;
       if (titleLines.length) {
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8.8);
+        doc.setFontSize(8.6);
         doc.text(titleLines, centerX + colB / 2, textY, { align:'center', lineHeightFactor:1.05 });
         textY += titleLines.length * titleLineH + gap;
       }
       if (periodLines.length) {
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.3);
+        doc.setFontSize(8.1);
         doc.text(periodLines, centerX + colB / 2, textY, { align:'center', lineHeightFactor:1.05 });
       }
     }
 
-    centerLines(doc, code ? 'Código:\n' + code : 'Código:', x + colA + colB, y, colC, height, {
-      size:7.8,
-      bold:false,
-      paddingX:6,
-      lineHeight:3.6
-    });
+    const codeX = x + colA + colB;
+    doc.setTextColor(25);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.6);
+    doc.text('Código:', codeX + colC / 2, y + 9.2, { align:'center' });
+    if (code) {
+      const fontSize = singleLineFit(doc, code, colC - 4, 7.0, 5.1);
+      doc.setFontSize(fontSize);
+      doc.text(code, codeX + colC / 2, y + 17.2, { align:'center' });
+    }
 
     return Object.freeze({ x, y, width, height, bottom:y + height, columns:[colA,colB,colC], rows:[row1,row2] });
   }
 
-  window.docformacionRgiHeader = Object.freeze({ draw, identity, logoSource });
+  window.docformacionRgiHeader = Object.freeze({ draw, identity, logoSource, singleLineFit });
 })();
