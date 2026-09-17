@@ -47,9 +47,14 @@
   function singleLineFit(doc, value, maxWidth, preferred = 7.0, minimum = 4.6) {
     const text = clean(value);
     let size = preferred;
+    const measure = () => {
+      if (typeof doc.getTextWidth === 'function') return doc.getTextWidth(text);
+      // Aproximación solo para entornos de prueba/stubs; jsPDF usa getTextWidth en producción.
+      return text.length * size * 0.19;
+    };
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(size);
-    while (size > minimum && doc.getTextWidth(text) > maxWidth) {
+    while (size > minimum && measure() > maxWidth) {
       size -= 0.2;
       doc.setFontSize(size);
     }
