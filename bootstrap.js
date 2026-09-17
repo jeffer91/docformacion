@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260916-0940';
+  const LOCAL_BUILD = '20260917-0756';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -53,8 +53,6 @@
 
     await loadScript('app.js?v=' + encodeURIComponent(activeBuild));
 
-    // Conserva los metadatos de cada necesidad (justificación, código DNF y futuros
-    // campos) cuando app.js normaliza needItems durante renders y validaciones.
     await loadScript('documents/dnf/need-item-metadata.js?v=' + encodeURIComponent(activeBuild));
     await window.docformacionDnfNeedItemMetadata?.ready;
 
@@ -85,25 +83,20 @@
     await loadScript('ui/document-sections.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/plan/section-integration.js?v=' + encodeURIComponent(activeBuild));
 
-    // La trazabilidad DNF → Plan → Informe es interna. Los Excel, la UI y los PDF no exponen ni solicitan CODIGO_DNF.
     await loadScript('documents/internal-traceability.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/internal-traceability-report.js?v=' + encodeURIComponent(activeBuild));
 
-    // Garantiza que, tras aplicar la DNF, la justificación quede guardada y el estado visual se recalcule inmediatamente.
     await loadScript('documents/dnf/apply-refresh.js?v=' + encodeURIComponent(activeBuild));
-
-    // Confirma que la DNF quedó realmente persistida antes de cerrar el diálogo de importación.
     await loadScript('documents/dnf/import-persistence.js?v=' + encodeURIComponent(activeBuild));
-
-    // Repara la lectura de completitud usando la justificación persistida como fuente canónica.
     await loadScript('documents/dnf/readiness-repair.js?v=' + encodeURIComponent(activeBuild));
+
+    // Capa final de calidad: vence a los renderizadores heredados y bloquea el PDF final si existe cualquier pendiente crítico.
+    await loadScript('documents/dnf/final-quality.js?v=' + encodeURIComponent(activeBuild));
 
     await loadScript('core/diagnostics/index.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/system-views.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/svd-shell.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/minimal-ui.js?v=' + encodeURIComponent(activeBuild));
-
-    // Permite descargar un PDF borrador con la información disponible aunque el documento tenga pendientes.
     await loadScript('ui/draft-pdf.js?v=' + encodeURIComponent(activeBuild));
 
     if (typeof render === 'function') render();
