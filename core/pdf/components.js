@@ -4,22 +4,34 @@
   const clean = value => String(value ?? '').trim();
 
   function create(doc, layout, ensure, newPage) {
-    const { left, bodyW, pageH, bottom, pageW } = layout;
+    const { left, bodyW, pageH, bottom, pageW, top } = layout;
 
     function cover(meta = {}) {
       const title = clean(meta.title);
       const period = clean(meta.period);
       const signatures = Array.isArray(meta.signatures) ? meta.signatures : [];
+      const draft = meta.draft === true;
 
       window.docformacionRgiHeader.draw(doc, pageW, meta);
+
+      if (draft) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(150);
+        doc.text('BORRADOR', pageW / 2, 78, { align:'center' });
+        doc.setDrawColor(185);
+        doc.setLineWidth(.35);
+        doc.roundedRect(pageW / 2 - 34, 65, 68, 18, 2, 2);
+      }
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(18);
       doc.setTextColor(35);
       const titleLines = doc.splitTextToSize(title, pageW - 50);
-      doc.text(titleLines, pageW / 2, 112, { align:'center', lineHeightFactor:1.15 });
+      const titleY = draft ? 112 : 106;
+      doc.text(titleLines, pageW / 2, titleY, { align:'center', lineHeightFactor:1.15 });
       doc.setFontSize(13);
-      if (period) doc.text(period, pageW / 2, 112 + titleLines.length * 8 + 10, { align:'center' });
+      if (period) doc.text(period, pageW / 2, titleY + titleLines.length * 8 + 10, { align:'center' });
 
       if (signatures.length) {
         const x = 15;
@@ -36,11 +48,17 @@
           const cx = x + colW * index;
           doc.setFont('helvetica','bold');
           doc.setFontSize(7);
+          doc.setTextColor(35);
           doc.text(clean(entry.label), cx + 3, y + 5);
+
+          // Espacio real para firma: no se imprime ningún placeholder de firma o QR.
+          doc.setDrawColor(145);
+          doc.setLineWidth(.18);
+          doc.line(cx + 8, y + 14, cx + colW - 8, y + 14);
+
           doc.setFont('helvetica','normal');
           doc.setFontSize(6.7);
-          doc.text('FIRMA / QR DIGITAL', cx + colW / 2, y + 13, { align:'center' });
-          doc.text(doc.splitTextToSize('NOMBRE: ' + clean(entry.name), colW - 6), cx + 3, y + 25);
+          doc.text(doc.splitTextToSize('NOMBRE: ' + clean(entry.name), colW - 6), cx + 3, y + 25, { lineHeightFactor:1.05 });
           doc.text(doc.splitTextToSize('CARGO: ' + clean(entry.role), colW - 6), cx + 3, y + 34, { lineHeightFactor:1.05 });
         });
       }
@@ -58,12 +76,14 @@
     }
 
     function paragraph(text, opts = {}) {
+      const value = clean(text);
+      if (!value) return;
       const size = opts.size || 9.2;
       const lineH = opts.lineH || 4.7;
       doc.setFont('helvetica', opts.bold ? 'bold' : 'normal');
       doc.setFontSize(size);
       doc.setTextColor(opts.muted ? 90 : 35);
-      const lines = doc.splitTextToSize(clean(text), bodyW);
+      const lines = doc.splitTextToSize(value, bodyW);
       lines.forEach(line => {
         ensure(lineH);
         doc.text(line, left, layout.y());
@@ -73,7 +93,9 @@
     }
 
     function bullet(text) {
-      const lines = doc.splitTextToSize(clean(text), bodyW - 7);
+      const value = clean(text);
+      if (!value) return;
+      const lines = doc.splitTextToSize(value, bodyW - 7);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(35);
@@ -122,7 +144,12 @@
         layout.advance(h);
         doc.setTextColor(35);
       };
+
+      const headerHeight = rowHeight(headers, true);
+      const firstRowHeight = rowHeight(rows[0], false);
+      ensure(headerHeight + firstRowHeight);
       draw(headers, true);
+
       rows.forEach(row => {
         const h = rowHeight(row, false);
         if (layout.y() + h > pageH - bottom) {
@@ -139,17 +166,23 @@
     }
 
     function barChart(title, data) {
-      heading(title, 2);
       if (!data?.length) {
+        heading(title, 2);
         paragraph('Sin datos para graficar.', { muted: true });
         return;
       }
+      const rowH = 8;
+      const titleLines = doc.splitTextToSize(clean(title), bodyW);
+      const titleBlock = titleLines.length * 5 + 8;
+      const chartBlock = data.length * rowH + 3;
+      // El título y todas las barras se mantienen juntos para evitar filas huérfanas.
+      ensure(titleBlock + chartBlock);
+      heading(title, 2);
+
       const max = Math.max(...data.map(item => Number(item.value || 0)), 1);
       const x = left + 58;
       const width = bodyW - 65;
-      const rowH = 8;
       data.forEach(item => {
-        ensure(rowH);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
         doc.setTextColor(45);
