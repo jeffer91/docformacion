@@ -67,7 +67,7 @@
     }
 
     const documentTitle = ctx.documentTitle(type);
-    const pdfTitle = draft ? 'BORRADOR - ' + documentTitle : documentTitle;
+    const pdfTitle = draft ? 'BORRADOR · ' + documentTitle : documentTitle;
     const subject = pdfTitle + ' · ' + ctx.period.label;
 
     emitProgress(type, 4, 'preparing', { draft });
@@ -79,7 +79,7 @@
       firstPageFooter: false,
       header: () => ({
         organization: clean(modules.manifest.organization || 'ITSQMET · UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS'),
-        title: draft ? 'BORRADOR - ' + documentTitle : documentTitle,
+        title: draft ? 'BORRADOR · ' + documentTitle : documentTitle,
         period: ctx.period.label,
         code: ctx.documentCode(type),
         section: '',
@@ -115,7 +115,7 @@
       try {
         modules.renderers.render(type, section, writer, ctx);
       } catch (error) {
-        if (!draft && !options.allowDraft) throw error;
+        if (!options.allowDraft) throw error;
         console.warn('[DocFormación] Sección incompleta en borrador:', section.id, error);
         writer.note('Contenido pendiente: esta sección no pudo completarse con la información disponible al momento.');
       }
