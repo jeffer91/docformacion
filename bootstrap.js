@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260917-0905';
+  const LOCAL_BUILD = '20260917-1000';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -90,7 +90,6 @@
     await loadScript('documents/dnf/import-persistence.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('documents/dnf/readiness-repair.js?v=' + encodeURIComponent(activeBuild));
 
-    // Capa final de calidad: vence a los renderizadores heredados y bloquea el PDF final si existe cualquier pendiente crítico.
     await loadScript('documents/dnf/final-quality.js?v=' + encodeURIComponent(activeBuild));
 
     await loadScript('core/diagnostics/index.js?v=' + encodeURIComponent(activeBuild));
@@ -99,7 +98,6 @@
     await loadScript('ui/minimal-ui.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/draft-pdf.js?v=' + encodeURIComponent(activeBuild));
 
-    // La vista previa se muestra directamente dentro de cada sección y de los elementos del documento.
     await loadScript('ui/inline-previews.js?v=' + encodeURIComponent(activeBuild));
 
     if (typeof render === 'function') render();
