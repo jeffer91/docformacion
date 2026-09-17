@@ -1,5 +1,5 @@
 (() => {
-  const LOCAL_BUILD = '20260917-0756';
+  const LOCAL_BUILD = '20260917-0905';
   const isHttp = location.protocol === 'http:' || location.protocol === 'https:';
 
   function setBuildLabel(build) {
@@ -98,6 +98,9 @@
     await loadScript('ui/svd-shell.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/minimal-ui.js?v=' + encodeURIComponent(activeBuild));
     await loadScript('ui/draft-pdf.js?v=' + encodeURIComponent(activeBuild));
+
+    // La vista previa se muestra directamente dentro de cada sección y de los elementos del documento.
+    await loadScript('ui/inline-previews.js?v=' + encodeURIComponent(activeBuild));
 
     if (typeof render === 'function') render();
   }
