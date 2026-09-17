@@ -44,7 +44,7 @@
     };
   }
 
-  function singleLineFit(doc, value, maxWidth, preferred = 7.2, minimum = 5.1) {
+  function singleLineFit(doc, value, maxWidth, preferred = 7.0, minimum = 4.6) {
     const text = clean(value);
     let size = preferred;
     doc.setFont('helvetica', 'normal');
@@ -60,9 +60,9 @@
     const x = 15;
     const y = 15;
     const width = Math.min(180, pageW - 30);
-    const colA = width * 0.22;
+    const colA = width * 0.25;
     const colB = width * 0.50;
-    const colC = width - colA - colB;
+    const colC = width * 0.25;
     const row1 = 8;
     const row2 = 20;
     const height = row1 + row2;
@@ -87,7 +87,7 @@
     let logoDrawn = false;
     if (logo.dataUrl && typeof doc.addImage === 'function') {
       try {
-        const maxW = Math.min(33, colA - 7);
+        const maxW = Math.min(36, colA - 7);
         const maxH = Math.min(15, height - 10);
         const ratio = Number.isFinite(logo.ratio) && logo.ratio > 0 ? logo.ratio : (240 / 95);
         let logoW = maxW;
@@ -113,7 +113,6 @@
     if (!logoDrawn) {
       centerLines(doc, institution, x, y, colA, height - 5, { size:10, bold:true, paddingX:6, lineHeight:4.2 });
     }
-    // Identificación visible incluso si la imagen cargada es demasiado clara.
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(5.8);
     doc.setTextColor(55);
@@ -154,10 +153,10 @@
     const codeX = x + colA + colB;
     doc.setTextColor(25);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.6);
+    doc.setFontSize(6.5);
     doc.text('Código:', codeX + colC / 2, y + 9.2, { align:'center' });
     if (code) {
-      const fontSize = singleLineFit(doc, code, colC - 4, 7.0, 5.1);
+      const fontSize = singleLineFit(doc, code, colC - 3.5, 6.8, 4.6);
       doc.setFontSize(fontSize);
       doc.text(code, codeX + colC / 2, y + 17.2, { align:'center' });
     }
