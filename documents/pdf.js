@@ -43,6 +43,10 @@
     return values;
   }
 
+  function finalQuality(type, ctx) {
+    return window.docformacionFinalQuality?.preflight?.(type, ctx) || { ready:true, missing:[] };
+  }
+
   async function build(type, options = {}) {
     const modules = dependencies();
     await window.docformacionInstitutionAssets?.ensureLogo?.();
@@ -53,12 +57,17 @@
 
     const draft = options.draft === true;
     const readiness = modules.validation.documentReadiness(type, ctx);
-    if (!readiness.ready && !options.allowDraft) {
+    const quality = finalQuality(type, ctx);
+    if (!draft && (!readiness.ready || !quality.ready)) {
+      const pending = [...new Set([...(readiness.missing || []), ...(quality.missing || [])])];
+      throw new Error('El documento todavía tiene pendientes: ' + pending.join(', ') + '.');
+    }
+    if (!readiness.ready && !options.allowDraft && !draft) {
       throw new Error('El documento todavía tiene pendientes: ' + (readiness.missing || []).join(', ') + '.');
     }
 
     const documentTitle = ctx.documentTitle(type);
-    const pdfTitle = draft ? 'BORRADOR · ' + documentTitle : documentTitle;
+    const pdfTitle = draft ? 'BORRADOR - ' + documentTitle : documentTitle;
     const subject = pdfTitle + ' · ' + ctx.period.label;
 
     emitProgress(type, 4, 'preparing', { draft });
@@ -69,21 +78,23 @@
       initialHeader: false,
       firstPageFooter: false,
       header: () => ({
-        organization: clean(modules.manifest.organization || modules.manifest.title),
-        title: draft ? 'BORRADOR · ' + documentTitle : documentTitle,
+        organization: clean(modules.manifest.organization || 'ITSQMET · UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS'),
+        title: draft ? 'BORRADOR - ' + documentTitle : documentTitle,
         period: ctx.period.label,
         code: ctx.documentCode(type),
-        section: ''
+        section: '',
+        draft
       }),
-      footer: (page, pages) => (draft ? 'BORRADOR · ' : '') + clean(modules.manifest.title) + ' · ' + ctx.period.label + ' · Página ' + page + ' de ' + pages
+      footer: (page, pages) => (draft ? 'BORRADOR · ' : '') + documentTitle + ' · ' + ctx.period.label + ' · Página ' + page + ' de ' + pages
     });
 
     writer.cover({
-      organization: clean(modules.manifest.organization || modules.manifest.title),
-      title: pdfTitle,
+      organization: clean(modules.manifest.organization || 'ITSQMET · UNIDAD DE GESTIÓN DE PROCESOS ACADÉMICOS'),
+      title: documentTitle,
       period: ctx.period.label,
       code: ctx.documentCode(type),
       version: clean(ctx.period.version || '1.0'),
+      draft,
       signatures: [
         { label:'ELABORADO POR:', name:ctx.authorities.preparedBy, role:ctx.authorities.preparedRole },
         { label:'REVISADO POR:', name:ctx.authorities.reviewedBy, role:ctx.authorities.reviewedRole },
@@ -97,15 +108,15 @@
       writer.newPage();
       writer.heading(section.title, 1);
       const sectionState = modules.validation.sectionReadiness(type, section, ctx);
-      if (!sectionState.ready) {
+      if (draft && !sectionState.ready) {
         const sectionMissing = (sectionState.missing || []).filter(Boolean);
-        writer.note('Vista borrador: ' + (sectionMissing.length ? sectionMissing.join(', ') : 'esta sección todavía tiene información pendiente') + '.');
+        writer.note('BORRADOR: ' + (sectionMissing.length ? sectionMissing.join(', ') : 'esta sección todavía tiene información pendiente') + '.');
       }
       try {
         modules.renderers.render(type, section, writer, ctx);
       } catch (error) {
-        if (!options.allowDraft) throw error;
-        console.warn('[DocFormación] Sección omitida parcialmente en borrador:', section.id, error);
+        if (!draft && !options.allowDraft) throw error;
+        console.warn('[DocFormación] Sección incompleta en borrador:', section.id, error);
         writer.note('Contenido pendiente: esta sección no pudo completarse con la información disponible al momento.');
       }
       emitProgress(type, Math.min(90, 10 + Math.round(((index + 1) / Math.max(1, sections.length)) * 78)), 'render', {
@@ -126,7 +137,7 @@
     const name = filename(type, ctx, draft);
     if (options.download !== false) downloadBlob(result.blob, name);
     emitProgress(type, 100, 'done', { pages:result.pages, size:result.size, draft });
-    return { ...result, filename:name, type, readiness, draft };
+    return { ...result, filename:name, type, readiness, quality, draft };
   }
 
   async function generate(type) {
@@ -137,13 +148,13 @@
       button.textContent = 'Generando PDF…';
     }
     try {
-      const result = await build(type, { download:true });
-      if (typeof toast === 'function') toast('PDF generado correctamente');
+      const result = await build(type, { download:true, draft:false });
+      if (typeof toast === 'function') toast('PDF final generado correctamente');
       return result;
     } catch (error) {
       console.error('[DocFormación] PDF documental:', error);
       emitProgress(type, 0, 'error', { message:error?.message || String(error) });
-      if (typeof toast === 'function') toast('No se pudo generar el PDF: ' + (error?.message || error));
+      if (typeof toast === 'function') toast('No se pudo generar el PDF final: ' + (error?.message || error));
       return null;
     } finally {
       if (button) {
@@ -177,8 +188,7 @@
     }
   }
 
-  window.docformacionDocumentPdf = Object.freeze({ build, generate, generateDraft });
+  window.docformacionDocumentPdf = Object.freeze({ build, generate, generateDraft, filename });
 
-  // Punto único de entrada utilizado por la interfaz existente.
   generateDocument = generate;
 })();
